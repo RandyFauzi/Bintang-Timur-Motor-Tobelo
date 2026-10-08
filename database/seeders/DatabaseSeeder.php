@@ -17,6 +17,15 @@ class DatabaseSeeder extends Seeder
      */
     public function run(InventoryService $inventoryService): void
     {
+        // 0. Super Admin Account
+        \App\Models\User::firstOrCreate(
+            ['email' => 'randyfauzi24@gmail.com'],
+            [
+                'name' => 'Randy Fauzi (Super Admin)',
+                'password' => \Illuminate\Support\Facades\Hash::make('password'),
+            ]
+        );
+
         // 1. Seed Brands
         $brands = [
             ['name' => 'Honda Genuine Parts (AHM)', 'slug' => Str::slug('Honda Genuine Parts AHM')],
