@@ -22,6 +22,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/reports', [\App\Http\Controllers\ReportController::class, 'index'])->name('reports.index');
     Route::post('/reports/expenses', [\App\Http\Controllers\ReportController::class, 'storeExpense'])->name('reports.expenses.store');
     
+    // Users Management
+    Route::resource('users', \App\Http\Controllers\UserController::class)->except(['create', 'show', 'edit']);
+    
     // Distributors (Coming Soon / Mockup)
     Route::get('/distributors', function() {
         return view('distributors.index');

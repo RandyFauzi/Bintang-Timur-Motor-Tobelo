@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Randy Fauzi (Super Admin)',
                 'password' => \Illuminate\Support\Facades\Hash::make('password'),
+                'role' => 'admin',
             ]
         );
 
