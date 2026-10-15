@@ -5,4 +5,4 @@
         : ['completed' => 'Selesai', 'cancelled' => 'Dibatalkan'];
     $positive = in_array($value, ['completed', 'paid'], true);
 @endphp
-<span @class(['neutral-badge', 'text-success' => $positive, 'text-danger' => $value === 'cancelled'])>{{ $labels[$value] ?? ucfirst($value) }}</span>
+<span class="history-status history-status--{{ $value }}">{{ $labels[$value] ?? ucfirst($value) }}</span>

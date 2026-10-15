@@ -44,6 +44,7 @@
                 @endif
                 <div class="grid gap-1">
                     @foreach ($group['items'] as $item)
+                        @continue(($item['route'] ?? null) === 'users.index' && !auth()->user()->can('manage-users'))
                         @if ($item['route'])
                             <a href="{{ route($item['route']) }}" @class(['sidebar-link', 'sidebar-link--active' => request()->routeIs($item['active'])]) @if(request()->routeIs($item['active'])) aria-current="page" @endif title="{{ $item['label'] }}">
                                 <x-ui.icon :name="$item['icon']" />

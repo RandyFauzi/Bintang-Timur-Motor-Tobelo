@@ -4,6 +4,7 @@ import { revenueChart } from './components/revenue-chart';
 import { appDialog, multiSelect, observationForm } from './components/catalogue';
 import { returnSelection, productPicker } from './components/product-returns';
 import { posRegister } from './components/pos';
+import { transactionEditor } from './components/transaction-editor';
 
 import.meta.glob('../images/**/*', { eager: true, query: '?url', import: 'default' });
 
@@ -18,6 +19,7 @@ Alpine.data('observationForm', observationForm);
 Alpine.data('returnSelection', returnSelection);
 Alpine.data('productPicker', productPicker);
 Alpine.data('posRegister', posRegister);
+Alpine.data('transactionEditor', transactionEditor);
 
 window.Alpine = Alpine;
 Alpine.start();

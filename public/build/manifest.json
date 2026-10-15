@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-BRGxLqy7.css",
+    "file": "assets/app-BQC2eixL.css",
     "name": "app",
     "names": [
       "app.css"
@@ -55,6 +55,10 @@
     "file": "assets/cart-DPkaTg8y.svg",
     "src": "resources/images/icons/cart.svg"
   },
+  "resources/images/icons/cashier-filter.svg": {
+    "file": "assets/cashier-filter-Dhl35m-4.svg",
+    "src": "resources/images/icons/cashier-filter.svg"
+  },
   "resources/images/icons/chart.svg": {
     "file": "assets/chart-ZosF-cUy.svg",
     "src": "resources/images/icons/chart.svg"
@@ -91,6 +95,10 @@
     "file": "assets/grid-BauOENSo.svg",
     "src": "resources/images/icons/grid.svg"
   },
+  "resources/images/icons/history-banknote.svg": {
+    "file": "assets/history-banknote-eLuvlY6K.svg",
+    "src": "resources/images/icons/history-banknote.svg"
+  },
   "resources/images/icons/history.svg": {
     "file": "assets/history-7cbGGSXO.svg",
     "src": "resources/images/icons/history.svg"
@@ -102,6 +110,10 @@
   "resources/images/icons/info.svg": {
     "file": "assets/info-CkUXSi0Y.svg",
     "src": "resources/images/icons/info.svg"
+  },
+  "resources/images/icons/invoice.svg": {
+    "file": "assets/invoice-B8HmT6wr.svg",
+    "src": "resources/images/icons/invoice.svg"
   },
   "resources/images/icons/list.svg": {
     "file": "assets/list-CEdQiYLn.svg",
@@ -159,6 +171,10 @@
     "file": "assets/sidebar-toggle-D0Wx3_lz.svg",
     "src": "resources/images/icons/sidebar-toggle.svg"
   },
+  "resources/images/icons/status-filter.svg": {
+    "file": "assets/status-filter-DXlXGzWe.svg",
+    "src": "resources/images/icons/status-filter.svg"
+  },
   "resources/images/icons/stock-box.svg": {
     "file": "assets/stock-box-BgYySsl8.svg",
     "src": "resources/images/icons/stock-box.svg"
@@ -188,7 +204,7 @@
     "src": "resources/images/icons/workshop.svg"
   },
   "resources/js/app.js": {
-    "file": "assets/app-BWSIucsY.js",
+    "file": "assets/app-BQdYwJqg.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true

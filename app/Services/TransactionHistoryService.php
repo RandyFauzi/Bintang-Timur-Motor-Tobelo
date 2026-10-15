@@ -65,7 +65,7 @@ class TransactionHistoryService
     /** @param array<string, mixed> $filters */
     public function listing(array $filters): Builder
     {
-        return $this->query($filters)->with(['user:id,name', 'payments'])
+        return $this->query($filters)->with(['user:id,name', 'payments', 'items'])
             ->withSum('items', 'quantity')->orderByDesc('sold_at')->orderByDesc('id');
     }
 }

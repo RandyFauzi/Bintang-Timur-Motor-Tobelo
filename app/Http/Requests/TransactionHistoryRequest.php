@@ -26,6 +26,8 @@ class TransactionHistoryRequest extends FormRequest
             'view' => ['nullable', Rule::in(['list', 'cards'])],
             'per_page' => ['nullable', Rule::in([5, 6, 10, 12, 15, 25, 50])],
             'page' => ['nullable', 'integer', 'min:1'],
+            'edit' => ['nullable', 'uuid'],
+            'invoice' => ['nullable', 'uuid'],
         ];
     }
 

@@ -1,0 +1,26 @@
+@layer components {
+    .user-avatar { display: inline-grid; width: var(--avatar-size,24px); height: var(--avatar-size,24px); flex-shrink: 0; place-items: center; border-radius: 50%; background: #d6eab4; color: var(--color-success); font-size: 12px; font-weight: 600; }
+    .history-summary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 0; overflow: hidden; margin-bottom: 24px; border: 1px solid var(--color-border); border-radius: 12px; box-shadow: var(--shadow-card); }
+    .history-summary .stat-card { border-radius: 0; border: 0; border-right: 1px solid var(--color-border); box-shadow: none; }
+    .history-summary .stat-card:first-child .stat-card__icon { width: 175px; height: 175px; top: -10px; right: -12px; }
+    .history-summary .stat-card:first-child { padding-right: 100px; }
+    .history-filters { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 16px; }
+    .history-date summary { display: flex; min-height: 36px; align-items: center; gap: 8px; cursor: pointer; list-style: none; border: 1px solid var(--color-border-strong); border-radius: 10px; padding: 8px 12px; font-size: 12px; }
+    .history-date[open] .history-date-panel { position: absolute; z-index: 30; left: 16px; top: 56px; display: grid; gap: 16px; width: min(320px, calc(100vw - 96px)); border: 1px solid var(--color-border); border-radius: 12px; padding: 20px; background: white; box-shadow: var(--shadow-card); }
+    .history-status { display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--color-border-strong); border-radius: 999px; padding: 8px 12px; font-size: 12px; white-space: nowrap; }
+    .history-status--completed, .history-status--paid { border-color: #8dbf4a; color: var(--color-success); background: #f4f8ed; }
+    .history-status--cancelled { border-color: #e57c7c; color: var(--color-danger); background: #fff3f3; }
+    .ui-dialog.invoice-dialog { width: min(751px,calc(100vw - 32px)); }
+    .ui-dialog.correction-dialog { width: min(654px,calc(100vw - 32px)); }
+    .invoice-surface { background: #f0f1ed; padding: 24px; border-radius: 12px; }
+    .invoice-content { background: white; border-radius: 12px; padding: 24px; }
+    .invoice-table { min-width: 550px; width: 100%; text-align: left; font-size: 14px; }
+    .invoice-table th { background: #f7f8fa; padding: 12px; color: var(--color-muted); font-size: 12px; font-weight: 500; }
+    .invoice-table td { border-bottom: 1px solid var(--color-border); padding: 16px 12px; }
+    .correction-item { border: 1px solid var(--color-border); border-radius: 16px; padding: 16px; box-shadow: var(--shadow-card); }
+    @media(max-width: 767px) {
+        .history-summary { grid-template-columns: 1fr; }
+        .history-summary .stat-card { border-bottom: 1px solid var(--color-border); }
+        .invoice-surface, .invoice-content { padding: 16px; }
+    }
+}

@@ -2,13 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CatalogueFilterRequest;
+use App\Http\Requests\SaleCorrectionRequest;
 use App\Http\Requests\TransactionHistoryRequest;
 use App\Models\Payment;
+use App\Models\Product;
 use App\Models\Sale;
 use App\Models\User;
+use App\Services\CatalogueService;
 use App\Services\CsvExportService;
+use App\Services\SaleCorrectionService;
 use App\Services\TransactionHistoryService;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -17,20 +24,45 @@ class TransactionHistoryController extends Controller
     public function index(TransactionHistoryRequest $request, TransactionHistoryService $history): View
     {
         $filters = $request->validated();
+        $editId = $request->input('edit') ?? old('_sale_id');
+        $editing = is_string($editId) && Str::isUuid($editId) ? $this->detail(Sale::findOrFail($editId)) : null;
 
         return view('transactions.index', [
             'transactions' => $history->listing($filters)->paginate((int) ($filters['per_page'] ?? 10))->withQueryString(),
             'summary' => $history->summary($filters),
             'cashiers' => User::query()->select('id', 'name')->orderBy('name')->get(),
             'paymentMethods' => Payment::query()->select('method')->distinct()->orderBy('method')->pluck('method'),
+            'editing' => $editing,
+            'invoice' => $request->filled('invoice') ? $this->detail(Sale::findOrFail($request->input('invoice'))) : null,
         ]);
     }
 
     public function show(Sale $sale): View
     {
-        $sale->load(['user:id,name', 'items' => fn (HasMany $query): HasMany => $query->orderBy('created_at')->orderBy('id'), 'payments' => fn (HasMany $query): HasMany => $query->orderBy('paid_at')->orderBy('id')]);
+        $this->detail($sale);
 
         return view('transactions.show', ['sale' => $sale]);
+    }
+
+    private function detail(Sale $sale): Sale
+    {
+        return $sale->load(['user:id,name', 'items.product' => fn ($query) => $query->withTrashed(), 'payments', 'corrections']);
+    }
+
+    public function update(SaleCorrectionRequest $request, Sale $sale, SaleCorrectionService $corrections): RedirectResponse
+    {
+        $corrections->update($sale, $request->validated(), $request->user());
+
+        return redirect()->route('transactions.index', ['invoice' => $sale->id])->with('success', 'Transaksi berhasil dikoreksi dan stok disesuaikan.');
+    }
+
+    public function products(CatalogueFilterRequest $request, CatalogueService $catalogue): JsonResponse
+    {
+        return response()->json(['data' => $catalogue->products($request->safe()->only('search'))->limit(20)->get()->map(fn (Product $product): array => [
+            'id' => $product->id, 'name' => $product->name, 'sku' => $product->sku,
+            'price' => (float) $product->selling_price,
+            'available' => max(0, ($product->stock?->quantity ?? 0) - ($product->stock?->reserved_quantity ?? 0)),
+        ])]);
     }
 
     public function export(TransactionHistoryRequest $request, TransactionHistoryService $history, CsvExportService $csv): StreamedResponse

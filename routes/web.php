@@ -31,6 +31,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/transactions', [TransactionHistoryController::class, 'index'])->name('transactions.index');
     Route::get('/transactions/export', [TransactionHistoryController::class, 'export'])->name('transactions.export');
+    Route::get('/transactions/products', [TransactionHistoryController::class, 'products'])->name('transactions.products');
+    Route::patch('/transactions/{sale}', [TransactionHistoryController::class, 'update'])->whereUuid('sale')->name('transactions.update');
     Route::get('/transactions/{sale}', [TransactionHistoryController::class, 'show'])->whereUuid('sale')->name('transactions.show');
 
     Route::get('/returns', [ProductReturnController::class, 'index'])->name('returns.index');
@@ -54,6 +56,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/reports/expenses', [ReportController::class, 'storeExpense'])->name('reports.expenses.store');
 
     // Users Management
+    Route::get('/users/export', [UserController::class, 'export'])->name('users.export');
     Route::resource('users', UserController::class)->except(['create', 'show', 'edit']);
 
     Route::get('/distributors/export', [DistributorController::class, 'export'])->name('distributors.export');
