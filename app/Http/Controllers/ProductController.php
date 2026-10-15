@@ -1,12 +1,13 @@
 <?php
+
 namespace App\Http\Controllers;
 
-use App\Models\Product;
 use App\Models\Brand;
-use App\Models\ProductType;
 use App\Models\Color;
-use Illuminate\Http\Request;
+use App\Models\Product;
+use App\Models\ProductType;
 use App\Services\InventoryService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
@@ -14,14 +15,21 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $query = Product::with(['brand', 'type', 'stock'])->where('is_active', true);
-        if ($request->search) {
-            $query->where(function($q) use ($request) {
-                $q->where('name', 'like', "%{$request->search}%")
-                  ->orWhere('sku', 'like', "%{$request->search}%")
-                  ->orWhere('barcode', 'like', "%{$request->search}%");
+        if ($request->boolean('low_stock')) {
+            $query->where(function ($query) {
+                $query->whereDoesntHave('stock')
+                    ->orWhereHas('stock', fn ($stock) => $stock->whereColumn('quantity', '<=', 'products.stock_minimum'));
             });
         }
-        $products = $query->orderBy('id', 'desc')->paginate(15);
+        if ($request->search) {
+            $query->where(function ($q) use ($request) {
+                $q->where('name', 'like', "%{$request->search}%")
+                    ->orWhere('sku', 'like', "%{$request->search}%")
+                    ->orWhere('barcode', 'like', "%{$request->search}%");
+            });
+        }
+        $products = $query->orderBy('id', 'desc')->paginate(15)->withQueryString();
+
         return view('products.index', compact('products'));
     }
 
@@ -30,6 +38,7 @@ class ProductController extends Controller
         $brands = Brand::all();
         $types = ProductType::all();
         $colors = Color::all();
+
         return view('products.create', compact('brands', 'types', 'colors'));
     }
 

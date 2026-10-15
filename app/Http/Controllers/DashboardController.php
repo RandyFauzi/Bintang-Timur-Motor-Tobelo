@@ -2,23 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Services\ReportService;
-use App\Models\Product;
+use App\Http\Requests\DashboardRequest;
+use App\Services\DashboardService;
+use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index(ReportService $reportService)
+    public function index(DashboardRequest $request, DashboardService $dashboardService): View
     {
-        $todaySummary = $reportService->getFinancialSummary(now(), now());
-        $lowStockCount = Product::whereHas('stock', function($q) {})
-                            ->join('product_stocks', 'products.id', '=', 'product_stocks.product_id')
-                            ->whereRaw('product_stocks.quantity <= products.stock_minimum')
-                            ->count();
-        $totalProducts = Product::count();
-        
-        $topProducts = $reportService->getBestSellers(3);
-
-        return view('dashboard', compact('todaySummary', 'lowStockCount', 'totalProducts', 'topProducts'));
+        return view('dashboard', $dashboardService->getDashboard($request->validated()));
     }
 }

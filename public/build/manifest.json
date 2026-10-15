@@ -1,15 +1,94 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-BkwgQOr0.css",
+    "file": "assets/app-C_8EL-oQ.css",
     "name": "app",
     "names": [
       "app.css"
     ],
     "src": "resources/css/app.css",
-    "isEntry": true
+    "isEntry": true,
+    "assets": [
+      "assets/roboto-latin-ccAYIvAh.woff2"
+    ]
+  },
+  "resources/fonts/roboto-latin.woff2": {
+    "file": "assets/roboto-latin-ccAYIvAh.woff2",
+    "src": "resources/fonts/roboto-latin.woff2"
+  },
+  "resources/images/brand/logo.svg": {
+    "file": "assets/logo-CB0IS3_h.svg",
+    "src": "resources/images/brand/logo.svg"
+  },
+  "resources/images/icons/banknote.svg": {
+    "file": "assets/banknote-BadWDvli.svg",
+    "src": "resources/images/icons/banknote.svg"
+  },
+  "resources/images/icons/box.svg": {
+    "file": "assets/box-CThVdKNa.svg",
+    "src": "resources/images/icons/box.svg"
+  },
+  "resources/images/icons/buildings.svg": {
+    "file": "assets/buildings-BlZ4W6dY.svg",
+    "src": "resources/images/icons/buildings.svg"
+  },
+  "resources/images/icons/calendar.svg": {
+    "file": "assets/calendar-D0AvlCw6.svg",
+    "src": "resources/images/icons/calendar.svg"
+  },
+  "resources/images/icons/cart.svg": {
+    "file": "assets/cart-DPkaTg8y.svg",
+    "src": "resources/images/icons/cart.svg"
+  },
+  "resources/images/icons/chart.svg": {
+    "file": "assets/chart-ZosF-cUy.svg",
+    "src": "resources/images/icons/chart.svg"
+  },
+  "resources/images/icons/chevron.svg": {
+    "file": "assets/chevron-DrsYYv0l.svg",
+    "src": "resources/images/icons/chevron.svg"
+  },
+  "resources/images/icons/history.svg": {
+    "file": "assets/history-7cbGGSXO.svg",
+    "src": "resources/images/icons/history.svg"
+  },
+  "resources/images/icons/home.svg": {
+    "file": "assets/home-CBta79AZ.svg",
+    "src": "resources/images/icons/home.svg"
+  },
+  "resources/images/icons/more.svg": {
+    "file": "assets/more-DwklI93G.svg",
+    "src": "resources/images/icons/more.svg"
+  },
+  "resources/images/icons/notification.svg": {
+    "file": "assets/notification-DRkpZBCi.svg",
+    "src": "resources/images/icons/notification.svg"
+  },
+  "resources/images/icons/return.svg": {
+    "file": "assets/return-DRJJWDvi.svg",
+    "src": "resources/images/icons/return.svg"
+  },
+  "resources/images/icons/settings.svg": {
+    "file": "assets/settings-G-HvdFFi.svg",
+    "src": "resources/images/icons/settings.svg"
+  },
+  "resources/images/icons/sidebar-toggle.svg": {
+    "file": "assets/sidebar-toggle-D0Wx3_lz.svg",
+    "src": "resources/images/icons/sidebar-toggle.svg"
+  },
+  "resources/images/icons/stock-box.svg": {
+    "file": "assets/stock-box-BgYySsl8.svg",
+    "src": "resources/images/icons/stock-box.svg"
+  },
+  "resources/images/icons/user.svg": {
+    "file": "assets/user-BdwKEQSl.svg",
+    "src": "resources/images/icons/user.svg"
+  },
+  "resources/images/icons/wallet.svg": {
+    "file": "assets/wallet-3-2p40ZX.svg",
+    "src": "resources/images/icons/wallet.svg"
   },
   "resources/js/app.js": {
-    "file": "assets/app-DIZEten-.js",
+    "file": "assets/app-C8Rx3ykO.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true
