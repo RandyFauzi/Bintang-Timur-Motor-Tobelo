@@ -1,6 +1,6 @@
 <x-app-layout>
     <div x-data="{ expenseModalOpen: false }" class="max-w-7xl mx-auto mb-8">
-        
+
         <!-- Header -->
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
             <div>
@@ -24,10 +24,10 @@
                 {{ session('success') }}
             </div>
         @endif
-        
+
         <!-- 4 Key Metrics -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            
+
             <!-- Uang Masuk -->
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden group">
                 <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity text-green-500"><svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg></div>
@@ -76,7 +76,7 @@
 
         <!-- Detail Tables (2 Columns) -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
+
             <!-- Pengeluaran Terakhir -->
             <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
                 <div class="flex justify-between items-center mb-6">
@@ -141,8 +141,8 @@
         <!-- Modal Tambah Pengeluaran -->
         <div x-show="expenseModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0" x-cloak>
             <div x-show="expenseModalOpen" x-transition.opacity class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="expenseModalOpen = false"></div>
-            
-            <div x-show="expenseModalOpen" 
+
+            <div x-show="expenseModalOpen"
                  x-transition:enter="transition ease-out duration-300"
                  x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                  x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
@@ -150,7 +150,7 @@
                  x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                  x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                  class="relative bg-white rounded-3xl shadow-2xl w-full max-w-md mx-auto overflow-hidden">
-                
+
                 <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                     <h3 class="text-lg font-bold text-gray-900">Catat Pengeluaran Baru</h3>
                     <button @click="expenseModalOpen = false" class="text-gray-400 hover:text-gray-900 transition-colors">
@@ -189,7 +189,7 @@
                             <textarea name="description" rows="2" class="w-full bg-gray-50 border-gray-200 focus:border-[#C62828] focus:ring-[#C62828] rounded-xl text-sm" placeholder="Contoh: Beli token listrik bengkel"></textarea>
                         </div>
                     </div>
-                    
+
                     <div class="mt-8 flex gap-3">
                         <button type="button" @click="expenseModalOpen = false" class="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-700 font-medium text-sm hover:bg-gray-50 transition-colors">Batal</button>
                         <button type="submit" class="flex-1 py-2.5 rounded-xl bg-[#C62828] text-white font-medium text-sm hover:bg-[#9E1B1B] shadow-sm transition-colors">Simpan Catatan</button>
