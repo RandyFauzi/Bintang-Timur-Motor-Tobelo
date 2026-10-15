@@ -8,6 +8,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReportLookupController;
+use App\Http\Controllers\TransactionHistoryController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -26,6 +27,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/pos', [PosController::class, 'index'])->name('pos.index');
     Route::post('/pos/checkout', [PosController::class, 'checkout'])->name('pos.checkout');
     Route::post('/pos/scan', [PosController::class, 'getProductByBarcode'])->name('pos.scan');
+
+    Route::get('/transactions', [TransactionHistoryController::class, 'index'])->name('transactions.index');
+    Route::get('/transactions/export', [TransactionHistoryController::class, 'export'])->name('transactions.export');
+    Route::get('/transactions/{sale}', [TransactionHistoryController::class, 'show'])->whereUuid('sale')->name('transactions.show');
 
     // Reports & Finance
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');

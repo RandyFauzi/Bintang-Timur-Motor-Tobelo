@@ -9,7 +9,7 @@
             ['label' => 'Stok & Produk', 'icon' => 'box', 'route' => 'products.index', 'active' => 'products.*'],
             ['label' => 'Distributor', 'icon' => 'buildings', 'route' => 'distributors.index', 'active' => 'distributors.*'],
             ['label' => 'Retur Produk', 'icon' => 'return', 'route' => null],
-            ['label' => 'Histori Transaksi', 'icon' => 'history', 'route' => null],
+            ['label' => 'Histori Transaksi', 'icon' => 'history', 'route' => 'transactions.index', 'active' => 'transactions.*'],
         ]],
         ['label' => 'Laporan & Analisa', 'items' => [
             ['label' => 'Laporan', 'icon' => 'chart', 'route' => 'reports.index', 'active' => 'reports.*'],
