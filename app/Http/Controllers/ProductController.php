@@ -2,67 +2,60 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Brand;
-use App\Models\Color;
+use App\Http\Requests\CatalogueFilterRequest;
+use App\Http\Requests\ProductRequest;
 use App\Models\Product;
-use App\Models\ProductType;
-use App\Services\InventoryService;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use App\Services\CatalogueService;
+use App\Services\CsvExportService;
+use App\Services\DashboardService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProductController extends Controller
 {
-    public function index(Request $request)
+    public function index(CatalogueFilterRequest $request, CatalogueService $catalogue, DashboardService $dashboard): View
     {
-        $query = Product::with(['brand', 'type', 'stock'])->where('is_active', true);
-        if ($request->boolean('low_stock')) {
-            $query->where(function ($query) {
-                $query->whereDoesntHave('stock')
-                    ->orWhereHas('stock', fn ($stock) => $stock->whereColumn('quantity', '<=', 'products.stock_minimum'));
-            });
-        }
-        if ($request->search) {
-            $query->where(function ($q) use ($request) {
-                $q->where('name', 'like', "%{$request->search}%")
-                    ->orWhere('sku', 'like', "%{$request->search}%")
-                    ->orWhere('barcode', 'like', "%{$request->search}%");
-            });
-        }
-        $products = $query->orderBy('id', 'desc')->paginate(15)->withQueryString();
+        $filters = $request->validated();
+        $products = $catalogue->products($filters)->paginate((int) ($filters['per_page'] ?? ($request->input('view') === 'cards' ? 6 : 15)))->withQueryString();
+        $editing = $request->filled('edit') ? Product::with(['stock', 'brand', 'type', 'color', 'distributors'])->findOrFail($request->integer('edit')) : null;
 
-        return view('products.index', compact('products'));
+        return view('products.index', array_merge($catalogue->options(), ['products' => $products, 'editing' => $editing, 'categories' => $catalogue->categories(), 'stockOverview' => $dashboard->stockOverview()]));
     }
 
-    public function create()
+    public function create(): RedirectResponse
     {
-        $brands = Brand::all();
-        $types = ProductType::all();
-        $colors = Color::all();
-
-        return view('products.create', compact('brands', 'types', 'colors'));
+        return redirect()->route('products.index', ['create' => 1]);
     }
 
-    public function store(Request $request, InventoryService $inventoryService)
+    public function edit(Product $product): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'sku' => 'required|string|unique:products,sku',
-            'barcode' => 'nullable|string|unique:products,barcode',
-            'brand_id' => 'nullable|exists:brands,id',
-            'type_id' => 'nullable|exists:product_types,id',
-            'purchase_price' => 'required|numeric|min:0',
-            'selling_price' => 'required|numeric|min:0',
-            'stock_minimum' => 'required|integer|min:0',
-            'initial_stock' => 'required|integer|min:0',
-        ]);
+        return redirect()->route('products.index', ['edit' => $product->id]);
+    }
 
-        DB::transaction(function () use ($validated, $inventoryService) {
-            $product = Product::create($validated);
-            if ($validated['initial_stock'] > 0) {
-                $inventoryService->adjustStock($product, $validated['initial_stock'], 'initial', 'Stok Awal dari Sistem');
-            }
-        });
+    public function show(Product $product): RedirectResponse
+    {
+        return redirect()->route('products.index', ['edit' => $product->id]);
+    }
 
-        return redirect()->route('products.index')->with('success', 'Produk berhasil ditambahkan.');
+    public function store(ProductRequest $request, CatalogueService $catalogue): RedirectResponse
+    {
+        $catalogue->saveProduct($request->validated(), $request->user()->id);
+
+        return redirect()->route('products.index')->with('success', 'Produk baru berhasil ditambahkan.');
+    }
+
+    public function update(ProductRequest $request, Product $product, CatalogueService $catalogue): RedirectResponse
+    {
+        $catalogue->saveProduct($request->validated(), $request->user()->id, $product);
+
+        return redirect()->route('products.index')->with('success', $product->name.' berhasil diperbarui.');
+    }
+
+    public function export(CatalogueFilterRequest $request, CatalogueService $catalogue, CsvExportService $csv): StreamedResponse
+    {
+        $rows = $catalogue->products($request->validated())->lazy(200)->map(fn (Product $product): array => [$product->name, $product->sku, $product->color?->name, $product->purchase_price, $product->selling_price, $product->product_kind === 'daily' ? 'Harian' : 'Non-Harian', $product->brand?->name, $product->type?->name, $product->distributors->pluck('name')->join(', '), $product->stock?->quantity ?? 0]);
+
+        return $csv->download('produk-'.now()->format('Ymd').'.csv', ['Nama Produk', 'SKU', 'Warna', 'Modal', 'Harga Jual', 'Tipe Produk', 'Merk', 'Jenis Part', 'Distributor', 'Stok'], $rows);
     }
 }

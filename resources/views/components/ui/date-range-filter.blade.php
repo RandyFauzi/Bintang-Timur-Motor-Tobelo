@@ -1,8 +1,9 @@
-@props(['range', 'prefix' => '', 'label' => 'Filter periode', 'compact' => false, 'action' => null])
+@props(['range', 'prefix' => '', 'label' => 'Filter periode', 'compact' => false, 'action' => null, 'preserve' => []])
 @php
     $startName = $prefix.'start_date';
     $endName = $prefix.'end_date';
     $preserved = $prefix === '' ? [] : request()->only(['start_date', 'end_date', 'revenue_start_date', 'revenue_end_date', 'activity_start_date', 'activity_end_date']);
+    $preserved = array_merge($preserved, $preserve);
     unset($preserved[$startName], $preserved[$endName]);
     $presets = [
         'Hari ini' => [now()->toDateString(), now()->toDateString()],
@@ -19,9 +20,7 @@
     </button>
     <div id="{{ $prefix }}date-filter-panel" class="date-filter__panel" x-show="open" x-cloak x-transition.opacity @focusout="if ($event.relatedTarget && !$el.contains($event.relatedTarget)) open = false">
         <form method="GET" action="{{ $action ?? url()->current() }}" x-ref="form" class="space-y-4" @submit="submitting = true">
-            @foreach ($preserved as $name => $value)
-                <input type="hidden" name="{{ $name }}" value="{{ $value }}">
-            @endforeach
+            <x-ui.query-fields :values="$preserved" />
             <p class="text-sm font-semibold">{{ $label }}</p>
             <div class="grid grid-cols-2 gap-2">
                 @foreach ($presets as $title => [$start, $end])
