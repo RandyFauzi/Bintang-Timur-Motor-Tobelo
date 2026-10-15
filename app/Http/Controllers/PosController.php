@@ -1,54 +1,63 @@
 <?php
+
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Http\Requests\CatalogueFilterRequest;
+use App\Http\Requests\CheckoutRequest;
 use App\Models\Product;
+use App\Services\CatalogueService;
 use App\Services\SaleService;
-use Exception;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class PosController extends Controller
 {
-    public function index()
+    public function index(CatalogueFilterRequest $request, CatalogueService $catalogue): View
     {
-        // Load active products with stock
-        $products = Product::with('stock')->where('is_active', true)->get();
-        return view('pos.index', compact('products'));
+        $products = $catalogue->products($request->validated())
+            ->paginate((int) ($request->validated('per_page') ?? 6))->withQueryString();
+
+        return view('pos.index', array_merge($catalogue->options(), [
+            'products' => $products,
+            'catalogueProducts' => $products->getCollection()->map(fn (Product $product): array => $this->productData($product))->values(),
+        ]));
     }
 
-    public function getProductByBarcode(Request $request)
+    public function getProductByBarcode(Request $request): JsonResponse
     {
-        $product = Product::with('stock')
-            ->where('is_active', true)
-            ->where('barcode', $request->barcode)
-            ->first();
-            
-        if (!$product) {
-            return response()->json(['success' => false, 'message' => 'Produk tidak ditemukan'], 404);
+        $data = $request->validate(['barcode' => ['required', 'string', 'max:100']]);
+        $product = Product::with(['stock', 'brand', 'type', 'color', 'distributors'])
+            ->where('is_active', true)->where('barcode', $data['barcode'])->first();
+        if (! $product) {
+            return response()->json(['success' => false, 'message' => 'Produk tidak ditemukan.'], 404);
         }
-        return response()->json(['success' => true, 'data' => $product]);
+
+        return response()->json(['success' => true, 'data' => $this->productData($product)]);
     }
 
-    public function checkout(Request $request, SaleService $saleService)
+    public function checkout(CheckoutRequest $request, SaleService $saleService): JsonResponse
     {
-        try {
-            $data = $request->validate([
-                'items' => 'required|array|min:1',
-                'items.*.product_id' => 'required|exists:products,id',
-                'items.*.quantity' => 'required|integer|min:1',
-                'paid_amount' => 'required|numeric|min:0',
-                'payment_method' => 'required|string',
-            ]);
-            
-            $sale = $saleService->processCheckout($data, auth()->id());
-            
-            return response()->json([
-                'success' => true, 
-                'message' => 'Transaksi Berhasil', 
-                'invoice' => $sale->invoice_number,
-                'change' => $sale->change_amount
-            ]);
-        } catch (Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
-        }
+        $sale = $saleService->processCheckout($request->validated(), $request->user()->id);
+
+        return response()->json([
+            'success' => true, 'message' => 'Transaksi berhasil dicatat.',
+            'invoice' => $sale->invoice_number, 'change' => (float) $sale->change_amount,
+            'total' => (float) $sale->grand_total, 'sold_at' => $sale->sold_at->format('d/m/Y H:i'),
+            'detail_url' => route('transactions.show', $sale),
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function productData(Product $product): array
+    {
+        return [
+            'id' => $product->id, 'name' => $product->name, 'sku' => $product->sku, 'barcode' => $product->barcode,
+            'price' => (float) $product->selling_price,
+            'available' => max(0, ($product->stock?->quantity ?? 0) - ($product->stock?->reserved_quantity ?? 0)),
+            'minimum' => $product->stock_minimum, 'brand' => $product->brand?->name,
+            'color' => $product->color?->name, 'type' => $product->type?->name,
+            'distributors' => $product->distributors->pluck('name')->join(', '),
+        ];
     }
 }

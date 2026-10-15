@@ -2,13 +2,12 @@
 
 namespace App\Services;
 
-use App\Models\Sale;
-use App\Models\SaleItem;
 use App\Models\Payment;
 use App\Models\Product;
+use App\Models\Sale;
+use App\Models\SaleItem;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
-use Exception;
+use Illuminate\Validation\ValidationException;
 
 class SaleService
 {
@@ -21,7 +20,7 @@ class SaleService
 
     /**
      * Process checkout
-     * 
+     *
      * $data expected format:
      * [
      *    'customer_name' => '...',
@@ -36,51 +35,55 @@ class SaleService
      *    ]
      * ]
      */
-    public function processCheckout(array $data, int $userId)
+    public function processCheckout(array $data, int $userId): Sale
     {
-        return DB::transaction(function () use ($data, $userId) {
-            
+        return DB::transaction(function () use ($data, $userId): Sale {
+
             // 1. Calculate totals & prepare items
             $subtotal = 0;
             $saleItemsData = [];
-            
-            foreach ($data['items'] as $itemData) {
-                // We don't lock here yet, we lock in inventory service
-                $product = Product::findOrFail($itemData['product_id']);
-                
-                if (!$product->is_active) {
-                    throw new Exception("Produk {$product->name} sedang tidak aktif.");
+
+            $items = collect($data['items'])->sortBy('product_id');
+            foreach ($items as $itemData) {
+                $product = Product::query()->lockForUpdate()->findOrFail($itemData['product_id']);
+
+                if (! $product->is_active) {
+                    throw ValidationException::withMessages(['items' => "Produk {$product->name} sedang tidak aktif."]);
                 }
-                
+
                 $qty = (int) $itemData['quantity'];
+                $stock = $product->stock()->lockForUpdate()->first();
+                if ($qty > ($stock?->quantity ?? 0) - ($stock?->reserved_quantity ?? 0)) {
+                    throw ValidationException::withMessages(['items' => "Stok tersedia tidak mencukupi untuk {$product->name}."]);
+                }
                 $itemDiscount = (float) ($itemData['discount'] ?? 0);
                 $unitPrice = $product->selling_price;
                 $itemSubtotal = ($unitPrice * $qty) - $itemDiscount;
-                
+
                 $subtotal += $itemSubtotal;
-                
+
                 $saleItemsData[] = [
                     'product' => $product,
                     'quantity' => $qty,
                     'unit_price' => $unitPrice,
                     'discount' => $itemDiscount,
-                    'subtotal' => $itemSubtotal
+                    'subtotal' => $itemSubtotal,
                 ];
             }
-            
+
             $globalDiscount = (float) ($data['discount'] ?? 0);
             $tax = (float) ($data['tax'] ?? 0);
             $grandTotal = $subtotal - $globalDiscount + $tax;
             $paidAmount = (float) ($data['paid_amount'] ?? 0);
-            
+
             if ($paidAmount < $grandTotal) {
-                throw new Exception("Jumlah pembayaran (Rp " . number_format($paidAmount, 0, ',', '.') . ") kurang dari Total Belanja (Rp " . number_format($grandTotal, 0, ',', '.') . ")");
+                throw ValidationException::withMessages(['paid_amount' => 'Uang diterima kurang dari total belanja. Periksa kembali jumlah pembayaran.']);
             }
-            
+
             $changeAmount = $paidAmount - $grandTotal;
-            
+
             // 2. Create Sale (Header)
-            $sale = new Sale();
+            $sale = new Sale;
             $sale->invoice_number = $this->generateInvoiceNumber();
             $sale->user_id = $userId;
             $sale->subtotal = $subtotal;
@@ -95,12 +98,12 @@ class SaleService
             $sale->change_amount = $changeAmount;
             $sale->sold_at = now();
             $sale->save();
-            
+
             // 3. Create Sale Items & Decrease Stock
             foreach ($saleItemsData as $item) {
                 $product = $item['product'];
-                
-                $saleItem = new SaleItem();
+
+                $saleItem = new SaleItem;
                 $saleItem->sale_id = $sale->id;
                 $saleItem->product_id = $product->id;
                 $saleItem->product_name = $product->name;
@@ -111,7 +114,7 @@ class SaleService
                 $saleItem->discount = $item['discount'];
                 $saleItem->subtotal = $item['subtotal'];
                 $saleItem->save();
-                
+
                 // Decrease stock via InventoryService (handles pessimistic locking)
                 $this->inventoryService->adjustStock(
                     $product,
@@ -122,15 +125,15 @@ class SaleService
                     $userId
                 );
             }
-            
+
             // 4. Create Payment
-            $payment = new Payment();
+            $payment = new Payment;
             $payment->sale_id = $sale->id;
             $payment->method = $data['payment_method'] ?? 'cash';
             $payment->amount = $grandTotal; // Assuming full payment applied to this transaction
             $payment->paid_at = now();
             $payment->save();
-            
+
             return $sale;
         });
     }
@@ -139,18 +142,18 @@ class SaleService
     {
         $date = now()->format('Ymd');
         $prefix = "INV-{$date}-";
-        
+
         $lastSale = Sale::where('invoice_number', 'like', "{$prefix}%")
             ->orderBy('invoice_number', 'desc')
             ->first();
-            
-        if (!$lastSale) {
-            return $prefix . '0001';
+
+        if (! $lastSale) {
+            return $prefix.'0001';
         }
-        
+
         $lastNumber = (int) substr($lastSale->invoice_number, -4);
-        $newNumber = str_pad((string)($lastNumber + 1), 4, '0', STR_PAD_LEFT);
-        
-        return $prefix . $newNumber;
+        $newNumber = str_pad((string) ($lastNumber + 1), 4, '0', STR_PAD_LEFT);
+
+        return $prefix.$newNumber;
     }
 }

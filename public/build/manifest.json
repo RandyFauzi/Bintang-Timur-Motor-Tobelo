@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-C7fWStfs.css",
+    "file": "assets/app-DK-Fh5UI.css",
     "name": "app",
     "names": [
       "app.css"
@@ -18,6 +18,10 @@
   "resources/images/brand/logo.svg": {
     "file": "assets/logo-CB0IS3_h.svg",
     "src": "resources/images/brand/logo.svg"
+  },
+  "resources/images/icons/add-square.svg": {
+    "file": "assets/add-square-CPtIgdgS.svg",
+    "src": "resources/images/icons/add-square.svg"
   },
   "resources/images/icons/add.svg": {
     "file": "assets/add-BsWSTDaL.svg",
@@ -63,6 +67,10 @@
     "file": "assets/clock-DYxcFpnH.svg",
     "src": "resources/images/icons/clock.svg"
   },
+  "resources/images/icons/close.svg": {
+    "file": "assets/close-D8AFbBan.svg",
+    "src": "resources/images/icons/close.svg"
+  },
   "resources/images/icons/color.svg": {
     "file": "assets/color-CSp4gTqo.svg",
     "src": "resources/images/icons/color.svg"
@@ -91,9 +99,17 @@
     "file": "assets/home-CBta79AZ.svg",
     "src": "resources/images/icons/home.svg"
   },
+  "resources/images/icons/info.svg": {
+    "file": "assets/info-CkUXSi0Y.svg",
+    "src": "resources/images/icons/info.svg"
+  },
   "resources/images/icons/list.svg": {
     "file": "assets/list-CEdQiYLn.svg",
     "src": "resources/images/icons/list.svg"
+  },
+  "resources/images/icons/minus-square.svg": {
+    "file": "assets/minus-square-poKXOGT1.svg",
+    "src": "resources/images/icons/minus-square.svg"
   },
   "resources/images/icons/more.svg": {
     "file": "assets/more-DwklI93G.svg",
@@ -114,6 +130,14 @@
   "resources/images/icons/part.svg": {
     "file": "assets/part-BzNSZ-V6.svg",
     "src": "resources/images/icons/part.svg"
+  },
+  "resources/images/icons/pos-box.svg": {
+    "file": "assets/pos-box-ArzU8r6p.svg",
+    "src": "resources/images/icons/pos-box.svg"
+  },
+  "resources/images/icons/pos-cart.svg": {
+    "file": "assets/pos-cart-BMJEEAPl.svg",
+    "src": "resources/images/icons/pos-cart.svg"
   },
   "resources/images/icons/return-units.svg": {
     "file": "assets/return-units-qVktCBW_.svg",
@@ -139,6 +163,10 @@
     "file": "assets/stock-box-BgYySsl8.svg",
     "src": "resources/images/icons/stock-box.svg"
   },
+  "resources/images/icons/success.svg": {
+    "file": "assets/success-BkRtRwrd.svg",
+    "src": "resources/images/icons/success.svg"
+  },
   "resources/images/icons/trash.svg": {
     "file": "assets/trash-DSpsaYpf.svg",
     "src": "resources/images/icons/trash.svg"
@@ -160,7 +188,7 @@
     "src": "resources/images/icons/workshop.svg"
   },
   "resources/js/app.js": {
-    "file": "assets/app-BV6ApHd0.js",
+    "file": "assets/app-BWSIucsY.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true
