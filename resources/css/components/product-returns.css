@@ -1,0 +1,23 @@
+@layer components {
+    .ui-icon.ui-icon--native { display: inline-flex; align-items: center; justify-content: center; }
+    .ui-dialog.return-dialog { width: min(var(--return-dialog-width, 459px), calc(100vw - 32px)); }
+    .return-summary { grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) minmax(260px, 1.85fr); }
+    .return-note-chart { --chart-1: #f39a54; }
+    .return-note-status { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #efb669; border-radius: 999px; background: #fffaeb; padding: 8px 12px; color: #875a13; font-size: 12px; white-space: nowrap; }
+    .return-note-status--credited { border-color: #8dbf4a; background: #f0f7e8; color: var(--color-success); }
+    .return-note-filter { display: flex; align-items: center; gap: 8px; min-height: 36px; border: 1px solid var(--color-border-strong); border-radius: 12px; padding-left: 12px; }
+    .return-note-filter select { max-width: 220px; min-height: 34px; border: 0; border-radius: 12px; background-color: transparent; padding-block: 6px; font-size: 14px; }
+    .return-table { min-width: 1320px; }
+    .return-table tbody td { padding-block: 24px; }
+    .return-actions { position: relative; }
+    .return-actions summary { display: grid; width: 36px; height: 36px; cursor: pointer; list-style: none; place-items: center; }
+    .return-actions summary::-webkit-details-marker { display: none; }
+    .return-actions nav { position: relative; z-index: 20; display: grid; min-width: 175px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface); padding: 8px; box-shadow: var(--shadow-card); }
+    .return-actions a { display: flex; min-height: 44px; align-items: center; gap: 10px; border-radius: 8px; padding: 10px; font-size: 14px; white-space: nowrap; }
+    .return-actions a:hover { background: var(--color-page); }
+    .return-bulk-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 16px; border-top: 1px solid var(--color-border); padding: 16px; }
+    @media (max-width: 767px) {
+        .return-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .return-summary .catalogue-summary__chart { grid-column: 1 / -1; border-top: 1px solid var(--color-border); }
+    }
+}

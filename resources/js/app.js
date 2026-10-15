@@ -2,6 +2,7 @@ import Alpine from 'alpinejs';
 import { appShell, dateRangeFilter, stockNotifications, toast } from './components/ui';
 import { revenueChart } from './components/revenue-chart';
 import { appDialog, multiSelect, observationForm } from './components/catalogue';
+import { returnSelection, productPicker } from './components/product-returns';
 
 import.meta.glob('../images/**/*', { eager: true, query: '?url', import: 'default' });
 
@@ -13,6 +14,8 @@ Alpine.data('revenueChart', revenueChart);
 Alpine.data('appDialog', appDialog);
 Alpine.data('multiSelect', multiSelect);
 Alpine.data('observationForm', observationForm);
+Alpine.data('returnSelection', returnSelection);
+Alpine.data('productPicker', productPicker);
 
 window.Alpine = Alpine;
 Alpine.start();

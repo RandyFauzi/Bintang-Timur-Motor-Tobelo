@@ -8,7 +8,7 @@
         ['label' => 'Manajemen Produk', 'items' => [
             ['label' => 'Stok & Produk', 'icon' => 'box', 'route' => 'products.index', 'active' => 'products.*'],
             ['label' => 'Distributor', 'icon' => 'buildings', 'route' => 'distributors.index', 'active' => 'distributors.*'],
-            ['label' => 'Retur Produk', 'icon' => 'return', 'route' => null],
+            ['label' => 'Retur Produk', 'icon' => 'return', 'route' => 'returns.index', 'active' => 'returns.*'],
             ['label' => 'Histori Transaksi', 'icon' => 'history', 'route' => 'transactions.index', 'active' => 'transactions.*'],
         ]],
         ['label' => 'Laporan & Analisa', 'items' => [

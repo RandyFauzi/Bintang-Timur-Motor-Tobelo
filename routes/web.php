@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DistributorController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductReturnController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReportLookupController;
@@ -31,6 +32,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/transactions', [TransactionHistoryController::class, 'index'])->name('transactions.index');
     Route::get('/transactions/export', [TransactionHistoryController::class, 'export'])->name('transactions.export');
     Route::get('/transactions/{sale}', [TransactionHistoryController::class, 'show'])->whereUuid('sale')->name('transactions.show');
+
+    Route::get('/returns', [ProductReturnController::class, 'index'])->name('returns.index');
+    Route::get('/returns/products', [ProductReturnController::class, 'products'])->name('returns.products');
+    Route::get('/returns/export', [ProductReturnController::class, 'export'])->name('returns.export');
+    Route::get('/returns/activity', [ProductReturnController::class, 'activity'])->name('returns.activity');
+    Route::post('/returns', [ProductReturnController::class, 'store'])->name('returns.store');
+    Route::patch('/returns/bulk', [ProductReturnController::class, 'bulk'])->name('returns.bulk');
+    Route::patch('/returns/{productReturn}/cancel', [ProductReturnController::class, 'cancel'])->whereUuid('productReturn')->name('returns.cancel');
+    Route::patch('/returns/{productReturn}', [ProductReturnController::class, 'update'])->whereUuid('productReturn')->name('returns.update');
+    Route::delete('/returns/{productReturn}', [ProductReturnController::class, 'destroy'])->whereUuid('productReturn')->name('returns.destroy');
 
     // Reports & Finance
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');

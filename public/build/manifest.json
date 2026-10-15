@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-DSYCwg58.css",
+    "file": "assets/app-C7fWStfs.css",
     "name": "app",
     "names": [
       "app.css"
@@ -23,9 +23,17 @@
     "file": "assets/add-BsWSTDaL.svg",
     "src": "resources/images/icons/add.svg"
   },
+  "resources/images/icons/arrow-right.svg": {
+    "file": "assets/arrow-right-CsRiI28G.svg",
+    "src": "resources/images/icons/arrow-right.svg"
+  },
   "resources/images/icons/banknote.svg": {
     "file": "assets/banknote-BadWDvli.svg",
     "src": "resources/images/icons/banknote.svg"
+  },
+  "resources/images/icons/barcode.svg": {
+    "file": "assets/barcode-7DIgdlGH.svg",
+    "src": "resources/images/icons/barcode.svg"
   },
   "resources/images/icons/box.svg": {
     "file": "assets/box-CThVdKNa.svg",
@@ -54,6 +62,10 @@
   "resources/images/icons/clock.svg": {
     "file": "assets/clock-DYxcFpnH.svg",
     "src": "resources/images/icons/clock.svg"
+  },
+  "resources/images/icons/color.svg": {
+    "file": "assets/color-CSp4gTqo.svg",
+    "src": "resources/images/icons/color.svg"
   },
   "resources/images/icons/edit.svg": {
     "file": "assets/edit-hwe9Jn3p.svg",
@@ -87,9 +99,25 @@
     "file": "assets/more-DwklI93G.svg",
     "src": "resources/images/icons/more.svg"
   },
+  "resources/images/icons/note-summary.svg": {
+    "file": "assets/note-summary-DLqugfy_.svg",
+    "src": "resources/images/icons/note-summary.svg"
+  },
+  "resources/images/icons/note.svg": {
+    "file": "assets/note-BEYZyhj9.svg",
+    "src": "resources/images/icons/note.svg"
+  },
   "resources/images/icons/notification.svg": {
     "file": "assets/notification-DRkpZBCi.svg",
     "src": "resources/images/icons/notification.svg"
+  },
+  "resources/images/icons/part.svg": {
+    "file": "assets/part-BzNSZ-V6.svg",
+    "src": "resources/images/icons/part.svg"
+  },
+  "resources/images/icons/return-units.svg": {
+    "file": "assets/return-units-qVktCBW_.svg",
+    "src": "resources/images/icons/return-units.svg"
   },
   "resources/images/icons/return.svg": {
     "file": "assets/return-DRJJWDvi.svg",
@@ -111,6 +139,14 @@
     "file": "assets/stock-box-BgYySsl8.svg",
     "src": "resources/images/icons/stock-box.svg"
   },
+  "resources/images/icons/trash.svg": {
+    "file": "assets/trash-DSpsaYpf.svg",
+    "src": "resources/images/icons/trash.svg"
+  },
+  "resources/images/icons/undo.svg": {
+    "file": "assets/undo-C93aywng.svg",
+    "src": "resources/images/icons/undo.svg"
+  },
   "resources/images/icons/user.svg": {
     "file": "assets/user-BdwKEQSl.svg",
     "src": "resources/images/icons/user.svg"
@@ -124,7 +160,7 @@
     "src": "resources/images/icons/workshop.svg"
   },
   "resources/js/app.js": {
-    "file": "assets/app-VQgapDcq.js",
+    "file": "assets/app-BV6ApHd0.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true
