@@ -8,7 +8,7 @@
             </x-ui.field>
             <x-ui.field name="observed_on" label="Tanggal Pengamatan" type="date" x-model="form.observed_on" max="{{ now()->toDateString() }}" required />
             <x-ui.field name="observed_hour" label="Jam Pengamatan">
-                <select id="observed_hour" name="observed_hour" class="form-input" x-model="form.observed_hour" required><option value="">Pilih jam</option>@foreach(range(0,23) as $hour)<option value="{{ $hour }}">Jam {{ sprintf('%02d.00',$hour) }}</option>@endforeach</select>
+                <select id="observed_hour" name="observed_hour" class="form-input" x-model="form.observed_hour" required><option value="">Pilih jam</option>@foreach([11,14] as $hour)<option value="{{ $hour }}">Jam {{ sprintf('%02d.00',$hour) }}</option>@endforeach</select>
             </x-ui.field>
         </div>
         <fieldset class="observation-types"><legend>Jenis Pengerjaan</legend>

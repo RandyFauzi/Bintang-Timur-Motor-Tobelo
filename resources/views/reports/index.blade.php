@@ -20,7 +20,7 @@
             <x-dashboard.panel title="Pengerjaan paling sering" id="work-types-title">
                 <x-slot:filter>
                     <div class="report-chart-filters">
-                        <form method="GET" action="{{ route('reports.index') }}"><x-ui.query-fields :values="$chartQuery" :except="['type_hour']" /><label class="filter-select-label"><x-ui.icon name="clock" :size="14" /><span class="sr-only">Jam grafik jenis pengerjaan</span><select name="type_hour" class="filter-select" onchange="this.form.requestSubmit()"><option value="">Semua Jam</option>@foreach(range(0,23) as $hour)<option value="{{ $hour }}" @selected(request('type_hour', request('hour')) !== null && request('type_hour', request('hour')) !== '' && request('type_hour', request('hour')) == $hour)>Jam {{ sprintf('%02d.00',$hour) }}</option>@endforeach</select></label></form>
+                        <form method="GET" action="{{ route('reports.index') }}"><x-ui.query-fields :values="$chartQuery" :except="['type_hour']" /><label class="filter-select-label"><x-ui.icon name="clock" :size="14" /><span class="sr-only">Jam grafik jenis pengerjaan</span><select name="type_hour" class="filter-select" onchange="this.form.requestSubmit()"><option value="">Semua Jam</option>@foreach([11,14] as $hour)<option value="{{ $hour }}" @selected(request('type_hour', request('hour')) !== null && request('type_hour', request('hour')) !== '' && request('type_hour', request('hour')) == $hour)>Jam {{ sprintf('%02d.00',$hour) }}</option>@endforeach</select></label></form>
                         <x-ui.date-range-filter :range="$typeRange" prefix="type_" :preserve="$chartQuery" label="Periode jenis pengerjaan" compact />
                     </div>
                 </x-slot:filter>
@@ -50,7 +50,7 @@
                 </nav>
                 @if(request('workshop_id'))<input type="hidden" name="workshop_id" value="{{ request('workshop_id') }}">@endif
                 <div class="catalogue-filters">
-                    <label class="filter-select-label"><x-ui.icon name="clock" :size="16" /><span class="sr-only">Jam Pengamatan</span><select name="hour" class="filter-select" onchange="this.form.requestSubmit()"><option value="">Semua Jam</option>@foreach(range(0,23) as $hour)<option value="{{ $hour }}" @selected(request()->filled('hour') && request('hour') == $hour)>Jam {{ sprintf('%02d.00',$hour) }}</option>@endforeach</select></label>
+                    <label class="filter-select-label"><x-ui.icon name="clock" :size="16" /><span class="sr-only">Jam Pengamatan</span><select name="hour" class="filter-select" onchange="this.form.requestSubmit()"><option value="">Semua Jam</option>@foreach([11,14] as $hour)<option value="{{ $hour }}" @selected(request()->filled('hour') && request('hour') == $hour)>Jam {{ sprintf('%02d.00',$hour) }}</option>@endforeach</select></label>
                     <x-ui.multiselect name="work_type_ids" label="Semua Pengerjaan" :options="$workTypes" />
                     <a href="{{ route('reports.index') }}" class="filter-reset">Reset filter</a>
                 </div>
