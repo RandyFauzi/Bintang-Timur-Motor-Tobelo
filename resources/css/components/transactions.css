@@ -12,6 +12,13 @@
     .history-status--cancelled { border-color: #e57c7c; color: var(--color-danger); background: #fff3f3; }
     .ui-dialog.invoice-dialog { width: min(751px,calc(100vw - 32px)); }
     .ui-dialog.correction-dialog { width: min(654px,calc(100vw - 32px)); }
+    .invoice-dialog .dialog-actions, .correction-dialog .dialog-actions { flex-wrap: wrap; align-items: center; gap: 12px; }
+    .invoice-dialog .dialog-actions .ui-button, .correction-dialog .dialog-actions .ui-button { min-height: 45px; padding: 12px 16px; font-size: 16px; line-height: 1.2; white-space: nowrap; }
+    .invoice-dialog .dialog-actions .ui-button--plain { font-size: 13px; font-weight: 700; }
+    .invoice-dialog .dialog-actions .ui-button--secondary { border-color: #a8ada5; }
+    .correction-dialog .dialog-actions { gap: 15px; }
+    .correction-dialog .dialog-actions .ui-button--cancel { min-width: 128px; }
+    .history-page .catalogue-toolbar__actions .ui-button { min-height: 45px; padding: 12px 16px; font-size: 16px; line-height: 1.2; white-space: nowrap; }
     .invoice-surface { background: #f0f1ed; padding: 24px; border-radius: 12px; }
     .invoice-content { background: white; border-radius: 12px; padding: 24px; }
     .invoice-table { min-width: 550px; width: 100%; text-align: left; font-size: 14px; }
@@ -20,6 +27,7 @@
     .correction-item { border: 1px solid var(--color-border); border-radius: 16px; padding: 16px; box-shadow: var(--shadow-card); }
     @media(max-width: 767px) {
         .history-summary { grid-template-columns: 1fr; }
+        .history-page .catalogue-toolbar__actions .ui-button { padding-inline: 10px; font-size: 12px; }
         .history-summary .stat-card { border-bottom: 1px solid var(--color-border); }
         .invoice-surface, .invoice-content { padding: 16px; }
     }

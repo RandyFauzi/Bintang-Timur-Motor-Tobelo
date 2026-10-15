@@ -1,5 +1,5 @@
 <x-app-layout>
-    <div class="catalogue-page">
+    <div class="catalogue-page history-page">
         <header class="catalogue-heading"><div><h1>Histori Transaksi</h1><p class="mt-2 text-sm text-muted">Telusuri penjualan, rincian belanja, dan pembayaran pelanggan.</p></div></header>
         <div class="history-summary">
             <x-dashboard.stat-card title="Nilai Penjualan" :value="'Rp '.number_format($summary['revenue'],2,',','.')" note="Sesuai filter yang dipilih · Hanya transaksi selesai" icon="history-banknote" />
@@ -36,7 +36,7 @@
         @if($invoice)
             <x-ui.dialog name="detail-invoice" title="Detail Invoice" :show="true" class="invoice-dialog" close-icon="close">
                 @include('transactions.partials.invoice',['sale'=>$invoice])
-                <footer class="dialog-actions"><button type="button" class="ui-button ui-button--secondary" @click="$el.closest('dialog').close()">Tutup Invoice</button>@if($invoice->status === 'completed')<a href="{{ request()->fullUrlWithQuery(['edit'=>$invoice->id,'invoice'=>null]) }}" class="ui-button ui-button--secondary"><x-ui.icon name="edit" :size="18" />Edit Transaksi</a>@endif</footer>
+                <footer class="dialog-actions"><button type="button" class="ui-button ui-button--plain" @click="$el.closest('dialog').close()">Tutup Invoice</button>@if($invoice->status === 'completed')<a href="{{ request()->fullUrlWithQuery(['edit'=>$invoice->id,'invoice'=>null]) }}" class="ui-button ui-button--secondary"><x-ui.icon name="edit" :size="18" />Edit Transaksi</a>@endif</footer>
             </x-ui.dialog>
         @endif
         @if($editing)@include('transactions.partials.editor',['sale'=>$editing])@endif

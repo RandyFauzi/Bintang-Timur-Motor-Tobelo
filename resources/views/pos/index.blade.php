@@ -19,7 +19,7 @@
             <div class="pos-products">
                 <template x-for="product in products" :key="product.id">
                     <article class="pos-product">
-                        <header><div class="min-w-0"><div class="pos-product__name"><x-ui.icon name="pos-box" :size="18" /><h2 class="min-w-0 truncate font-semibold" x-text="product.name" :title="product.name"></h2></div><p class="mt-2 text-sm text-muted" x-text="product.color || '–'"></p></div><span x-show="product.brand" class="pos-product__brand" x-text="product.brand"></span></header>
+                        <header><div class="min-w-0 flex-1"><div class="pos-product__name"><x-ui.icon name="pos-box" :size="18" /><h2 class="min-w-0 truncate font-semibold" x-text="product.name" :title="product.name"></h2></div><p class="mt-2 text-sm text-muted" x-text="product.color || '–'"></p></div><span x-show="product.brand" class="pos-product__brand" x-text="product.brand" :title="product.brand"></span></header>
                         <dl><dt>Total Stok</dt><dd><span :class="product.available <= product.minimum ? 'stock-badge' : ''" x-text="product.available"></span></dd><dt>Jenis Part</dt><dd x-text="product.type || '–'"></dd><dt>Distributor</dt><dd x-text="product.distributors || '–'"></dd></dl>
                         <footer><strong x-text="money(product.price)"></strong><button type="button" class="ui-button pos-add" :disabled="busy || quantity(product.id) >= product.available" @click="add(product)" :aria-label="'Tambah '+product.name+' ke keranjang'"><x-ui.icon name="pos-cart" :size="18" /></button></footer>
                     </article>
