@@ -4,15 +4,6 @@
         @csrf @if($product) @method('PATCH') @endif
         <input type="hidden" name="_dialog" value="product-form">
         <input type="hidden" name="_edit_details" :value="detailsExpanded ? '1' : '0'" value="{{ $detailsExpanded ? '1' : '0' }}">
-        <div class="form-grid">
-            <x-ui.field name="quantity" label="Jumlah Stok" type="number" :value="$product?->stock?->quantity ?? 0" min="0" max="100000000" required />
-            <x-ui.field name="stock_minimum" label="Stok Minimum" type="number" :value="$product?->stock_minimum ?? 0" min="0" max="100000000" required />
-        </div>
-        @if($product)
-            <button type="button" class="edit-link justify-self-start" @click="detailsExpanded = !detailsExpanded" :aria-expanded="detailsExpanded" aria-controls="product-edit-details">
-                <span x-text="detailsExpanded ? 'Tutup Detail' : 'Edit Detail'">Edit Detail</span><x-ui.icon name="chevron" :size="16" x-bind:class="{ 'rotate-90': detailsExpanded }" />
-            </button>
-        @endif
         <fieldset id="product-edit-details" class="form-grid min-w-0" x-show="detailsExpanded" :disabled="!detailsExpanded" @disabled(! $detailsExpanded) @if(! $detailsExpanded) x-cloak @endif>
             <legend class="sr-only">Detail informasi produk</legend>
             <x-ui.field name="name" label="Nama Produk" :value="$product?->name" required maxlength="255" />
@@ -29,6 +20,15 @@
             <x-ui.field name="barcode" label="Barcode (opsional)" :value="$product?->barcode" maxlength="100" />
             @if($product)<div class="form-field"><span class="form-field__label">SKU</span><p class="py-2 text-sm text-muted">{{ $product->sku }}</p></div>@else<x-ui.field name="sku" label="SKU (opsional)" hint="Dibuat otomatis jika dikosongkan." maxlength="100" />@endif
         </fieldset>
+        <div class="form-grid">
+            <x-ui.field name="quantity" label="Jumlah Stok" type="number" :value="$product?->stock?->quantity ?? 0" min="0" max="100000000" required />
+            <x-ui.field name="stock_minimum" label="Stok Minimum" type="number" :value="$product?->stock_minimum ?? 0" min="0" max="100000000" required />
+        </div>
+        @if($product)
+            <button type="button" class="edit-link justify-self-start" @click="detailsExpanded = !detailsExpanded" :aria-expanded="detailsExpanded" aria-controls="product-edit-details">
+                <span x-text="detailsExpanded ? 'Tutup Detail' : 'Edit Detail'">Edit Detail</span><x-ui.icon name="chevron" :size="16" x-bind:class="{ 'rotate-90': detailsExpanded }" />
+            </button>
+        @endif
         @foreach(['brand'=>'brands','type'=>'types','color'=>'colors'] as $name=>$collection)<datalist id="{{ $name }}-options">@foreach($$collection as $option)<option value="{{ $option->name }}">@endforeach</datalist>@endforeach
         <footer class="dialog-actions"><button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button><button type="submit" class="ui-button" :disabled="submitting" x-text="submitting ? 'Menyimpan…' : 'Simpan'">Simpan</button></footer>
     </form>
