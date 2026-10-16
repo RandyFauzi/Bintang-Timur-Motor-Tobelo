@@ -2,6 +2,7 @@
 @import './components/product-returns.css';
 @import './components/pos.css';
 @import './components/transactions.css';
+@import './components/auth.css';
 
 @font-face {
     font-family: Roboto;

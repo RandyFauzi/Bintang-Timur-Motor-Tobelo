@@ -1,0 +1,17 @@
+@layer components {
+    .guest-shell { display: flex; align-items: center; justify-content: center; min-height: 100dvh; background: var(--color-page); padding: 40px 20px; color: var(--color-text); }
+    .guest-container { width: 100%; max-width: 460px; }
+    .guest-container .guest-card { padding: 32px; box-shadow: var(--shadow-card); }
+    .guest-footer { padding-top: 24px; text-align: center; color: var(--color-muted); font-size: 12px; }
+    .login-header { margin-bottom: 28px; text-align: center; }
+    .login-brand { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 28px; font-size: 16px; font-weight: 500; }
+    .login-header h1 { font-size: 24px; font-weight: 600; line-height: 1.2; }
+    .login-header p { margin-top: 12px; color: var(--color-muted); font-size: 14px; line-height: 1.6; }
+    .login-status { margin-bottom: 24px; }
+    .login-options { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; }
+    .login-link { display: inline-flex; min-height: 44px; align-items: center; font-size: 14px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
+    .login-link:hover { color: var(--color-muted); }
+    .login-register { text-align: center; color: var(--color-muted); font-size: 14px; }
+    .login-register .login-link { color: var(--color-text); }
+    @media(max-width:479px) { .guest-shell { padding: 24px 16px; } .guest-container .guest-card { padding: 24px; } }
+}

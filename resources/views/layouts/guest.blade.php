@@ -1,27 +1,19 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="id">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
-
-        <title>{{ config('app.name', 'Laravel') }}</title>
-
-        <!-- Favicon -->
+        <meta name="theme-color" content="#171a17">
+        <title>{{ request()->routeIs('login') ? 'Login · ' : '' }}{{ config('app.name', 'Bintang Timur Motor') }}</title>
         <link rel="icon" type="image/svg+xml" href="{{ Vite::asset('resources/images/brand/logo.svg') }}">
-
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet" />
-
-        <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans antialiased bg-[#FAF8F5] text-[#222222]">
-        <div class="min-h-screen flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8">
-            <div class="w-full max-w-[400px]">
-                {{ $slot }}
-            </div>
+    <body class="guest-shell font-sans antialiased">
+        <a href="#guest-main" class="skip-link">Lewati ke formulir</a>
+        <div class="guest-container">
+            <main id="guest-main" class="catalogue-surface guest-card" tabindex="-1">{{ $slot }}</main>
+            <footer class="guest-footer">Bintang Timur Motor &middot; Tobelo</footer>
         </div>
     </body>
 </html>

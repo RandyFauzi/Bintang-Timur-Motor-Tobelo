@@ -34,10 +34,14 @@ class AuthenticationTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $this->post('/login', [
+        $this->from(route('login'))->post('/login', [
             'email' => $user->email,
             'password' => 'wrong-password',
-        ]);
+        ])->assertRedirect(route('login'))->assertSessionHasErrors('email');
+
+        $response = $this->withCookie(config('session.cookie'), session()->getId())->get(route('login'));
+        $response->assertOk()->assertSee('Email atau password tidak sesuai.')->assertSee($user->email)->assertDontSee('wrong-password');
+        $this->assertMatchesRegularExpression('/id="email"[^>]*aria-invalid="true"/', $response->getContent());
 
         $this->assertGuest();
     }
