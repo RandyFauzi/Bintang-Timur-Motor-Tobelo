@@ -9,15 +9,13 @@ function register(products = [{ ...product }]) {
     return state;
 }
 
-test('cart combines products, counts units, and calculates precise cash change', () => {
+test('cart combines products, counts units, and calculates precise transaction totals', () => {
     const state = register();
     state.add(product);
     state.add(product);
     assert.equal(state.cart.length, 1);
     assert.equal(state.units, 2);
     assert.equal(state.total, 100000.5);
-    state.paidAmount = 110000;
-    assert.equal(state.change, 9999.5);
     assert.equal(state.canCheckout, true);
 });
 
@@ -39,7 +37,6 @@ test('refreshed stock and prices replace cached metadata without deleting cart q
     state.add(product);
     state.add(product);
     state.add({ ...product, available: 1, price: 60000 });
-    state.paidAmount = 200000;
     assert.equal(state.quantity(1), 2);
     assert.equal(state.total, 120000);
     assert.equal(state.canCheckout, false);
@@ -68,15 +65,16 @@ test('corrupt or unavailable session storage keeps the register usable', () => {
     } finally { globalThis.window = originalWindow; }
 });
 
-test('underpayment and blank cash input cannot start checkout, exact payment enables it', () => {
+test('checkout needs products and available stock without requiring cash input', () => {
     const state = register();
+    assert.equal(state.canCheckout, false);
     state.add(product);
-    assert.equal(state.canCheckout, false);
-    state.paidAmount = 10;
-    assert.equal(state.canCheckout, false);
-    state.exactPayment();
     assert.equal(state.canCheckout, true);
-    assert.equal(state.change, 0);
+    state.setQuantity(product.id, 3);
+    assert.equal(state.total, 150000.75);
+    assert.equal(state.canCheckout, true);
+    state.busy = true;
+    assert.equal(state.canCheckout, false);
 });
 
 test('one in-flight checkout blocks duplicate requests and clears the cart only after success', async () => {
@@ -85,17 +83,19 @@ test('one in-flight checkout blocks duplicate requests and clears the cart only 
     try {
         let resolve;
         let requests = 0;
+        let payload;
         const events = [];
         globalThis.document = { querySelector: () => ({ content: 'csrf' }), getElementById: () => ({ close() {} }) };
-        globalThis.fetch = () => { requests++; return new Promise((done) => { resolve = done; }); };
+        globalThis.fetch = (url, options) => { payload = JSON.parse(options.body); requests++; return new Promise((done) => { resolve = done; }); };
         const state = register();
         state.$dispatch = (...args) => events.push(args);
         state.add(product);
-        state.exactPayment();
         const first = state.checkout();
         await state.checkout();
         state.remove(1);
         assert.equal(requests, 1);
+        assert.equal(payload.paid_amount, 50000.25);
+        assert.equal(payload.payment_method, 'cash');
         assert.equal(state.units, 1);
         resolve({ ok: true, json: async () => ({ success: true, invoice: 'INV-1', total: 50000.25, change: 0 }) });
         await first;
@@ -118,7 +118,6 @@ test('server validation errors preserve the cart and release the submit lock', a
         globalThis.fetch = async () => ({ ok: false, json: async () => ({ errors: { items: ['Stok berubah.'] } }) });
         const state = register();
         state.add(product);
-        state.exactPayment();
         await state.checkout();
         assert.equal(state.units, 1);
         assert.equal(state.error, 'Stok berubah.');

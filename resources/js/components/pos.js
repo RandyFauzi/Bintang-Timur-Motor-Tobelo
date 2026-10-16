@@ -1,7 +1,7 @@
 export function posRegister(products, endpoints, storageKey) {
     return {
         products, endpoints, storageKey, cart: [], busy: false, scanning: false,
-        paidAmount: '', error: '', result: null, storage: null,
+        error: '', result: null, storage: null,
         init() {
             try {
                 this.storage = window.sessionStorage;
@@ -19,11 +19,9 @@ export function posRegister(products, endpoints, storageKey) {
         get totalCents() { return this.cart.reduce((sum, row) => sum + Math.round(Number(row.price) * 100) * row.quantity, 0); },
         get total() { return this.totalCents / 100; },
         get units() { return this.cart.reduce((sum, row) => sum + row.quantity, 0); },
-        get change() { return Math.max(0, (Math.round(Number(this.paidAmount) * 100) - this.totalCents) / 100); },
         get canCheckout() {
             return !this.busy && this.cart.length > 0 && this.cart.every((row) => row.quantity <= row.available)
-                && this.paidAmount !== '' && Number.isFinite(Number(this.paidAmount))
-                && Math.round(Number(this.paidAmount) * 100) >= this.totalCents;
+                && Number.isFinite(this.total) && this.total >= 0;
         },
         money(amount) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(Number(amount) || 0); },
         quantity(id) { return this.cart.find((row) => row.id === id)?.quantity ?? 0; },
@@ -75,7 +73,6 @@ export function posRegister(products, endpoints, storageKey) {
             document.getElementById('pos-review').close();
             this.openCart();
         },
-        exactPayment() { if (!this.busy) this.paidAmount = this.total; },
         async scan(value) {
             const barcode = value.trim();
             if (!barcode || this.scanning || this.busy) return;
@@ -102,7 +99,7 @@ export function posRegister(products, endpoints, storageKey) {
                 const response = await fetch(this.endpoints.checkout, {
                     method: 'POST', headers: this.headers(), body: JSON.stringify({
                         items: this.cart.map((row) => ({ product_id: row.id, quantity: row.quantity })),
-                        paid_amount: Number(this.paidAmount), payment_method: 'cash',
+                        paid_amount: this.total, payment_method: 'cash',
                     }),
                 });
                 const result = await response.json();
@@ -116,7 +113,6 @@ export function posRegister(products, endpoints, storageKey) {
                     if (product) product.available = Math.max(0, product.available - row.quantity);
                 }
                 this.cart = [];
-                this.paidAmount = '';
                 this.persist();
                 document.getElementById('pos-review').close();
                 this.$dispatch('open-dialog', { id: 'pos-success' });
@@ -132,7 +128,7 @@ export function posRegister(products, endpoints, storageKey) {
             if (event.key === 'F4') {
                 event.preventDefault();
                 if (this.busy) return;
-                if (document.getElementById('pos-review').open) document.getElementById('paid_amount')?.focus();
+                if (document.getElementById('pos-review').open) document.getElementById('pos-save-transaction')?.focus();
                 else this.openCart();
             }
         },
