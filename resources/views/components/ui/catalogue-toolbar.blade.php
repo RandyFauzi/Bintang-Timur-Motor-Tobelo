@@ -1,5 +1,5 @@
 @props(['exportRoute', 'createLabel' => null, 'dialog' => null, 'createHref' => null])
-<div class="catalogue-toolbar">
+<div class="catalogue-toolbar catalogue-toolbar--compact">
     <label class="catalogue-search"><span class="sr-only">Cari data</span><x-ui.icon name="search" :size="18" /><input type="search" name="search" value="{{ request('search') }}" placeholder="Cari apapun..." aria-label="Cari data"><button type="submit" class="sr-only">Cari</button></label>
     <div class="catalogue-toolbar__actions">
         <div class="view-switch" aria-label="Tampilan data">
@@ -7,8 +7,8 @@
             <a href="{{ request()->fullUrlWithQuery(['view' => 'cards', 'page' => 1, 'edit' => null, 'create' => null]) }}" @class(['view-switch__option', 'is-active' => request('view') === 'cards']) aria-label="Tampilan kartu" @if(request('view') === 'cards') aria-current="true" @endif><x-ui.icon name="grid" :size="16" /></a>
         </div>
         <div class="relative inline-flex items-center" x-data="{ exportMenu: false }" @click.outside="exportMenu = false">
-            <a href="{{ route($exportRoute, array_merge(request()->except(['page', 'edit', 'create']), ['format' => 'xlsx'])) }}" class="ui-button ui-button--secondary !rounded-r-none !border-r-0" title="Export data langsung ke file Excel (.xlsx)">
-                <x-ui.icon name="export" :size="18" />Export Excel
+            <a href="{{ route($exportRoute, array_merge(request()->except(['page', 'edit', 'create']), ['format' => 'xlsx'])) }}" class="ui-button ui-button--secondary !rounded-r-none !border-r-0" title="Export data langsung ke file Excel (.xlsx)" aria-label="Export Excel">
+                <x-ui.icon name="export" :size="18" /><span class="catalogue-export-label">Export Excel</span>
             </a>
             <button type="button" @click="exportMenu = !exportMenu" class="ui-button ui-button--secondary !rounded-l-none !px-2.5" aria-label="Pilihan format ekspor" :aria-expanded="exportMenu">
                 <x-ui.icon name="chevron" :size="12" class="rotate-90" />
@@ -24,7 +24,7 @@
                 </a>
             </div>
         </div>
-        @if($createLabel)<a class="ui-button" href="{{ $createHref ?? request()->fullUrlWithQuery(['create'=>1,'edit'=>null]) }}"><x-ui.icon name="add" :size="18" />{{ $createLabel }}</a>@endif
+        @if($createLabel)<a class="ui-button catalogue-create" href="{{ $createHref ?? request()->fullUrlWithQuery(['create'=>1,'edit'=>null]) }}"><x-ui.icon name="add" :size="18" />{{ $createLabel }}</a>@endif
     </div>
 </div>
 <input type="hidden" name="view" value="{{ request('view', 'list') }}">

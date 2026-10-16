@@ -196,6 +196,15 @@
         .report-charts { grid-template-columns: 1fr; }
     }
     @media (max-width: 767px) {
+        .catalogue-toolbar--compact { flex-wrap: nowrap; gap: 8px; padding: 12px; }
+        .catalogue-toolbar--compact .catalogue-search { min-width: 0; gap: 8px; padding-inline: 10px; }
+        .catalogue-toolbar--compact .catalogue-search > .ui-icon { flex-shrink: 0; }
+        .catalogue-toolbar--compact .catalogue-toolbar__actions { width: auto; flex-wrap: nowrap; gap: 6px; margin-left: 0; }
+        .catalogue-toolbar--compact .view-switch__option { min-width: 40px; min-height: 44px; }
+        .catalogue-toolbar--compact .catalogue-export-label { display: none; }
+        .catalogue-toolbar--compact .catalogue-toolbar__actions .ui-button { min-height: 44px; padding-inline: 10px; }
+        .catalogue-toolbar--compact .catalogue-toolbar__actions .catalogue-create { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 35; min-height: 52px; gap: 8px; border-radius: 999px; padding: 14px 20px; font-size: 14px; box-shadow: 0 6px 20px rgb(0 0 0 / 20%); }
+        .catalogue-page:has(.catalogue-toolbar--compact .catalogue-create) { padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
         .catalogue-filters--scroll { flex-wrap: nowrap; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
         .catalogue-filters--scroll > * { flex-shrink: 0; }
         .catalogue-filters--scroll .filter-reset { white-space: nowrap; }
