@@ -1,11 +1,11 @@
 <x-app-layout>
-    <div class="catalogue-page" x-data="posRegister(@js($catalogueProducts), @js(['scan'=>route('pos.scan'),'checkout'=>route('pos.checkout')]), @js('pos-cart:'.auth()->id()))" @keydown.window="shortcut($event)">
+    <div class="catalogue-page pos-register" x-data="posRegister(@js($catalogueProducts), @js(['scan'=>route('pos.scan'),'checkout'=>route('pos.checkout')]), @js('pos-cart:'.auth()->id()))" @keydown.window="shortcut($event)">
         <header class="catalogue-heading"><h1>Kasir / POS</h1><span class="text-xs text-muted">F1 Cari · F4 Keranjang</span></header>
         <section class="catalogue-surface" aria-label="Pilih produk">
             <form method="GET" action="{{ route('pos.index') }}">
                 <div class="catalogue-toolbar">
                     <label class="catalogue-search"><span class="sr-only">Cari produk atau scan barcode</span><x-ui.icon name="search" :size="16" /><input type="search" name="search" value="{{ request('search') }}" x-ref="search" placeholder="Cari produk, SKU, atau scan barcode..." maxlength="200" @keydown.enter="if ($event.target.value.trim() && /^\d{6,}$/.test($event.target.value.trim())) { $event.preventDefault(); scan($event.target.value); }"><button type="submit" class="sr-only">Cari</button></label>
-                    <div class="catalogue-toolbar__actions"><button type="button" class="ui-button" @click="openCart()"><x-ui.icon name="pos-cart" :size="18" />Lihat Keranjang <span x-cloak x-show="units" x-text="'('+units+')'" aria-live="polite"></span></button></div>
+                    <div class="catalogue-toolbar__actions pos-cart-launcher"><button type="button" class="ui-button pos-cart-trigger" @click="openCart()" aria-controls="pos-cart"><x-ui.icon name="pos-cart" :size="18" />Lihat Keranjang <span class="pos-cart-count" x-cloak x-show="units" x-text="units" :aria-label="units + ' item di keranjang'" aria-live="polite" aria-atomic="true"></span></button></div>
                 </div>
                 @if(request()->filled('per_page'))<input type="hidden" name="per_page" value="{{ request('per_page') }}">@endif
                 <div class="catalogue-filters">

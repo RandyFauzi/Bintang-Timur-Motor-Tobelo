@@ -1,4 +1,4 @@
-<x-ui.dialog name="pos-cart" title="Keranjang" class="pos-panel" close-icon="close">
+<x-ui.dialog name="pos-cart" title="Keranjang" class="pos-panel pos-cart-sheet" close-icon="close">
     <div class="pos-panel-body">
         <div class="pos-cart-items">
             <p class="px-2 text-sm text-muted" x-text="cart.length+' jenis produk · '+units+' unit'"></p>
