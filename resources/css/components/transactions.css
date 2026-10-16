@@ -4,9 +4,8 @@
     .history-summary .stat-card { border-radius: 0; border: 0; border-right: 1px solid var(--color-border); box-shadow: none; }
     .history-summary .stat-card:first-child .stat-card__icon { width: 175px; height: 175px; top: -10px; right: -12px; }
     .history-summary .stat-card:first-child { padding-right: 100px; }
-    .history-filters { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 16px; }
-    .history-date summary { display: flex; min-height: 36px; align-items: center; gap: 8px; cursor: pointer; list-style: none; border: 1px solid var(--color-border-strong); border-radius: 10px; padding: 8px 12px; font-size: 12px; }
-    .history-date[open] .history-date-panel { position: absolute; z-index: 30; left: 16px; top: 56px; display: grid; gap: 16px; width: min(320px, calc(100vw - 96px)); border: 1px solid var(--color-border); border-radius: 12px; padding: 20px; background: white; box-shadow: var(--shadow-card); }
+    .history-filters .filter-trigger, .history-filters .filter-select-label { min-height: 40px; background: var(--color-surface); }
+    .history-filters .filter-select { max-width: 220px; }
     .history-status { display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--color-border-strong); border-radius: 999px; padding: 8px 12px; font-size: 12px; white-space: nowrap; }
     .history-status--completed, .history-status--paid { border-color: #8dbf4a; color: var(--color-success); background: #f4f8ed; }
     .history-status--cancelled { border-color: #e57c7c; color: var(--color-danger); background: #fff3f3; }
