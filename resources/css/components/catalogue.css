@@ -180,30 +180,34 @@
     .quantity-stepper button { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 5px; background: #171a17; color: white; }
     .quantity-stepper input { width: 65px; min-height: 32px; border: 1px solid var(--color-border-strong); border-radius: 8px; padding: 4px; text-align: center; font-size: 12px; }
     .work-total { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--color-border); padding-top: 16px; margin-top: 8px; font-size: 14px; }
-}
-@media (max-width: 1279px) {
-    .catalogue-card-grid, .distributor-list.catalogue-card-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
-    .catalogue-toolbar { flex-wrap: wrap; }
-    .catalogue-toolbar__actions { margin-left: auto; }
-    .report-charts { grid-template-columns: 1fr; }
-}
-@media (max-width: 639px) {
-    .catalogue-heading { align-items: flex-start; flex-wrap: wrap; }
-    .catalogue-summary { grid-template-columns: 1fr; }
-    .catalogue-summary__metric { border-right: 0; border-bottom: 1px solid var(--color-border); }
-    .catalogue-toolbar { gap: 12px; }
-    .catalogue-toolbar__actions { width: 100%; gap: 8px; justify-content: flex-end; }
-    .catalogue-toolbar__actions .ui-button { min-width: 0; padding-inline: 10px; font-size: 12px; }
-    .catalogue-tabs { margin-inline: 12px; }
-    .catalogue-tab { padding: 12px; font-size: 12px; }
-    .catalogue-filters { padding: 12px; gap: 8px; }
-    .filter-trigger { max-width: 200px; }
-    .multi-filter__panel { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 280px; box-shadow: 0 0 0 100vmax rgb(0 0 0 / 20%); }
-    .catalogue-card-grid, .distributor-list.catalogue-card-grid { grid-template-columns: 1fr; }
-    .distributor-card__content { align-items: flex-start; flex-direction: column; gap: 0; }
-    .product-card, .distributor-card, .observation-card { padding: 20px; }
-    .catalogue-pagination { flex-wrap: wrap; justify-content: center; padding: 16px 12px; }
-    .form-grid--three { grid-template-columns: 1fr; }
-    .ui-dialog { padding: 20px; }
-    .work-type-options { grid-template-columns: repeat(2,minmax(0,1fr)); }
+
+    @media (max-width: 1279px) {
+        .catalogue-card-grid, .distributor-list.catalogue-card-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+        .catalogue-toolbar { flex-wrap: wrap; }
+        .catalogue-toolbar__actions { margin-left: auto; }
+        .report-charts { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 767px) {
+        .catalogue-card-grid, .distributor-list.catalogue-card-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 639px) {
+        .catalogue-heading { align-items: flex-start; flex-wrap: wrap; }
+        .catalogue-summary { grid-template-columns: 1fr; }
+        .catalogue-summary__metric { border-right: 0; border-bottom: 1px solid var(--color-border); }
+        .catalogue-toolbar { gap: 12px; }
+        .catalogue-toolbar__actions { width: 100%; gap: 8px; justify-content: flex-end; }
+        .catalogue-toolbar__actions .ui-button { min-width: 0; padding-inline: 10px; font-size: 12px; }
+        .catalogue-tabs { margin-inline: 12px; }
+        .catalogue-tab { padding: 12px; font-size: 12px; }
+        .catalogue-filters { padding: 12px; gap: 8px; }
+        .filter-trigger { max-width: 100%; }
+        .multi-filter__panel { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 280px; box-shadow: 0 0 0 100vmax rgb(0 0 0 / 20%); }
+        .catalogue-card-grid, .distributor-list.catalogue-card-grid { grid-template-columns: 1fr; }
+        .distributor-card__content { align-items: flex-start; flex-direction: column; gap: 0; }
+        .product-card, .distributor-card, .observation-card { padding: 20px; }
+        .catalogue-pagination { flex-wrap: wrap; justify-content: center; padding: 16px 12px; }
+        .form-grid--three { grid-template-columns: 1fr; }
+        .ui-dialog { padding: 20px; }
+        .work-type-options { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    }
 }
