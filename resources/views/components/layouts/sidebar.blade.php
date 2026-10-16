@@ -29,9 +29,9 @@
 @endphp
 <aside id="app-sidebar" class="app-sidebar" :class="{ 'app-sidebar--collapsed': collapsed, 'app-sidebar--open': mobileMenuOpen }" :inert="isMobile && !mobileMenuOpen" aria-label="Navigasi utama" @keydown.tab="trapMobileFocus($event)">
     <div class="sidebar-brand">
-        <a href="{{ route('dashboard') }}" class="flex min-w-0 items-center gap-3" aria-label="Bintang Timur — Dashboard">
-            <x-ui.icon name="logo" :size="24" />
-            <span x-show="!collapsed || isMobile" class="truncate text-base font-medium">Bintang Timur</span>
+        <a href="{{ route('dashboard') }}" class="flex min-w-0 items-center gap-3" aria-label="{{ \App\Models\BusinessSetting::current()->business_name }} — Dashboard">
+            <x-ui.business-logo :size="24" />
+            <span x-show="!collapsed || isMobile" class="truncate text-base font-medium">{{ \App\Models\BusinessSetting::current()->business_name }}</span>
         </a>
         <button type="button" class="sidebar-toggle" @click="toggleSidebar()" :aria-label="mobileMenuOpen ? 'Tutup navigasi' : (collapsed ? 'Perluas sidebar' : 'Perkecil sidebar')" :aria-expanded="!collapsed || mobileMenuOpen">
             <x-ui.icon name="sidebar-toggle" :size="18" />
@@ -89,7 +89,7 @@
             @endif
         </div>
         <div class="sidebar-profile" x-data="{ profileOpen: false }" @click.outside="profileOpen = false" @keydown.escape.stop="profileOpen = false; $refs.profile.focus()">
-            <span class="profile-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}</span>
+            <span class="profile-avatar relative overflow-hidden" aria-hidden="true">{{ mb_strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}@if(auth()->user()->avatar_path)<img src="{{ auth()->user()->avatarUrl() }}" alt="" class="absolute inset-0 h-full w-full object-cover" x-on:error="$el.remove()">@endif</span>
             <div class="min-w-0 flex-1" x-show="!collapsed || isMobile">
                 <p class="truncate text-sm font-medium">{{ auth()->user()->name }}</p>
                 <p class="mt-0.5 text-sm text-white/75">{{ auth()->user()->role === 'admin' ? 'Administrator' : 'Staf' }}</p>

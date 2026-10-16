@@ -28,13 +28,7 @@
                     @forelse($products as $product)
                         <article class="product-card">
                             <header><div><h2>{{ $product->name }}</h2><p class="mt-2 text-sm text-muted">{{ $product->color?->name ?? '–' }}</p></div><div class="product-card__actions">
-                                <x-dropdown>
-                                    <x-slot:trigger><button type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-100 focus-visible:outline focus-visible:outline-2" aria-label="Aksi {{ $product->name }}" :aria-expanded="open"><x-ui.icon name="more-dark" :size="24" /></button></x-slot:trigger>
-                                    <x-slot:content>
-                                        <x-dropdown-link :href="route('returns.index', ['create'=>1, 'product_id'=>$product->id])"><span class="flex items-center gap-2"><x-ui.icon name="return-dark" :size="16" />Retur Produk</span></x-dropdown-link>
-                                        <button type="button" class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-700 hover:bg-gray-100 focus:bg-gray-100" @click="$dispatch('delete-product', @js(['name'=>$product->name, 'url'=>route('products.destroy',$product)]))"><x-ui.icon name="trash" :size="16" />Hapus Produk</button>
-                                    </x-slot:content>
-                                </x-dropdown>
+                                <x-ui.product-actions :product="$product" />
                             </div></header>
                             <dl class="product-card__details">
                                 <dt>Total Stok</dt><dd><span @class(['stock-badge'=>($product->stock?->quantity ?? 0) <= $product->stock_minimum])>{{ $product->stock?->quantity ?? 0 }}</span></dd>
@@ -60,7 +54,7 @@
                         <td>{{ $product->product_kind === 'daily' ? 'Harian' : 'Non-Harian' }}</td><td><span class="neutral-badge">{{ $product->brand?->name ?? '–' }}</span></td>
                         <td>{{ $product->type?->name ?? '–' }}</td><td>{{ $product->distributors->pluck('name')->join(', ') ?: '–' }}</td>
                         <td><span @class(['stock-badge'=>($product->stock?->quantity ?? 0) <= $product->stock_minimum])>{{ $product->stock?->quantity ?? 0 }}</span></td>
-                        <td><a href="{{ request()->fullUrlWithQuery(['edit'=>$product->id,'create'=>null]) }}" class="edit-link">Edit <x-ui.icon name="edit" :size="16" /></a></td>
+                        <td><div class="flex items-center gap-2"><a href="{{ request()->fullUrlWithQuery(['edit'=>$product->id,'create'=>null]) }}" class="edit-link">Edit</a><x-ui.product-actions :product="$product" /></div></td>
                     </tr>@empty<tr><td colspan="9"><x-ui.empty-state title="Produk tidak ditemukan" description="Tambahkan produk baru atau ubah pilihan filter." /></td></tr>@endforelse</tbody>
                 </table></div>
             @endif

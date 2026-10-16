@@ -18,7 +18,7 @@ class ActivityLog extends Model
 
     public const RESULTS = ['success' => 'Berhasil', 'failed' => 'Gagal', 'denied' => 'Ditolak'];
 
-    public const MODULES = ['dashboard' => 'Dashboard', 'products' => 'Stok & Produk', 'distributors' => 'Distributor', 'returns' => 'Retur Produk', 'pos' => 'Kasir / POS', 'transactions' => 'Histori Transaksi', 'reports' => 'Laporan & Riset', 'finance' => 'Laporan Keuangan', 'research' => 'Riset Kompetitor', 'users' => 'Pengguna', 'profile' => 'Pengaturan', 'activity-logs' => 'Log Aktivitas', 'auth' => 'Autentikasi', 'other' => 'Lainnya'];
+    public const MODULES = ['dashboard' => 'Dashboard', 'products' => 'Stok & Produk', 'distributors' => 'Distributor', 'returns' => 'Retur Produk', 'pos' => 'Kasir / POS', 'transactions' => 'Histori Transaksi', 'reports' => 'Laporan & Riset', 'finance' => 'Laporan Keuangan', 'research' => 'Riset Kompetitor', 'users' => 'Pengguna', 'profile' => 'Pengaturan', 'business' => 'Identitas Usaha', 'activity-logs' => 'Log Aktivitas', 'auth' => 'Autentikasi', 'other' => 'Lainnya'];
 
     protected function casts(): array
     {

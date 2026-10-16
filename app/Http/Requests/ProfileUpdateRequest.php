@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\User;
+use App\Services\ImageStorageService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -38,6 +39,8 @@ class ProfileUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'avatar' => ImageStorageService::rules(),
+            'remove_avatar' => ['sometimes', 'boolean'],
             'name' => ['required', 'string', 'max:255'],
             'email' => [
                 'required',

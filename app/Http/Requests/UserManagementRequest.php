@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\User;
+use App\Services\ImageStorageService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -30,6 +31,8 @@ class UserManagementRequest extends FormRequest
         $user = $this->route('user');
 
         return [
+            'avatar' => ImageStorageService::rules(),
+            'remove_avatar' => ['sometimes', 'boolean'],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique(User::class)->ignore($user)],
             'role' => ['required', 'string', Rule::in(['admin', 'staff'])],

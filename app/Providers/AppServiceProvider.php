@@ -4,12 +4,14 @@ namespace App\Providers;
 
 use App\Models\User;
 use App\Services\ActivityRecorder;
+use App\Services\ImageStorageService;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Database\Events\TransactionCommitted;
 use Illuminate\Database\Events\TransactionRolledBack;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -29,6 +31,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Gate::define('manage-business', fn (User $user): bool => $user->role === 'admin');
+        User::deleted(function (User $user): void {
+            DB::afterCommit(fn () => app(ImageStorageService::class)->delete($user->avatar_path));
+        });
         Gate::define('manage-users', fn (User $user): bool => $user->role === 'admin');
         Gate::define('view-activity-logs', fn (User $user): bool => $user->role === 'admin');
         Event::listen(['eloquent.created: App\\Models\\*', 'eloquent.updated: App\\Models\\*', 'eloquent.deleted: App\\Models\\*', 'eloquent.restored: App\\Models\\*'], function (string $event, array $models): void {

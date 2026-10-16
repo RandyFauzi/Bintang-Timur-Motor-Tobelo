@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\BusinessSettingController;
 use App\Http\Controllers\CompetitorObservationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DistributorController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReportLookupController;
 use App\Http\Controllers\TransactionHistoryController;
+use App\Http\Controllers\UserAvatarController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -61,6 +63,10 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/activity-logs/export', [ActivityLogController::class, 'export'])->name('activity-logs.export');
     Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
+
+    Route::get('/users/{user}/avatar', UserAvatarController::class)->name('users.avatar');
+    Route::patch('/settings/business', [BusinessSettingController::class, 'update'])->name('business.update');
+    Route::get('/settings/business/logo', [BusinessSettingController::class, 'logo'])->name('business.logo');
 
     // Users Management
     Route::get('/users/export', [UserController::class, 'export'])->name('users.export');

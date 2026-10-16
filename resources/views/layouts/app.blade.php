@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="theme-color" content="#171a17">
-        <title>{{ request()->routeIs('dashboard') ? 'Dashboard · ' : '' }}{{ config('app.name', 'Bintang Timur Motor') }}</title>
+        <title>{{ request()->routeIs('dashboard') ? 'Dashboard · ' : '' }}{{ \App\Models\BusinessSetting::current()->business_name }}</title>
         <link rel="icon" type="image/svg+xml" href="{{ Vite::asset('resources/images/brand/logo.svg') }}">
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
@@ -16,8 +16,8 @@
         <div class="app-content">
             <header class="mobile-header" :inert="isMobile && mobileMenuOpen">
                 <button type="button" x-ref="menuTrigger" class="mobile-menu-trigger" @click="openMobileMenu()" :aria-expanded="mobileMenuOpen" aria-controls="app-sidebar" aria-label="Buka navigasi"><span aria-hidden="true">☰</span></button>
-                <a href="{{ route('dashboard') }}" class="text-sm font-medium">Bintang Timur</a>
-                <x-ui.icon name="logo" :size="24" />
+                <a href="{{ route('dashboard') }}" class="text-sm font-medium">{{ \App\Models\BusinessSetting::current()->business_name }}</a>
+                <x-ui.business-logo :size="24" />
             </header>
             <main id="main-content" class="app-main" tabindex="-1" :inert="isMobile && mobileMenuOpen">
                 @if ($errors->any())

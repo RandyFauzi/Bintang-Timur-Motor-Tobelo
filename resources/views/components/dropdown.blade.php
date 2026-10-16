@@ -1,4 +1,4 @@
-@props(['align' => 'right', 'width' => '48', 'contentClasses' => 'py-1 bg-white'])
+@props(['align' => 'right', 'width' => '48', 'contentClasses' => 'py-1 bg-white', 'portal' => false])
 
 @php
 $alignmentClasses = match ($align) {
@@ -13,12 +13,13 @@ $width = match ($width) {
 };
 @endphp
 
-<div class="relative" x-data="{ open: false }" @click.outside="open = false" @close.stop="open = false" @keydown.escape.stop="open = false; $refs.trigger.querySelector('button, a')?.focus()">
-    <div x-ref="trigger" @click="open = ! open">
+<div class="relative" x-data="{ open: false, panelPosition: {}, toggle() { if (this.open) { this.open = false; return; } const bounds = this.$refs.trigger.getBoundingClientRect(); this.panelPosition = { position: 'fixed', left: Math.max(8, Math.min(bounds.right - 192, window.innerWidth - 200)) + 'px', top: (bounds.bottom + 120 > window.innerHeight ? Math.max(8, bounds.top - 104) : bounds.bottom) + 'px' }; this.open = true; } }" @click.outside="open = false" @close.stop="open = false" @keydown.escape.stop="open = false; $refs.trigger.querySelector('button, a')?.focus()">
+    <div x-ref="trigger" @click="toggle()">
         {{ $trigger }}
     </div>
 
-    <div x-show="open"
+    @if($portal)<template x-teleport="body">@endif
+    <div x-show="open" @if($portal) :style="panelPosition" @click.outside="if (!$refs.trigger.contains($event.target)) open = false" @keydown.escape.window="if (open) { open = false; $refs.trigger.querySelector('button, a')?.focus(); }" @resize.window="open = false" @scroll.window.capture="open = false" @endif
             x-transition:enter="transition ease-out duration-200"
             x-transition:enter-start="opacity-0 scale-95"
             x-transition:enter-end="opacity-100 scale-100"
@@ -32,4 +33,5 @@ $width = match ($width) {
             {{ $content }}
         </div>
     </div>
+    @if($portal)</template>@endif
 </div>
