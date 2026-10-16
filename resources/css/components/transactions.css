@@ -4,8 +4,10 @@
     .history-summary .stat-card { border-radius: 0; border: 0; border-right: 1px solid var(--color-border); box-shadow: none; }
     .history-summary .stat-card:first-child .stat-card__icon { width: 175px; height: 175px; top: -10px; right: -12px; }
     .history-summary .stat-card:first-child { padding-right: 100px; }
-    .history-filters .filter-trigger, .history-filters .filter-select-label { min-height: 40px; background: var(--color-surface); }
-    .history-filters .filter-select { max-width: 220px; }
+    .history-filters .filter-trigger, .history-filters .filter-select-label { width: 180px; height: 40px; min-height: 40px; gap: 8px; border-radius: 12px; background: var(--color-surface); padding: 0 12px; color: var(--color-text); font-family: inherit; font-size: 12px; font-weight: 400; line-height: 20px; }
+    .history-filters .filter-trigger > span { flex: 1; text-align: left; }
+    .history-filters .ui-icon { flex-shrink: 0; }
+    .history-filters .filter-select { flex: 1; width: 100%; min-width: 0; height: 38px; min-height: 0; padding: 0 24px 0 0; background-position: right center; background-size: 14px 14px; color: inherit; font-family: inherit; font-size: 12px; font-weight: 400; line-height: 20px; }
     .history-status { display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--color-border-strong); border-radius: 999px; padding: 8px 12px; font-size: 12px; white-space: nowrap; }
     .history-status--completed, .history-status--paid { border-color: #8dbf4a; color: var(--color-success); background: #f4f8ed; }
     .history-status--cancelled { border-color: #e57c7c; color: var(--color-danger); background: #fff3f3; }
@@ -24,6 +26,8 @@
     .invoice-table td { border-bottom: 1px solid var(--color-border); padding: 16px 12px; }
     .correction-item { border: 1px solid var(--color-border); border-radius: 16px; padding: 16px; box-shadow: var(--shadow-card); }
     @media(max-width: 767px) {
+        .history-filters .filter-trigger, .history-filters .filter-select-label { height: 44px; min-height: 44px; }
+        .history-filters .filter-select { height: 42px; }
         .history-summary { grid-template-columns: 1fr; }
         .history-summary .stat-card { border-bottom: 1px solid var(--color-border); }
         .invoice-surface, .invoice-content { padding: 16px; }
