@@ -14,7 +14,7 @@
                     @endforeach
                 </nav>
                 @if(request()->filled('kind'))<input type="hidden" name="kind" value="{{ request('kind') }}">@endif
-                <div class="catalogue-filters">
+                <div class="catalogue-filters catalogue-filters--scroll" role="region" aria-label="Filter produk, geser untuk melihat pilihan lainnya" tabindex="0">
                     <x-ui.multiselect name="color_ids" label="Semua Warna" :options="$colors" />
                     <x-ui.multiselect name="type_ids" label="Semua Part" :options="$types" />
                     <x-ui.multiselect name="brand_ids" label="Semua Merk" :options="$brands" />
