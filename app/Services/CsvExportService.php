@@ -15,6 +15,7 @@ class CsvExportService
         return response()->streamDownload(function () use ($headers, $rows): void {
             $output = fopen('php://output', 'w');
             fwrite($output, "\xEF\xBB\xBF");
+            fwrite($output, "sep=,\r\n");
             fputcsv($output, $headers, ',', '"', '');
             foreach ($rows as $row) {
                 $safe = array_map(fn (mixed $value): string => is_string($value) && preg_match('/^[=+@\\t\\r-]/', $value) ? "'".$value : (string) $value, $row);
