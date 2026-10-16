@@ -11,7 +11,7 @@
                 <x-ui.catalogue-toolbar export-route="returns.export" create-label="Tambah Retur" dialog="return-create" />
                 <nav class="catalogue-tabs" aria-label="Tipe produk">@foreach([''=>'Semua Produk','daily'=>'Produk Harian','non_daily'=>'Produk Non Harian'] as $kind=>$label)<a href="{{ request()->fullUrlWithQuery(['kind'=>$kind ?: null, 'page'=>1,'edit'=>null,'mode'=>null,'create'=>null]) }}" @class(['catalogue-tab','is-active'=>request('kind','') === $kind]) @if(request('kind','') === $kind) aria-current="page" @endif>{{ $label }}</a>@endforeach</nav>
                 @if(request()->filled('kind'))<input type="hidden" name="kind" value="{{ request('kind') }}">@endif
-                <div class="catalogue-filters">
+                <div class="catalogue-filters catalogue-filters--scroll" role="region" aria-label="Filter retur produk, geser untuk melihat pilihan lainnya" tabindex="0">
                     <x-ui.multiselect name="color_ids" label="Semua Warna" :options="$colors" icon="color" />
                     <label class="return-note-filter"><span class="sr-only">Status Nota</span><x-ui.icon name="note" :size="16" /><select name="note_status" onchange="this.form.requestSubmit()"><option value="">Semua Status Nota</option><option value="pending" @selected(request('note_status') === 'pending')>Belum Dikurangi</option><option value="credited" @selected(request('note_status') === 'credited')>Sudah Dikurangi</option></select></label>
                     <x-ui.multiselect name="brand_ids" label="Semua Merk" :options="$brands" icon="barcode" />
