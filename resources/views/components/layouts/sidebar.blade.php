@@ -12,7 +12,8 @@
             ['label' => 'Histori Transaksi', 'icon' => 'history', 'route' => 'transactions.index', 'active' => 'transactions.*'],
         ]],
         ['label' => 'Laporan & Analisa', 'items' => [
-            ['label' => 'Laporan', 'icon' => 'chart', 'route' => 'reports.index', 'active' => 'reports.*'],
+            ['label' => 'Laporan', 'icon' => 'report', 'route' => 'reports.finance', 'active' => 'reports.finance'],
+            ['label' => 'Riset Kompetitor', 'icon' => 'chart', 'route' => 'reports.index', 'active' => 'reports.index', 'create' => true],
         ]],
         ['label' => 'Admin Panel', 'items' => [
             ['label' => 'Pengguna', 'icon' => 'user', 'route' => 'users.index', 'active' => 'users.*'],
@@ -46,10 +47,15 @@
                     @foreach ($group['items'] as $item)
                         @continue(($item['route'] ?? null) === 'users.index' && !auth()->user()->can('manage-users'))
                         @if ($item['route'])
-                            <a href="{{ route($item['route']) }}" @class(['sidebar-link', 'sidebar-link--active' => request()->routeIs($item['active'])]) @if(request()->routeIs($item['active'])) aria-current="page" @endif title="{{ $item['label'] }}">
-                                <x-ui.icon :name="$item['icon']" />
-                                <span x-show="!collapsed || isMobile">{{ $item['label'] }}</span>
-                            </a>
+                            <div class="sidebar-item">
+                                <a href="{{ route($item['route']) }}" @class(['sidebar-link', 'sidebar-link--with-action' => $item['create'] ?? false, 'sidebar-link--active' => request()->routeIs($item['active'])]) @if(request()->routeIs($item['active'])) aria-current="page" @endif title="{{ $item['label'] }}">
+                                    <x-ui.icon :name="$item['icon']" />
+                                    <span x-show="!collapsed || isMobile">{{ $item['label'] }}</span>
+                                </a>
+                                @if($item['create'] ?? false)
+                                    <a href="{{ route($item['route'], ['create' => 1]) }}" class="sidebar-create" x-show="!collapsed || isMobile" aria-label="Catat pengerjaan kompetitor" title="Catat pengerjaan kompetitor"><x-ui.icon name="sidebar-add" :size="18" /></a>
+                                @endif
+                            </div>
                         @else
                             <button type="button" class="sidebar-link sidebar-link--upcoming" title="{{ $item['label'] }} — segera tersedia" @click="$dispatch('notify', { message: '{{ $item['label'] }} belum tersedia. Modul ini akan ditambahkan pada tahap berikutnya.', type: 'info' })">
                                 <x-ui.icon :name="$item['icon']" />

@@ -16,7 +16,7 @@
                     <label class="return-note-filter"><span class="sr-only">Status Nota</span><x-ui.icon name="note" :size="16" /><select name="note_status" onchange="this.form.requestSubmit()"><option value="">Semua Status Nota</option><option value="pending" @selected(request('note_status') === 'pending')>Belum Dikurangi</option><option value="credited" @selected(request('note_status') === 'credited')>Sudah Dikurangi</option></select></label>
                     <x-ui.multiselect name="brand_ids" label="Semua Merk" :options="$brands" icon="barcode" />
                     <x-ui.multiselect name="distributor_ids" label="Semua Distributor" :options="$distributors" icon="workshop" />
-                    <x-ui.multiselect name="type_ids" label="Semua Part" :options="$types" icon="part" />
+                    <x-ui.multiselect name="type_ids" label="Semua Part" :options="$types" />
                     <label class="return-note-filter"><span class="sr-only">Status Retur</span><select name="status" onchange="this.form.requestSubmit()">@foreach(['active'=>'Retur Aktif','cancelled'=>'Sudah Dibatalkan','all'=>'Semua Riwayat'] as $value=>$label)<option value="{{ $value }}" @selected(request('status','active') === $value)>{{ $label }}</option>@endforeach</select></label>
                     @if(count(request()->except(['view','page','edit','mode','create'])) > 0)<a href="{{ route('returns.index',['view'=>request('view','list')]) }}" class="filter-reset">Reset filter</a>@endif
                 </div>

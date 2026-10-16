@@ -11,7 +11,7 @@
         $chartQuery = ['start_date'=>$range['start'],'end_date'=>$range['end']] + \Illuminate\Support\Arr::except($reportFilters,['page','edit','create']);
     @endphp
     <div class="catalogue-page" x-data="observationForm(@js($initialObservation), @js($workTypes->map->only(['id','name'])->values()), @js($workshops->map->only(['id','name'])->values()), @js($lookupEndpoints))">
-        <header class="catalogue-heading"><div><h1>Laporan</h1><a href="{{ route('reports.finance') }}" class="finance-link">Lihat laporan keuangan <span aria-hidden="true">↗</span></a></div><x-ui.date-range-filter :range="$range" :preserve="$preservedFilters" label="Periode laporan" compact /></header>
+        <header class="catalogue-heading"><div><h1>Riset Kompetitor</h1><a href="{{ route('reports.finance') }}" class="finance-link">Lihat laporan keuangan <span aria-hidden="true">↗</span></a></div><x-ui.date-range-filter :range="$range" :preserve="$preservedFilters" label="Periode riset kompetitor" compact /></header>
         <div class="catalogue-summary catalogue-summary--equal">
             <div class="catalogue-summary__metric"><span class="text-sm text-muted">Total pengerjaan</span><strong>{{ number_format($totalWork,0,',','.') }}</strong><span class="text-xs text-muted">Jumlah seluruh aktivitas sesuai filter</span><x-ui.icon name="stock-box" /></div>
             <div class="catalogue-summary__metric"><span class="text-sm text-muted">Bengkel dipantau</span><strong>{{ $workshopCount }}</strong><span class="text-xs text-muted">Bengkel dengan data pada periode ini</span><x-ui.icon name="workshop" /></div>

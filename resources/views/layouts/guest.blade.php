@@ -8,7 +8,7 @@
         <title>{{ config('app.name', 'Laravel') }}</title>
 
         <!-- Favicon -->
-        <link rel="icon" type="image/webp" href="{{ asset('Logo.webp') }}">
+        <link rel="icon" type="image/svg+xml" href="{{ Vite::asset('resources/images/brand/logo.svg') }}">
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">

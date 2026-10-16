@@ -56,6 +56,10 @@
     .sidebar-group__label { padding: 0 4px 8px; color: #a8ada5; font-size: 14px; font-weight: 500; }
     .sidebar-link { position: relative; display: flex; min-height: 44px; width: 100%; align-items: center; gap: 12px; border-radius: 12px; padding: 10px 12px; text-align: left; white-space: nowrap; transition: background .15s; }
     .sidebar-link:hover, .sidebar-link--active { background: #252925; }
+    .sidebar-item { position: relative; }
+    .sidebar-link--with-action { padding-right: 42px; }
+    .sidebar-create { position: absolute; right: 6px; top: 7px; display: grid; width: 30px; height: 30px; place-items: center; border-radius: 6px; }
+    .sidebar-create:hover { background: #383d38; }
     .sidebar-link--active::before { position: absolute; inset: 10px auto 10px 0; width: 1px; background: #d4d8d0; content: ''; }
     .sidebar-coming { display: grid; width: 18px; height: 18px; margin-left: auto; place-items: center; border-radius: 4px; background: #252925; color: #a8ada5; font-size: 16px; }
     .sidebar-footer { flex-shrink: 0; padding: 16px; }
@@ -74,6 +78,7 @@
     .app-sidebar--collapsed .sidebar-brand { flex-direction: column; height: 100px; padding: 18px 8px 10px; }
     .app-sidebar--collapsed .sidebar-navigation { gap: 24px; padding: 12px; }
     .app-sidebar--collapsed .sidebar-link { justify-content: center; }
+    .app-sidebar--collapsed .sidebar-link--with-action { padding-right: 12px; }
     .app-sidebar--collapsed .sidebar-footer { padding: 12px; }
     .app-sidebar--collapsed .sidebar-profile { flex-direction: column; gap: 4px; border-radius: 12px; padding: 12px 4px; }
     .mobile-header { display: none; }
@@ -172,6 +177,7 @@
     .app-sidebar--collapsed .sidebar-brand { flex-direction: row; height: 72px; padding: 20px; }
     .app-sidebar--collapsed .sidebar-navigation { gap: 32px; padding: 24px 16px; }
     .app-sidebar--collapsed .sidebar-link { justify-content: flex-start; }
+    .app-sidebar--collapsed .sidebar-link--with-action { padding-right: 42px; }
     .app-sidebar--collapsed .sidebar-footer { padding: 16px; }
     .app-sidebar--collapsed .sidebar-profile { flex-direction: row; gap: 12px; border-radius: 0 0 12px 12px; padding: 16px; }
     .sidebar-navigation { gap: 32px; }

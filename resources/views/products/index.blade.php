@@ -16,10 +16,10 @@
                 @if(request()->filled('kind'))<input type="hidden" name="kind" value="{{ request('kind') }}">@endif
                 <div class="catalogue-filters">
                     <x-ui.multiselect name="color_ids" label="Semua Warna" :options="$colors" />
-                    <x-ui.multiselect name="type_ids" label="Semua Jenis Part" :options="$types" />
+                    <x-ui.multiselect name="type_ids" label="Semua Part" :options="$types" />
                     <x-ui.multiselect name="brand_ids" label="Semua Merk" :options="$brands" />
                     <x-ui.multiselect name="distributor_ids" label="Semua Distributor" :options="$distributors" icon="workshop" />
-                    <label class="filter-check"><input type="checkbox" name="low_stock" value="1" @checked(request()->boolean('low_stock')) onchange="this.form.requestSubmit()"> Stok menipis</label>
+                    <label class="filter-select-label"><x-ui.icon name="filter-stock" :size="16" /><span class="sr-only">Kondisi stok</span><select name="low_stock" class="filter-select" onchange="this.form.requestSubmit()"><option value="">Semua Stok</option><option value="1" @selected(request()->boolean('low_stock'))>Stok Menipis</option></select></label>
                     @if(count(request()->except(['view','page','edit','create'])) > 0)<a href="{{ route('products.index',['view'=>request('view','list')]) }}" class="filter-reset">Reset filter</a>@endif
                 </div>
             </form>
