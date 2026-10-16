@@ -51,6 +51,6 @@
     @media (max-width: 639px) {
         .pos-products { grid-template-columns: 1fr; gap: 16px; padding: 12px; }
         .pos-product { padding: 20px; }
-        .ui-dialog.pos-panel:not(.pos-cart-sheet) { inset: 16px; width: calc(100vw - 32px); height: calc(100dvh - 32px); max-height: calc(100dvh - 32px); }
+        .ui-dialog.pos-panel:not(.pos-cart-sheet):not(:has(form)) { inset: 16px; width: calc(100vw - 32px); height: calc(100dvh - 32px); max-height: calc(100dvh - 32px); }
     }
 }

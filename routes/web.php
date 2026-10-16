@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DistributorController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductImportController;
 use App\Http\Controllers\ProductReturnController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
@@ -22,6 +23,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Products
+    Route::get('products/import/template', [ProductImportController::class, 'template'])->name('products.import.template');
+    Route::post('products/import', [ProductImportController::class, 'store'])->middleware('throttle:10,1')->name('products.import');
     Route::get('products/export', [ProductController::class, 'export'])->name('products.export');
     Route::resource('products', ProductController::class);
 
