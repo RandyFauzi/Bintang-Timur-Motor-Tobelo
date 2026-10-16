@@ -37,8 +37,13 @@ export function multiSelect(options, selected, label, submitOnApply = true) {
             if (this.open) {
                 this.draft = [...this.selected];
                 this.search = '';
-                this.$nextTick(() => this.$refs.search.focus());
+                this.$nextTick(() => this.$refs.search?.focus());
             }
+        },
+        close() {
+            this.draft = [...this.selected];
+            this.open = false;
+            this.$nextTick(() => this.$refs.trigger?.focus());
         },
         selectAll(checked) {
             const ids = this.filtered.map((item) => item.id);

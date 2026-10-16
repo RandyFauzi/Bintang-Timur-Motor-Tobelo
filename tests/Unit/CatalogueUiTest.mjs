@@ -46,6 +46,19 @@ test('reopening a cancelled filter restores applied choices', () => {
     assert.deepEqual(filter.draft, ['1']);
 });
 
+test('closing a filter cancels draft changes and closes popup', () => {
+    const filter = multiSelect(options, ['1'], 'Semua');
+    let focused = false;
+    filter.$refs = { trigger: { focus() { focused = true; } } };
+    filter.$nextTick = (callback) => callback();
+    filter.open = true;
+    filter.draft = ['2'];
+    filter.close();
+    assert.equal(filter.open, false);
+    assert.deepEqual(filter.draft, ['1']);
+    assert.equal(focused, true);
+});
+
 test('observation quantities preserve selected work and prevent duplicate types', () => {
     const form = observationForm({ items: [{ work_type_id: 1, quantity: '3' }] }, options, [], {});
     form.toggleType(1, true);
