@@ -171,3 +171,26 @@ test('viewport listeners follow keyboard resizing and are removed when a filter 
         else globalThis.window = originalWindow;
     }
 });
+
+test('mobile form opens within the visible viewport without scrolling to a text field', () => {
+    const previousWindow = globalThis.window;
+    try {
+        globalThis.window = { innerWidth: 390, innerHeight: 800, visualViewport: { width: 390, height: 500, offsetLeft: 0, offsetTop: 0 } };
+        const values = {};
+        let focused;
+        const dialog = appDialog();
+        dialog.$el = { open: false, scrollLeft: 80, scrollTop: 150,
+            style: { setProperty(key, value) { values[key] = value; } },
+            showModal() { this.open = true; },
+            querySelector(selector) { return selector === '.dialog-close' ? { focus(options) { focused = options; } } : null; },
+        };
+        dialog.$nextTick = (callback) => callback();
+        dialog.open();
+        assert.equal(values['--sheet-width'], '390px');
+        assert.equal(values['--sheet-height'], '488px');
+        assert.equal(values['--sheet-bottom'], '300px');
+        assert.equal(dialog.$el.scrollLeft, 0);
+        assert.equal(dialog.$el.scrollTop, 0);
+        assert.deepEqual(focused, { preventScroll: true });
+    } finally { globalThis.window = previousWindow; }
+});

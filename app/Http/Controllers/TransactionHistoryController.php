@@ -86,7 +86,7 @@ class TransactionHistoryController extends Controller
                 'HISTORI TRANSAKSI KASIR',
                 $headers,
                 $rows,
-                'Laporan Penjualan & Pembayaran Konsumen Bintang Timur Motor'
+                'Laporan Penjualan & Pembayaran Konsumen'
             );
         }
 

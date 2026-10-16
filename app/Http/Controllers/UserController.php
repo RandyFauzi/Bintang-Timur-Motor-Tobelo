@@ -55,7 +55,7 @@ class UserController extends Controller
                 'DAFTAR PENGGUNA & HAK AKSES',
                 $headers,
                 $rows,
-                'Manajemen Akun Karyawan & Kasir Bintang Timur Motor'
+                'Manajemen Akun Karyawan & Kasir'
             );
         }
 

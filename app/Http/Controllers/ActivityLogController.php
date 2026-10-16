@@ -57,7 +57,7 @@ class ActivityLogController extends Controller
                 'AUDIT LOG AKTIVITAS SISTEM',
                 $headers,
                 $rows,
-                'Catatan Jejak Operasional & Keamanan Bintang Timur Motor'
+                'Catatan Jejak Operasional & Keamanan'
             );
         }
 

@@ -1,14 +1,41 @@
 export function appDialog(initiallyOpen = false) {
     return {
         submitting: false,
-        init() { if (initiallyOpen) this.$nextTick(() => this.open()); },
+        init() {
+            this.viewport = globalThis.window?.visualViewport;
+            this.viewportListener = () => { if (this.$el.open) this.positionSheet(); };
+            this.viewport?.addEventListener('resize', this.viewportListener);
+            this.viewport?.addEventListener('scroll', this.viewportListener);
+            globalThis.window?.addEventListener('resize', this.viewportListener);
+            if (initiallyOpen) this.$nextTick(() => this.open());
+        },
+        destroy() {
+            this.viewport?.removeEventListener('resize', this.viewportListener);
+            this.viewport?.removeEventListener('scroll', this.viewportListener);
+            globalThis.window?.removeEventListener('resize', this.viewportListener);
+        },
+        positionSheet() {
+            const view = globalThis.window?.visualViewport;
+            const width = view?.width ?? globalThis.window?.innerWidth;
+            const height = view?.height ?? globalThis.window?.innerHeight;
+            if (!width || !height) return;
+            this.$el.style.setProperty('--sheet-left', `${view?.offsetLeft ?? 0}px`);
+            this.$el.style.setProperty('--sheet-width', `${width}px`);
+            this.$el.style.setProperty('--sheet-height', `${Math.max(0, height - 12)}px`);
+            this.$el.style.setProperty('--sheet-bottom', `${Math.max(0, (globalThis.window?.innerHeight ?? height) - (view?.offsetTop ?? 0) - height)}px`);
+        },
         open() {
             this.submitting = false;
+            this.positionSheet();
             if (!this.$el.open) this.$el.showModal();
+            this.$el.scrollLeft = 0;
+            this.$el.scrollTop = 0;
             this.$nextTick(() => {
-                const field = this.$el.querySelector('[aria-invalid="true"]')
-                    ?? this.$el.querySelector('input:not([type="hidden"]), select, textarea');
-                field?.focus();
+                const field = this.$el.querySelector('[aria-invalid="true"]:not(:disabled)')
+                    ?? (globalThis.window?.innerWidth <= 767 ? this.$el.querySelector('.dialog-close') : null)
+                    ?? this.$el.querySelector('input:not([type="hidden"]):not(:disabled), select:not(:disabled), textarea:not(:disabled)');
+                field?.focus({ preventScroll: true });
+                this.$el.scrollLeft = 0;
             });
         },
         backdrop(event) {

@@ -114,7 +114,7 @@ class ProductReturnController extends Controller
                 'LAPORAN RETUR PRODUK',
                 $headers,
                 $rows,
-                'Catatan Pengembalian Barang & Penyesuaian Nota Bintang Timur Motor'
+                'Catatan Pengembalian Barang & Penyesuaian Nota'
             );
         }
 

@@ -82,7 +82,7 @@ class ProductController extends Controller
                 'DAFTAR PRODUK & STOK BENGKEL',
                 $headers,
                 $rows,
-                'Katalog Suku Cadang & Inventaris Toko Bintang Timur Motor'
+                'Katalog Suku Cadang & Inventaris Toko'
             );
         }
 

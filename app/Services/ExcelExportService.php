@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\BusinessSetting;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use ZipArchive;
 
@@ -21,17 +23,19 @@ class ExcelExportService
         array $meta = []
     ): StreamedResponse {
         return response()->streamDownload(function () use ($title, $headers, $rows, $subtitle, $meta): void {
+            $logo = $this->brandImage();
             $tempFile = tempnam(sys_get_temp_dir(), 'bintang_xlsx_');
             $zip = new ZipArchive;
             $zip->open($tempFile, ZipArchive::CREATE | ZipArchive::OVERWRITE);
 
-            $zip->addFromString('[Content_Types].xml', $this->getContentTypesXml());
+            $zip->addFromString('[Content_Types].xml', $this->getContentTypesXml($logo['extension'], $logo['mime']));
             $zip->addFromString('_rels/.rels', $this->getRootRelsXml());
             $zip->addFromString('xl/_rels/workbook.xml.rels', $this->getWorkbookRelsXml());
             $zip->addFromString('xl/workbook.xml', $this->getWorkbookXml());
             $zip->addFromString('xl/styles.xml', $this->getStylesXml());
             $zip->addFromString('xl/worksheets/sheet1.xml', $this->getSheetXml($title, $headers, $rows, $subtitle, $meta));
 
+            $this->embedLogo($zip, $logo);
             $zip->close();
 
             $handle = fopen($tempFile, 'rb');
@@ -44,7 +48,38 @@ class ExcelExportService
         ]);
     }
 
-    private function getContentTypesXml(): string
+    /** @return array{data: string, extension: string, mime: string, width: int, height: int} */
+    private function brandImage(): array
+    {
+        $business = BusinessSetting::current();
+        $data = $business->logo_path && Storage::disk('local')->exists($business->logo_path)
+            ? Storage::disk('local')->get($business->logo_path)
+            : file_get_contents(resource_path('images/brand/logo.svg'));
+        $size = @getimagesizefromstring($data);
+        $mime = $size['mime'] ?? 'image/svg+xml';
+        $extension = match ($mime) {
+            'image/png' => 'png', 'image/jpeg' => 'jpg', 'image/webp' => 'webp', default => 'svg',
+        };
+        $width = $size[0] ?? 48;
+        $height = $size[1] ?? 48;
+        $scale = 40 / max($width, $height, 1);
+
+        return ['data' => $data, 'extension' => $extension, 'mime' => $mime, 'width' => (int) round($width * $scale * 9525), 'height' => (int) round($height * $scale * 9525)];
+    }
+
+    /** @param array{data: string, extension: string, mime: string, width: int, height: int} $logo */
+    private function embedLogo(ZipArchive $zip, array $logo): void
+    {
+        $zip->addFromString('xl/media/business-logo.'.$logo['extension'], $logo['data']);
+        $zip->addFromString('xl/worksheets/_rels/sheet1.xml.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdBrand" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>');
+        $zip->addFromString('xl/drawings/_rels/drawing1.xml.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdLogo" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/business-logo.'.$logo['extension'].'"/></Relationships>');
+        $zip->addFromString('xl/drawings/drawing1.xml', '<?xml version="1.0" encoding="UTF-8"?>'
+            .'<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+            .'<xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:colOff>114300</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>114300</xdr:rowOff></xdr:from><xdr:ext cx="'.$logo['width'].'" cy="'.$logo['height'].'"/>'
+            .'<xdr:pic><xdr:nvPicPr><xdr:cNvPr id="1" name="Logo Usaha"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rIdLogo"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'.$logo['width'].'" cy="'.$logo['height'].'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>');
+    }
+
+    private function getContentTypesXml(string $extension, string $mime): string
     {
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             .'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
@@ -53,6 +88,8 @@ class ExcelExportService
             .'<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
             .'<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
             .'<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+            .'<Default Extension="'.$extension.'" ContentType="'.$mime.'"/>'
+            .'<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>'
             .'</Types>';
     }
 
@@ -227,9 +264,10 @@ class ExcelExportService
         $mergedRows = [];
 
         // Row 1: Company Header
-        $xml .= '<row r="'.$currentRow.'" ht="36" customHeight="1">';
-        $xml .= '<c r="A'.$currentRow.'" s="1" t="inlineStr"><is><t>BINTANG TIMUR MOTOR TOBELO</t></is></c>';
-        for ($c = 2; $c <= $colCount; $c++) {
+        $xml .= '<row r="'.$currentRow.'" ht="48" customHeight="1">';
+        $xml .= '<c r="A'.$currentRow.'" s="1"/>';
+        $xml .= '<c r="B'.$currentRow.'" s="1" t="inlineStr"><is><t>'.htmlspecialchars(BusinessSetting::current()->business_name, ENT_XML1).'</t></is></c>';
+        for ($c = 3; $c <= $colCount; $c++) {
             $xml .= '<c r="'.$this->getColumnLetter($c).$currentRow.'" s="1"/>';
         }
         $xml .= '</row>';
@@ -362,11 +400,12 @@ class ExcelExportService
         if (! empty($mergedRows)) {
             $xml .= '<mergeCells count="'.count($mergedRows).'">';
             foreach ($mergedRows as $mRow) {
-                $xml .= '<mergeCell ref="A'.$mRow.':'.$lastColLetter.$mRow.'"/>';
+                $xml .= '<mergeCell ref="'.($mRow === 1 ? 'B' : 'A').$mRow.':'.$lastColLetter.$mRow.'"/>';
             }
             $xml .= '</mergeCells>';
         }
 
+        $xml .= '<drawing xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rIdBrand"/>';
         $xml .= '</worksheet>';
 
         return $xml;

@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\BusinessSetting;
 use App\Models\Distributor;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -43,7 +45,7 @@ class ExcelExportTest extends TestCase
         $this->assertNotFalse($zip->locateName('xl/workbook.xml'));
 
         $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
-        $this->assertStringContainsString('BINTANG TIMUR MOTOR TOBELO', $sheetXml);
+        $this->assertStringContainsString('Bintang Timur', $sheetXml);
         $this->assertStringContainsString('DAFTAR PRODUK &amp; STOK BENGKEL', $sheetXml);
         $this->assertStringContainsString('Oli Enduro Racing', $sheetXml);
         $this->assertStringContainsString('45000', $sheetXml);
@@ -51,6 +53,29 @@ class ExcelExportTest extends TestCase
 
         $zip->close();
         @unlink($tempPath);
+    }
+
+    public function test_export_embeds_the_configured_business_logo_and_escapes_its_name(): void
+    {
+        Storage::fake('local');
+        $image = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6eZ8AAAAASUVORK5CYII=');
+        Storage::disk('local')->put('branding/logos/test.png', $image);
+        BusinessSetting::factory()->create(['business_name' => 'Toko & Motor', 'logo_path' => 'branding/logos/test.png']);
+        $response = $this->actingAs(User::factory()->create())->get(route('products.export', ['format' => 'xlsx']));
+        $path = tempnam(sys_get_temp_dir(), 'branded_export_');
+        try {
+            file_put_contents($path, $response->streamedContent());
+            $zip = new ZipArchive;
+            $zip->open($path);
+            $this->assertSame($image, $zip->getFromName('xl/media/business-logo.png'));
+            $this->assertStringContainsString('Toko &amp; Motor', $zip->getFromName('xl/worksheets/sheet1.xml'));
+            $this->assertStringContainsString('rIdBrand', $zip->getFromName('xl/worksheets/sheet1.xml'));
+            $this->assertStringContainsString('../media/business-logo.png', $zip->getFromName('xl/drawings/_rels/drawing1.xml.rels'));
+            $this->assertStringContainsString('rIdLogo', $zip->getFromName('xl/drawings/drawing1.xml'));
+            $zip->close();
+        } finally {
+            unlink($path);
+        }
     }
 
     public function test_transaction_export_returns_valid_xlsx(): void

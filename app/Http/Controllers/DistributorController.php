@@ -54,7 +54,7 @@ class DistributorController extends Controller
                 'DAFTAR DISTRIBUTOR & PEMASOK',
                 $headers,
                 $rows,
-                'Master Data Distributor Suku Cadang Bintang Timur Motor'
+                'Master Data Distributor Suku Cadang'
             );
         }
 

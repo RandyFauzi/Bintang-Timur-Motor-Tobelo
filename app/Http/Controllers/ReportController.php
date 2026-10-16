@@ -34,7 +34,7 @@ class ReportController extends Controller
                 'LAPORAN OBSERVASI KOMPETITOR',
                 $headers,
                 $rows,
-                'Monitoring Bengkel & Harga Pasar Sekitar Bintang Timur Motor'
+                'Monitoring Bengkel & Harga Pasar Sekitar'
             );
         }
 
