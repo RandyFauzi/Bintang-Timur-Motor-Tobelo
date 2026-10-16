@@ -6,6 +6,7 @@ use App\Http\Requests\UserFilterRequest;
 use App\Http\Requests\UserManagementRequest;
 use App\Models\User;
 use App\Services\CsvExportService;
+use App\Services\ExcelExportService;
 use App\Services\UserManagementService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
@@ -43,11 +44,22 @@ class UserController extends Controller
         return redirect()->route('users.index')->with('success', 'Pengguna berhasil diperbarui.');
     }
 
-    public function export(UserFilterRequest $request, UserManagementService $management, CsvExportService $csv): StreamedResponse
+    public function export(UserFilterRequest $request, UserManagementService $management, CsvExportService $csv, ExcelExportService $excel): StreamedResponse
     {
         $rows = $management->query($request->validated())->orderBy('id')->lazy(200)->map(fn (User $user): array => [$user->name, $user->email, $user->role === 'admin' ? 'Admin' : 'Staff Kasir', $user->created_at->format('Y-m-d H:i')]);
+        $headers = ['Nama', 'Email', 'Hak Akses', 'Tanggal Bergabung'];
 
-        return $csv->download('pengguna-'.now()->format('Ymd').'.csv', ['Nama', 'Email', 'Hak Akses', 'Tanggal Bergabung'], $rows);
+        if ($request->query('format') === 'xlsx' || $request->query('format') === 'excel') {
+            return $excel->download(
+                'pengguna-'.now()->format('Ymd').'.xlsx',
+                'DAFTAR PENGGUNA & HAK AKSES',
+                $headers,
+                $rows,
+                'Manajemen Akun Karyawan & Kasir Bintang Timur Motor'
+            );
+        }
+
+        return $csv->download('pengguna-'.now()->format('Ymd').'.csv', $headers, $rows);
     }
 
     public function destroy(User $user): RedirectResponse

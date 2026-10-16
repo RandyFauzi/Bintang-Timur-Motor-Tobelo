@@ -9,6 +9,7 @@ use App\Models\ProductReturn;
 use App\Models\ProductReturnEvent;
 use App\Services\CatalogueService;
 use App\Services\CsvExportService;
+use App\Services\ExcelExportService;
 use App\Services\ProductReturnService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -94,7 +95,7 @@ class ProductReturnController extends Controller
         return view('returns.activity', ['events' => $query->orderByDesc('id')->paginate((int) ($request->validated('per_page') ?? 15))->withQueryString()]);
     }
 
-    public function export(ProductReturnFilterRequest $request, ProductReturnService $returns, CsvExportService $csv): StreamedResponse
+    public function export(ProductReturnFilterRequest $request, ProductReturnService $returns, CsvExportService $csv, ExcelExportService $excel): StreamedResponse
     {
         $rows = $returns->query($request->validated())->orderByDesc('created_at')->orderByDesc('id')->lazy(200)
             ->map(fn (ProductReturn $record): array => [
@@ -105,7 +106,18 @@ class ProductReturnController extends Controller
                 $record->product_snapshot['brand'], $record->product_snapshot['color'], $record->product_snapshot['type'],
                 $record->product_snapshot['distributors'], $record->status,
             ]);
+        $headers = ['ID Retur', 'Tanggal', 'Produk', 'SKU', 'Status Nota', 'Jumlah Retur', 'Modal', 'Harga Jual', 'Tipe', 'Merk', 'Warna', 'Jenis Part', 'Distributor', 'Status Retur'];
 
-        return $csv->download('retur-produk-'.now()->format('Ymd').'.csv', ['ID Retur', 'Tanggal', 'Produk', 'SKU', 'Status Nota', 'Jumlah Retur', 'Modal', 'Harga Jual', 'Tipe', 'Merk', 'Warna', 'Jenis Part', 'Distributor', 'Status Retur'], $rows);
+        if ($request->query('format') === 'xlsx' || $request->query('format') === 'excel') {
+            return $excel->download(
+                'retur-produk-'.now()->format('Ymd').'.xlsx',
+                'LAPORAN RETUR PRODUK',
+                $headers,
+                $rows,
+                'Catatan Pengembalian Barang & Penyesuaian Nota Bintang Timur Motor'
+            );
+        }
+
+        return $csv->download('retur-produk-'.now()->format('Ymd').'.csv', $headers, $rows);
     }
 }

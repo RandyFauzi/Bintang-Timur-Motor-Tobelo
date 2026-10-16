@@ -11,6 +11,7 @@ use App\Models\Sale;
 use App\Models\User;
 use App\Services\CatalogueService;
 use App\Services\CsvExportService;
+use App\Services\ExcelExportService;
 use App\Services\SaleCorrectionService;
 use App\Services\TransactionHistoryService;
 use Illuminate\Http\JsonResponse;
@@ -65,7 +66,7 @@ class TransactionHistoryController extends Controller
         ])]);
     }
 
-    public function export(TransactionHistoryRequest $request, TransactionHistoryService $history, CsvExportService $csv): StreamedResponse
+    public function export(TransactionHistoryRequest $request, TransactionHistoryService $history, CsvExportService $csv, ExcelExportService $excel): StreamedResponse
     {
         $rows = $history->listing($request->validated())->lazy(200)->map(fn (Sale $sale): array => [
             $sale->invoice_number, $sale->sold_at?->format('Y-m-d H:i:s') ?? '',
@@ -74,10 +75,21 @@ class TransactionHistoryController extends Controller
             $sale->items_sum_quantity ?? 0, $sale->subtotal, $sale->discount, $sale->tax,
             $sale->grand_total, $sale->paid_amount, $sale->change_amount,
         ]);
-
-        return $csv->download('histori-transaksi-'.now()->format('Ymd-His').'.csv', [
+        $headers = [
             'Invoice', 'Tanggal', 'Pelanggan', 'Telepon', 'Kasir', 'Status Transaksi', 'Status Pembayaran',
             'Metode Pembayaran', 'Jumlah Unit', 'Subtotal', 'Diskon Transaksi', 'Pajak', 'Total', 'Uang Diterima', 'Kembalian',
-        ], $rows);
+        ];
+
+        if ($request->query('format') === 'xlsx' || $request->query('format') === 'excel') {
+            return $excel->download(
+                'histori-transaksi-'.now()->format('Ymd-His').'.xlsx',
+                'HISTORI TRANSAKSI KASIR',
+                $headers,
+                $rows,
+                'Laporan Penjualan & Pembayaran Konsumen Bintang Timur Motor'
+            );
+        }
+
+        return $csv->download('histori-transaksi-'.now()->format('Ymd-His').'.csv', $headers, $rows);
     }
 }

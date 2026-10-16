@@ -8,6 +8,7 @@ use App\Models\Distributor;
 use App\Models\Product;
 use App\Services\CatalogueService;
 use App\Services\CsvExportService;
+use App\Services\ExcelExportService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -42,10 +43,21 @@ class DistributorController extends Controller
         return redirect()->route('distributors.index')->with('success', 'Distributor berhasil diperbarui.');
     }
 
-    public function export(CatalogueFilterRequest $request, CatalogueService $catalogue, CsvExportService $csv): StreamedResponse
+    public function export(CatalogueFilterRequest $request, CatalogueService $catalogue, CsvExportService $csv, ExcelExportService $excel): StreamedResponse
     {
         $rows = $catalogue->distributorQuery($request->validated())->lazy(200)->map(fn (Distributor $distributor): array => [$distributor->name, $distributor->company_name, $distributor->phone, $distributor->email, $distributor->city, $distributor->products_count]);
+        $headers = ['Nama', 'Perusahaan', 'Telepon', 'Email', 'Kota', 'Total Produk'];
 
-        return $csv->download('distributor-'.now()->format('Ymd').'.csv', ['Nama', 'Perusahaan', 'Telepon', 'Email', 'Kota', 'Total Produk'], $rows);
+        if ($request->query('format') === 'xlsx' || $request->query('format') === 'excel') {
+            return $excel->download(
+                'distributor-'.now()->format('Ymd').'.xlsx',
+                'DAFTAR DISTRIBUTOR & PEMASOK',
+                $headers,
+                $rows,
+                'Master Data Distributor Suku Cadang Bintang Timur Motor'
+            );
+        }
+
+        return $csv->download('distributor-'.now()->format('Ymd').'.csv', $headers, $rows);
     }
 }

@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Services\CatalogueService;
 use App\Services\CsvExportService;
 use App\Services\DashboardService;
+use App\Services\ExcelExportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -52,10 +53,32 @@ class ProductController extends Controller
         return redirect()->route('products.index')->with('success', $product->name.' berhasil diperbarui.');
     }
 
-    public function export(CatalogueFilterRequest $request, CatalogueService $catalogue, CsvExportService $csv): StreamedResponse
+    public function export(CatalogueFilterRequest $request, CatalogueService $catalogue, CsvExportService $csv, ExcelExportService $excel): StreamedResponse
     {
-        $rows = $catalogue->products($request->validated())->lazy(200)->map(fn (Product $product): array => [$product->name, $product->sku, $product->color?->name, $product->purchase_price, $product->selling_price, $product->product_kind === 'daily' ? 'Harian' : 'Non-Harian', $product->brand?->name, $product->type?->name, $product->distributors->pluck('name')->join(', '), $product->stock?->quantity ?? 0]);
+        $rows = $catalogue->products($request->validated())->lazy(200)->map(fn (Product $product): array => [
+            $product->name,
+            $product->sku,
+            $product->color?->name,
+            $product->purchase_price,
+            $product->selling_price,
+            $product->product_kind === 'daily' ? 'Harian' : 'Non-Harian',
+            $product->brand?->name,
+            $product->type?->name,
+            $product->distributors->pluck('name')->join(', '),
+            $product->stock?->quantity ?? 0,
+        ]);
+        $headers = ['Nama Produk', 'SKU', 'Warna', 'Modal', 'Harga Jual', 'Tipe Produk', 'Merk', 'Jenis Part', 'Distributor', 'Stok'];
 
-        return $csv->download('produk-'.now()->format('Ymd').'.csv', ['Nama Produk', 'SKU', 'Warna', 'Modal', 'Harga Jual', 'Tipe Produk', 'Merk', 'Jenis Part', 'Distributor', 'Stok'], $rows);
+        if ($request->query('format') === 'xlsx' || $request->query('format') === 'excel') {
+            return $excel->download(
+                'produk-'.now()->format('Ymd').'.xlsx',
+                'DAFTAR PRODUK & STOK BENGKEL',
+                $headers,
+                $rows,
+                'Katalog Suku Cadang & Inventaris Toko Bintang Timur Motor'
+            );
+        }
+
+        return $csv->download('produk-'.now()->format('Ymd').'.csv', $headers, $rows);
     }
 }

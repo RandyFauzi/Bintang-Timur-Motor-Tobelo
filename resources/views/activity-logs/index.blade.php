@@ -9,7 +9,23 @@
         <section class="catalogue-surface" aria-label="Daftar log aktivitas">
             <form method="GET" action="{{ route('activity-logs.index') }}">
                 @if(request()->filled('per_page'))<input type="hidden" name="per_page" value="{{ request('per_page') }}">@endif
-                <div class="catalogue-toolbar"><label class="catalogue-search"><span class="sr-only">Cari log aktivitas</span><x-ui.icon name="search" :size="18" /><input type="search" name="search" value="{{ request('search') }}" placeholder="Cari akun, rute, atau ID permintaan..."></label><div class="catalogue-toolbar__actions"><button type="submit" class="ui-button ui-button--secondary">Cari</button><a href="{{ route('activity-logs.export', request()->except(['page','detail'])) }}" class="ui-button ui-button--secondary"><x-ui.icon name="export" :size="18" />Export</a></div></div>
+                <div class="catalogue-toolbar"><label class="catalogue-search"><span class="sr-only">Cari log aktivitas</span><x-ui.icon name="search" :size="18" /><input type="search" name="search" value="{{ request('search') }}" placeholder="Cari akun, rute, atau ID permintaan..."></label><div class="catalogue-toolbar__actions"><button type="submit" class="ui-button ui-button--secondary">Cari</button>
+                    <div class="relative" x-data="{ exportMenu: false }" @click.outside="exportMenu = false">
+                        <button type="button" @click="exportMenu = !exportMenu" class="ui-button ui-button--secondary" aria-haspopup="true" :aria-expanded="exportMenu">
+                            <x-ui.icon name="export" :size="18" />Export <x-ui.icon name="chevron" :size="12" class="rotate-90 ml-0.5" />
+                        </button>
+                        <div x-show="exportMenu" x-cloak x-transition.opacity class="absolute right-0 top-full mt-2 w-48 rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl z-30">
+                            <a class="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-800 rounded-lg hover:bg-gray-100 transition-colors" href="{{ route('activity-logs.export', array_merge(request()->except(['page','detail']), ['format' => 'xlsx'])) }}">
+                                <span class="inline-flex items-center justify-center w-5 h-5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">XLS</span>
+                                Export Excel (.xlsx)
+                            </a>
+                            <a class="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-gray-600 rounded-lg hover:bg-gray-100 transition-colors" href="{{ route('activity-logs.export', array_merge(request()->except(['page','detail']), ['format' => 'csv'])) }}">
+                                <span class="inline-flex items-center justify-center w-5 h-5 rounded bg-gray-100 text-gray-700 font-bold text-[10px]">CSV</span>
+                                Export CSV (.csv)
+                            </a>
+                        </div>
+                    </div>
+                </div></div>
                 <div class="catalogue-filters">
                     <label class="filter-select-label"><span class="sr-only">Akun</span><select name="user_id" class="filter-select" onchange="this.form.requestSubmit()"><option value="">Semua Akun</option>@foreach($users as $user)<option value="{{ $user->id }}" @selected(request('user_id') == $user->id)>{{ $user->name }} (#{{ $user->id }})</option>@endforeach</select></label>
                     @foreach(['module'=>['Modul',$modules], 'action'=>['Aktivitas',$actions], 'result'=>['Hasil',$results]] as $name=>[$label,$options])<label class="filter-select-label"><span class="sr-only">{{ $label }}</span><select name="{{ $name }}" class="filter-select" onchange="this.form.requestSubmit()"><option value="">Semua {{ $label }}</option>@foreach($options as $value=>$text)<option value="{{ $value }}" @selected(request($name) === $value)>{{ $text }}</option>@endforeach</select></label>@endforeach

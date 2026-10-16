@@ -9,6 +9,7 @@ use App\Models\Expense;
 use App\Models\WorkType;
 use App\Services\CompetitorReportService;
 use App\Services\CsvExportService;
+use App\Services\ExcelExportService;
 use App\Services\ReportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,11 +23,22 @@ class ReportController extends Controller
         return view('reports.index', $service->data($request->validated()) + ['reportFilters' => $request->validated()]);
     }
 
-    public function export(ReportFilterRequest $request, CompetitorReportService $service, CsvExportService $csv): StreamedResponse
+    public function export(ReportFilterRequest $request, CompetitorReportService $service, CsvExportService $csv, ExcelExportService $excel): StreamedResponse
     {
         $rows = $service->query($request->validated())->lazy(200)->map(fn (CompetitorObservation $row): array => [$row->observed_on->toDateString(), $row->workshop->name, sprintf('%02d.00', $row->observed_hour), $row->workTypes->sum('pivot.quantity'), $row->workTypes->map(fn (WorkType $type): string => $type->name.' ('.$type->pivot->quantity.')')->join(', ')]);
+        $headers = ['Tanggal', 'Bengkel', 'Jam', 'Jumlah', 'Jenis Pengerjaan'];
 
-        return $csv->download('laporan-'.now()->format('Ymd').'.csv', ['Tanggal', 'Bengkel', 'Jam', 'Jumlah', 'Jenis Pengerjaan'], $rows);
+        if ($request->query('format') === 'xlsx' || $request->query('format') === 'excel') {
+            return $excel->download(
+                'laporan-observasi-'.now()->format('Ymd').'.xlsx',
+                'LAPORAN OBSERVASI KOMPETITOR',
+                $headers,
+                $rows,
+                'Monitoring Bengkel & Harga Pasar Sekitar Bintang Timur Motor'
+            );
+        }
+
+        return $csv->download('laporan-'.now()->format('Ymd').'.csv', $headers, $rows);
     }
 
     public function finance(ReportService $reportService, Request $request): View

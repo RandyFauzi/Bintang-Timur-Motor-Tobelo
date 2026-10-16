@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ActivityLogFilterRequest;
 use App\Models\ActivityLog;
 use App\Services\CsvExportService;
+use App\Services\ExcelExportService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -45,10 +46,21 @@ class ActivityLogController extends Controller
         return view('activity-logs.index', ['logs' => $logs, 'summary' => $summary, 'detail' => $detail, 'users' => ActivityLog::whereNotNull('user_id')->select(['user_id as id', 'actor_name as name'])->distinct()->orderBy('name')->limit(500)->get(), 'actions' => ActivityLog::ACTIONS, 'results' => ActivityLog::RESULTS, 'modules' => ActivityLog::MODULES]);
     }
 
-    public function export(ActivityLogFilterRequest $request, CsvExportService $csv): StreamedResponse
+    public function export(ActivityLogFilterRequest $request, CsvExportService $csv, ExcelExportService $excel): StreamedResponse
     {
         $rows = $this->query($request->validated())->orderByDesc('id')->lazyByIdDesc(200)->map(fn (ActivityLog $log): array => [$log->request_id, $log->occurred_at->format('Y-m-d H:i:s.u').' '.config('app.timezone'), $log->actor_name, $log->user_id, $log->actor_role, ActivityLog::MODULES[$log->module] ?? $log->module, ActivityLog::ACTIONS[$log->action] ?? $log->action, ActivityLog::RESULTS[$log->result] ?? $log->result, $log->route_name, $log->method, $log->status_code, $log->ip_address, json_encode($log->changes, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE)]);
+        $headers = ['ID Permintaan', 'Waktu', 'Akun', 'ID Akun', 'Peran', 'Modul', 'Aktivitas', 'Hasil', 'Rute', 'Metode', 'HTTP', 'Alamat IP', 'Perubahan'];
 
-        return $csv->download('log-aktivitas-'.now()->format('Ymd').'.csv', ['ID Permintaan', 'Waktu', 'Akun', 'ID Akun', 'Peran', 'Modul', 'Aktivitas', 'Hasil', 'Rute', 'Metode', 'HTTP', 'Alamat IP', 'Perubahan'], $rows);
+        if ($request->query('format') === 'xlsx' || $request->query('format') === 'excel') {
+            return $excel->download(
+                'log-aktivitas-'.now()->format('Ymd').'.xlsx',
+                'AUDIT LOG AKTIVITAS SISTEM',
+                $headers,
+                $rows,
+                'Catatan Jejak Operasional & Keamanan Bintang Timur Motor'
+            );
+        }
+
+        return $csv->download('log-aktivitas-'.now()->format('Ymd').'.csv', $headers, $rows);
     }
 }
