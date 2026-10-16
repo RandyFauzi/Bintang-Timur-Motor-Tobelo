@@ -1,6 +1,6 @@
 <x-guest-layout>
     <header class="login-header">
-        <div class="login-brand"><x-ui.icon name="logo" :size="40" /><span>Bintang Timur Motor</span></div>
+        <div class="login-brand"><x-ui.business-logo :size="40" /><span>{{ \App\Models\BusinessSetting::current()->business_name }}</span></div>
         <h1>Selamat Datang</h1>
         <p>Masuk untuk mengelola penjualan, stok produk, dan laporan bengkel.</p>
     </header>

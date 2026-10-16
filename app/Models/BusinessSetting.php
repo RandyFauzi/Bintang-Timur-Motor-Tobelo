@@ -5,6 +5,7 @@ namespace App\Models;
 use Database\Factories\BusinessSettingFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Vite;
 
 class BusinessSetting extends Model
 {
@@ -12,6 +13,13 @@ class BusinessSetting extends Model
     use HasFactory;
 
     protected $fillable = ['id', 'business_name'];
+
+    public function logoUrl(): string
+    {
+        return $this->logo_path
+            ? route('business.logo', ['v' => substr(hash('sha256', $this->logo_path), 0, 12)])
+            : Vite::asset('resources/images/brand/logo.svg');
+    }
 
     public static function current(): self
     {

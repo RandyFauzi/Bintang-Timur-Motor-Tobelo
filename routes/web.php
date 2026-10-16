@@ -21,6 +21,8 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
+Route::get('/settings/business/logo', [BusinessSettingController::class, 'logo'])->name('business.logo');
+
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
@@ -66,7 +68,6 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/users/{user}/avatar', UserAvatarController::class)->name('users.avatar');
     Route::patch('/settings/business', [BusinessSettingController::class, 'update'])->name('business.update');
-    Route::get('/settings/business/logo', [BusinessSettingController::class, 'logo'])->name('business.logo');
 
     // Users Management
     Route::get('/users/export', [UserController::class, 'export'])->name('users.export');

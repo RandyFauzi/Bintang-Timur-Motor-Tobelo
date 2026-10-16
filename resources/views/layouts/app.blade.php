@@ -6,7 +6,7 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="theme-color" content="#171a17">
         <title>{{ request()->routeIs('dashboard') ? 'Dashboard · ' : '' }}{{ \App\Models\BusinessSetting::current()->business_name }}</title>
-        <link rel="icon" type="image/svg+xml" href="{{ Vite::asset('resources/images/brand/logo.svg') }}">
+        <link rel="icon" href="{{ \App\Models\BusinessSetting::current()->logoUrl() }}">
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="app-shell font-sans antialiased" x-data="appShell" @keydown.escape.window="closeMobileMenu()">

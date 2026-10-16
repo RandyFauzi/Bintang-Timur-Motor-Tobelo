@@ -5,6 +5,8 @@
     .guest-footer { padding-top: 24px; text-align: center; color: var(--color-muted); font-size: 12px; }
     .login-header { margin-bottom: 28px; text-align: center; }
     .login-brand { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 28px; font-size: 16px; font-weight: 500; }
+    .login-brand .ui-icon { flex-shrink: 0; }
+    .login-brand > span { min-width: 0; overflow-wrap: anywhere; }
     .login-header h1 { font-size: 24px; font-weight: 600; line-height: 1.2; }
     .login-header p { margin-top: 12px; color: var(--color-muted); font-size: 14px; line-height: 1.6; }
     .login-status { margin-bottom: 24px; }

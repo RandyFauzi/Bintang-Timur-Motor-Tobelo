@@ -37,6 +37,6 @@ class BusinessSettingController extends Controller
         $settings = BusinessSetting::current();
         abort_unless($settings->logo_path && Storage::disk('local')->exists($settings->logo_path), 404);
 
-        return Storage::disk('local')->response($settings->logo_path, null, ['Cache-Control' => 'private, max-age=86400', 'X-Content-Type-Options' => 'nosniff']);
+        return Storage::disk('local')->response($settings->logo_path, null, ['Cache-Control' => 'public, max-age=86400', 'X-Content-Type-Options' => 'nosniff']);
     }
 }
