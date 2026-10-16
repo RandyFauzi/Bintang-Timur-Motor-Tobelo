@@ -96,4 +96,39 @@ class ProfileTest extends TestCase
 
         $this->assertNotNull($user->fresh());
     }
+
+    public function test_profile_normalizes_input_and_does_not_allow_role_changes(): void
+    {
+        $user = User::factory()->create(['role' => 'staff']);
+        $this->actingAs($user)->patch(route('profile.update'), ['name' => '  Nama Baru  ', 'email' => '  BARU@EXAMPLE.COM  ', 'role' => 'admin'])->assertRedirect(route('profile.edit'))->assertSessionHasNoErrors()->assertSessionHas('success');
+        $user->refresh();
+        $this->assertSame('Nama Baru', $user->name);
+        $this->assertSame('baru@example.com', $user->email);
+        $this->assertSame('staff', $user->role);
+        $this->assertNull($user->email_verified_at);
+        $this->get(route('profile.edit'))->assertOk()->assertSee('Nama Baru')->assertSee('baru@example.com');
+    }
+
+    public function test_profile_rejects_duplicate_email_and_blank_name_without_changes(): void
+    {
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+        $originalName = $user->name;
+        $originalEmail = $user->email;
+        $this->actingAs($user)->from(route('profile.edit'))->patch(route('profile.update'), ['name' => '   ', 'email' => $other->email])->assertSessionHasErrors(['name', 'email']);
+        $this->assertSame($originalName, $user->fresh()->name);
+        $this->assertSame($originalEmail, $user->fresh()->email);
+    }
+
+    public function test_profile_and_password_updates_require_authentication(): void
+    {
+        $this->patch(route('profile.update'), ['name' => 'Unauthorized', 'email' => 'unauthorized@example.com'])->assertRedirect(route('login'));
+        $this->put(route('password.update'), ['password' => 'Unauthorized-password-123'])->assertRedirect(route('login'));
+    }
+
+    public function test_settings_never_render_old_password_input(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user)->withSession(['_old_input' => ['password' => 'never-render-new-password', 'current_password' => 'never-render-old-password', 'password_confirmation' => 'never-render-confirmation']])->get(route('profile.edit'))->assertOk()->assertSee('Informasi Profil')->assertSee('Ganti Password')->assertDontSee('never-render-new-password')->assertDontSee('never-render-old-password')->assertDontSee('never-render-confirmation');
+    }
 }

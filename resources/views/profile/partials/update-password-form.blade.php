@@ -1,48 +1,12 @@
-<section>
-    <header>
-        <h2 class="text-lg font-medium text-gray-900">
-            {{ __('Update Password') }}
-        </h2>
-
-        <p class="mt-1 text-sm text-gray-600">
-            {{ __('Ensure your account is using a long, random password to stay secure.') }}
-        </p>
-    </header>
-
-    <form method="post" action="{{ route('password.update') }}" class="mt-6 space-y-6">
-        @csrf
-        @method('put')
-
-        <div>
-            <x-input-label for="update_password_current_password" :value="__('Current Password')" />
-            <x-text-input id="update_password_current_password" name="current_password" type="password" class="mt-1 block w-full" autocomplete="current-password" />
-            <x-input-error :messages="$errors->updatePassword->get('current_password')" class="mt-2" />
-        </div>
-
-        <div>
-            <x-input-label for="update_password_password" :value="__('New Password')" />
-            <x-text-input id="update_password_password" name="password" type="password" class="mt-1 block w-full" autocomplete="new-password" />
-            <x-input-error :messages="$errors->updatePassword->get('password')" class="mt-2" />
-        </div>
-
-        <div>
-            <x-input-label for="update_password_password_confirmation" :value="__('Confirm Password')" />
-            <x-text-input id="update_password_password_confirmation" name="password_confirmation" type="password" class="mt-1 block w-full" autocomplete="new-password" />
-            <x-input-error :messages="$errors->updatePassword->get('password_confirmation')" class="mt-2" />
-        </div>
-
-        <div class="flex items-center gap-4">
-            <x-primary-button>{{ __('Save') }}</x-primary-button>
-
-            @if (session('status') === 'password-updated')
-                <p
-                    x-data="{ show: true }"
-                    x-show="show"
-                    x-transition
-                    x-init="setTimeout(() => show = false, 2000)"
-                    class="text-sm text-gray-600"
-                >{{ __('Saved.') }}</p>
-            @endif
-        </div>
+<x-dashboard.panel title="Ganti Password" id="profile-password-title">
+    <p class="mb-6 text-sm text-muted">Gunakan password baru minimal 8 karakter yang berbeda dari password saat ini.</p>
+    @if($errors->updatePassword->any())<div class="validation-alert mb-4" role="alert">Password belum diperbarui. Periksa kolom yang ditandai di bawah.</div>@endif
+    <form method="POST" action="{{ route('password.update') }}" class="dialog-form" x-data="{ saving: false, showPasswords: false }" @submit="saving = true">
+        @csrf @method('PUT')
+        <x-ui.field name="current_password" id="update-password-current" label="Password Saat Ini" type="password" error-bag="updatePassword" autocomplete="current-password" x-bind:type="showPasswords ? 'text' : 'password'" required />
+        <x-ui.field name="password" id="update-password-new" label="Password Baru" type="password" error-bag="updatePassword" autocomplete="new-password" minlength="8" x-bind:type="showPasswords ? 'text' : 'password'" required />
+        <x-ui.field name="password_confirmation" id="update-password-confirmation" label="Konfirmasi Password Baru" type="password" error-bag="updatePassword" autocomplete="new-password" minlength="8" x-bind:type="showPasswords ? 'text' : 'password'" required />
+        <label class="settings-password-toggle"><input type="checkbox" x-model="showPasswords" aria-controls="update-password-current update-password-new update-password-confirmation">Tampilkan password</label>
+        <footer class="settings-form-actions"><button type="submit" class="ui-button" :disabled="saving" x-text="saving ? 'Menyimpan...' : 'Simpan Password'">Simpan Password</button>@if(session('status') === 'password-updated')<p class="text-sm text-success" role="status">Password berhasil diperbarui.</p>@endif</footer>
     </form>
-</section>
+</x-dashboard.panel>
