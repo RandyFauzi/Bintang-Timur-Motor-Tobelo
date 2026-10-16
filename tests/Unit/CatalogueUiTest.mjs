@@ -115,3 +115,59 @@ test('dialog backdrop closes only clicks outside its bounds', () => {
     dialog.backdrop({ target: dialog.$el, clientX: 0, clientY: 50 });
     assert.equal(closed, 1);
 });
+
+
+test('closed filters do not steal focus and outside clicks preserve the clicked focus target', () => {
+    const filter = multiSelect(options, ['1'], 'Semua');
+    let focused = 0;
+    filter.$refs = { trigger: { focus() { focused++; } } };
+    filter.$nextTick = (callback) => callback();
+    filter.close();
+    assert.equal(focused, 0);
+    filter.open = true;
+    filter.draft = ['2'];
+    filter.close(false);
+    assert.equal(filter.open, false);
+    assert.deepEqual(filter.draft, ['1']);
+    assert.equal(focused, 0);
+});
+
+test('popup follows the visible viewport when the mobile keyboard changes its height', () => {
+    const filter = multiSelect(options, [], 'Semua');
+    filter.positionPanel({ width: 360, height: 700, offsetLeft: 0, offsetTop: 0 });
+    assert.equal(filter.panelPosition['--filter-center-y'], '350px');
+    filter.positionPanel({ width: 360, height: 280, offsetLeft: 0, offsetTop: 100 });
+    assert.equal(filter.panelPosition['--filter-center-x'], '180px');
+    assert.equal(filter.panelPosition['--filter-center-y'], '240px');
+    assert.equal(filter.panelPosition['--filter-max-height'], '248px');
+    assert.equal(filter.panelPosition['--filter-max-width'], '328px');
+});
+
+
+test('viewport listeners follow keyboard resizing and are removed when a filter is destroyed', () => {
+    const originalWindow = globalThis.window;
+    const listeners = new Map();
+    const viewport = {
+        width: 360, height: 700, offsetLeft: 0, offsetTop: 0,
+        addEventListener(event, callback) { listeners.set(`viewport-${event}`, callback); },
+        removeEventListener(event, callback) { if (listeners.get(`viewport-${event}`) === callback) listeners.delete(`viewport-${event}`); },
+    };
+    globalThis.window = {
+        visualViewport: viewport,
+        addEventListener(event, callback) { listeners.set(`window-${event}`, callback); },
+        removeEventListener(event, callback) { if (listeners.get(`window-${event}`) === callback) listeners.delete(`window-${event}`); },
+    };
+    try {
+        const filter = multiSelect(options, [], 'Semua');
+        filter.init();
+        filter.open = true;
+        viewport.height = 240;
+        listeners.get('viewport-resize')();
+        assert.equal(filter.panelPosition['--filter-max-height'], '208px');
+        filter.destroy();
+        assert.equal(listeners.size, 0);
+    } finally {
+        if (originalWindow === undefined) delete globalThis.window;
+        else globalThis.window = originalWindow;
+    }
+});

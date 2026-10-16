@@ -21,7 +21,30 @@ export function appDialog(initiallyOpen = false) {
 
 export function multiSelect(options, selected, label, submitOnApply = true) {
     return {
-        options, selected, draft: [...selected], label, open: false, search: '',
+        options, selected, draft: [...selected], label, open: false, search: '', panelPosition: {},
+        init() {
+            this.viewport = globalThis.window?.visualViewport;
+            this.viewportListener = () => { if (this.open) this.positionPanel(); };
+            this.viewport?.addEventListener('resize', this.viewportListener);
+            this.viewport?.addEventListener('scroll', this.viewportListener);
+            globalThis.window?.addEventListener('resize', this.viewportListener);
+        },
+        destroy() {
+            this.viewport?.removeEventListener('resize', this.viewportListener);
+            this.viewport?.removeEventListener('scroll', this.viewportListener);
+            globalThis.window?.removeEventListener('resize', this.viewportListener);
+        },
+        positionPanel(viewport = globalThis.window?.visualViewport) {
+            const width = viewport?.width ?? globalThis.window?.innerWidth;
+            const height = viewport?.height ?? globalThis.window?.innerHeight;
+            if (!width || !height) return;
+            this.panelPosition = {
+                '--filter-center-x': `${(viewport?.offsetLeft ?? 0) + width / 2}px`,
+                '--filter-center-y': `${(viewport?.offsetTop ?? 0) + height / 2}px`,
+                '--filter-max-height': `${Math.max(0, height - 32)}px`,
+                '--filter-max-width': `${Math.max(0, width - 32)}px`,
+            };
+        },
         get filtered() {
             const search = this.search.trim().toLocaleLowerCase('id');
             return this.options.filter((item) => item.name.toLocaleLowerCase('id').includes(search));
@@ -33,17 +56,20 @@ export function multiSelect(options, selected, label, submitOnApply = true) {
         },
         get allSelected() { return this.filtered.length > 0 && this.filtered.every((item) => this.draft.includes(item.id)); },
         toggle() {
-            this.open = !this.open;
+            if (this.open) { this.close(); return; }
+            this.open = true;
+            this.positionPanel();
             if (this.open) {
                 this.draft = [...this.selected];
                 this.search = '';
-                this.$nextTick(() => this.$refs.search?.focus());
+                this.$nextTick(() => this.$refs.search?.focus({ preventScroll: true }));
             }
         },
-        close() {
+        close(restoreFocus = true) {
+            if (!this.open) return;
             this.draft = [...this.selected];
             this.open = false;
-            this.$nextTick(() => this.$refs.trigger?.focus());
+            if (restoreFocus) this.$nextTick(() => this.$refs.trigger?.focus());
         },
         selectAll(checked) {
             const ids = this.filtered.map((item) => item.id);
