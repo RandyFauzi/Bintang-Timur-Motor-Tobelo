@@ -122,6 +122,7 @@
     .product-card__details dd { min-width: 0; overflow-wrap: anywhere; }
     .product-card > header > div { min-width: 0; flex: 1; }
     .product-card > header > a { flex-shrink: 0; }
+    .product-card > header > .product-card__actions { flex: 0 0 auto; }
     .product-card h2 { font-weight: 600; }
     .product-card .neutral-badge { max-width: 100%; white-space: normal; overflow-wrap: anywhere; border-radius: 12px; padding: 6px 12px; color: #494b4c; font-size: 14px; line-height: 1.2; }
     .product-card .stock-badge { font-size: 14px; }

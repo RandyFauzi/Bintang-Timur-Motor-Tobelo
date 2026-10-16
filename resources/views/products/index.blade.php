@@ -27,7 +27,15 @@
                 <div class="catalogue-card-grid">
                     @forelse($products as $product)
                         <article class="product-card">
-                            <header><div><h2>{{ $product->name }}</h2><p class="mt-2 text-sm text-muted">{{ $product->color?->name ?? '–' }}</p></div><a href="{{ request()->fullUrlWithQuery(['edit'=>$product->id,'create'=>null]) }}" aria-label="Edit {{ $product->name }}"><x-ui.icon name="edit" :size="18" /></a></header>
+                            <header><div><h2>{{ $product->name }}</h2><p class="mt-2 text-sm text-muted">{{ $product->color?->name ?? '–' }}</p></div><div class="product-card__actions">
+                                <x-dropdown>
+                                    <x-slot:trigger><button type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-100 focus-visible:outline focus-visible:outline-2" aria-label="Aksi {{ $product->name }}" :aria-expanded="open"><x-ui.icon name="more" :size="18" /></button></x-slot:trigger>
+                                    <x-slot:content>
+                                        <x-dropdown-link :href="route('returns.index', ['create'=>1, 'product_id'=>$product->id])"><span class="flex items-center gap-2"><x-ui.icon name="return" :size="16" />Retur Produk</span></x-dropdown-link>
+                                        <button type="button" class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-700 hover:bg-gray-100 focus:bg-gray-100" @click="$dispatch('delete-product', @js(['name'=>$product->name, 'url'=>route('products.destroy',$product)]))"><x-ui.icon name="trash" :size="16" />Hapus Produk</button>
+                                    </x-slot:content>
+                                </x-dropdown>
+                            </div></header>
                             <dl class="product-card__details">
                                 <dt>Total Stok</dt><dd><span @class(['stock-badge'=>($product->stock?->quantity ?? 0) <= $product->stock_minimum])>{{ $product->stock?->quantity ?? 0 }}</span></dd>
                                 <dt>Tipe Produk</dt><dd>{{ $product->product_kind === 'daily' ? 'Harian' : 'Non-Harian' }}</dd>
@@ -59,5 +67,12 @@
             <x-ui.pagination :paginator="$products" />
         </section>
         @include('products.partials.form', ['product' => $editing])
+        <x-ui.dialog name="product-delete" title="Hapus Produk" description="Produk akan dihapus dari katalog. Riwayat transaksi dan retur tetap tersimpan.">
+            <form method="POST" class="dialog-form" x-data="{ productName: '', deleteUrl: '' }" :action="deleteUrl" @delete-product.window="productName = $event.detail.name; deleteUrl = $event.detail.url; $dispatch('open-dialog', { id: 'product-delete' })" @submit="submitting = true">
+                @csrf @method('DELETE')
+                <p class="text-sm">Hapus produk <strong x-text="productName"></strong>?</p>
+                <footer class="dialog-actions"><button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button><button type="submit" class="ui-button" :disabled="submitting || !deleteUrl" x-text="submitting ? 'Menghapus…' : 'Hapus Produk'">Hapus Produk</button></footer>
+            </form>
+        </x-ui.dialog>
     </div>
 </x-app-layout>

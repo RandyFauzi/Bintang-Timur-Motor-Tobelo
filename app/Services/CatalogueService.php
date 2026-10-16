@@ -92,6 +92,19 @@ class CatalogueService
         });
     }
 
+    public function deleteProduct(Product $product): void
+    {
+        DB::transaction(function () use ($product): void {
+            $product = Product::query()->lockForUpdate()->findOrFail($product->id);
+            $stock = $product->stock()->lockForUpdate()->first();
+            if (($stock?->reserved_quantity ?? 0) > 0) {
+                throw ValidationException::withMessages(['product' => 'Produk masih memiliki stok yang dipesan dan belum dapat dihapus.']);
+            }
+
+            $product->delete();
+        });
+    }
+
     /** @return array<int, array{name: string, value: int}> */
     public function categories(): array
     {

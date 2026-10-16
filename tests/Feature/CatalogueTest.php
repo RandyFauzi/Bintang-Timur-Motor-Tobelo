@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Distributor;
 use App\Models\Product;
+use App\Models\ProductReturn;
 use App\Models\StockMovement;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -12,6 +13,42 @@ use Tests\TestCase;
 class CatalogueTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_deleting_product_archives_it_without_removing_stock_or_return_history(): void
+    {
+        $product = Product::factory()->withStock(8)->create();
+        $record = ProductReturn::factory()->create(['product_id' => $product->id]);
+
+        $this->actingAs(User::factory()->create())->delete(route('products.destroy', $product))
+            ->assertRedirect(route('products.index', ['view' => 'cards']))->assertSessionHasNoErrors();
+
+        $this->assertSoftDeleted($product);
+        $this->assertDatabaseHas('product_stocks', ['product_id' => $product->id, 'quantity' => 8]);
+        $this->assertModelExists($record);
+        $this->get(route('products.index'))->assertDontSee($product->name);
+        $this->assertDatabaseHas('activity_logs', ['route_name' => 'products.destroy', 'action' => 'delete', 'result' => 'success']);
+    }
+
+    public function test_product_with_reserved_stock_cannot_be_deleted(): void
+    {
+        $product = Product::factory()->withStock(8)->create();
+        $product->stock()->update(['reserved_quantity' => 2]);
+
+        $this->actingAs(User::factory()->create())->deleteJson(route('products.destroy', $product))
+            ->assertUnprocessable()->assertJsonValidationErrors('product');
+
+        $this->assertNotSoftDeleted($product);
+        $this->assertDatabaseHas('product_stocks', ['product_id' => $product->id, 'quantity' => 8, 'reserved_quantity' => 2]);
+    }
+
+    public function test_guests_cannot_delete_products(): void
+    {
+        $product = Product::factory()->create();
+
+        $this->delete(route('products.destroy', $product))->assertRedirect(route('login'));
+
+        $this->assertNotSoftDeleted($product);
+    }
 
     public function test_guests_cannot_manage_catalogues(): void
     {

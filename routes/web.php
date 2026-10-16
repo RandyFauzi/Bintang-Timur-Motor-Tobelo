@@ -23,7 +23,7 @@ Route::middleware('auth')->group(function () {
 
     // Products
     Route::get('products/export', [ProductController::class, 'export'])->name('products.export');
-    Route::resource('products', ProductController::class)->except(['destroy']);
+    Route::resource('products', ProductController::class);
 
     // POS (Kasir)
     Route::get('/pos', [PosController::class, 'index'])->name('pos.index');

@@ -19,6 +19,36 @@ class ProductReturnTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_return_link_preselects_product_and_saves_it_in_return_history(): void
+    {
+        $product = Product::factory()->withStock(9)->create();
+        $this->actingAs(User::factory()->create());
+
+        $response = $this->get(route('returns.index', ['create' => 1, 'product_id' => $product->id]));
+
+        $response->assertOk()->assertSee('Tambah Retur');
+        $this->assertSame($product->id, $response->viewData('selectedProduct')->id);
+        $this->post(route('returns.store'), [
+            'request_id' => $response->viewData('requestId'), 'product_id' => $product->id,
+            'quantity' => 2, 'note_status' => 'pending',
+        ])->assertRedirect(route('returns.index'))->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('product_returns', ['product_id' => $product->id, 'quantity' => 2]);
+        $this->assertSame(7, $product->stock->quantity);
+    }
+
+    public function test_return_link_rejects_archived_and_inactive_products(): void
+    {
+        $product = Product::factory()->create(['is_active' => false]);
+        $this->actingAs(User::factory()->create());
+
+        $this->getJson(route('returns.index', ['create' => 1, 'product_id' => $product->id]))
+            ->assertUnprocessable()->assertJsonValidationErrors('product_id');
+        $product->update(['is_active' => true]);
+        $product->delete();
+        $this->getJson(route('returns.index', ['create' => 1, 'product_id' => $product->id]))
+            ->assertUnprocessable()->assertJsonValidationErrors('product_id');
+    }
+
     public function test_guests_cannot_read_or_change_returns(): void
     {
         $record = ProductReturn::factory()->create();

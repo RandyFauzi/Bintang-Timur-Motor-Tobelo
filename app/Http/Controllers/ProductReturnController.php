@@ -26,7 +26,7 @@ class ProductReturnController extends Controller
         $editingId = $request->input('edit') ?? old('_return_id');
         $editingId = is_string($editingId) && Str::isUuid($editingId) ? $editingId : null;
         $editing = $editingId ? ProductReturn::withTrashed()->with('events')->findOrFail($editingId) : null;
-        $oldProductId = filter_var(old('product_id'), FILTER_VALIDATE_INT);
+        $oldProductId = filter_var(old('product_id', $request->validated('product_id')), FILTER_VALIDATE_INT);
         $selectedProduct = $oldProductId ? Product::with('stock')->find($oldProductId) : null;
         $requestId = old('request_id');
         $requestId = is_string($requestId) && Str::isUuid($requestId) ? $requestId : (string) Str::uuid();

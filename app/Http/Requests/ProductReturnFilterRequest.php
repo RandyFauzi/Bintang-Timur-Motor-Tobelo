@@ -10,6 +10,7 @@ class ProductReturnFilterRequest extends CatalogueFilterRequest
     public function rules(): array
     {
         return array_replace(parent::rules(), [
+            'product_id' => ['nullable', 'integer', 'min:1', Rule::exists('products', 'id')->whereNull('deleted_at')->where('is_active', true)],
             'note_status' => ['nullable', Rule::in(['pending', 'credited'])],
             'status' => ['nullable', Rule::in(['active', 'cancelled', 'all'])],
             'edit' => ['nullable', 'uuid'],

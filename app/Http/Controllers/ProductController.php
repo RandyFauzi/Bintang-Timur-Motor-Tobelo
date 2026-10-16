@@ -53,6 +53,13 @@ class ProductController extends Controller
         return redirect()->route('products.index')->with('success', $product->name.' berhasil diperbarui.');
     }
 
+    public function destroy(Product $product, CatalogueService $catalogue): RedirectResponse
+    {
+        $catalogue->deleteProduct($product);
+
+        return redirect()->route('products.index', ['view' => 'cards'])->with('success', 'Produk berhasil dihapus dari katalog. Riwayat tetap tersimpan.');
+    }
+
     public function export(CatalogueFilterRequest $request, CatalogueService $catalogue, CsvExportService $csv, ExcelExportService $excel): StreamedResponse
     {
         $rows = $catalogue->products($request->validated())->lazy(200)->map(fn (Product $product): array => [
