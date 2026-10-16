@@ -17,6 +17,7 @@
         ]],
         ['label' => 'Admin Panel', 'items' => [
             ['label' => 'Pengguna', 'icon' => 'user', 'route' => 'users.index', 'active' => 'users.*'],
+            ['label' => 'Log Aktivitas', 'icon' => 'report', 'route' => 'activity-logs.index', 'active' => 'activity-logs.*'],
             ['label' => 'Pengaturan', 'icon' => 'settings', 'route' => 'profile.edit', 'active' => 'profile.*'],
         ]],
     ];
@@ -46,6 +47,7 @@
                 <div class="grid gap-1">
                     @foreach ($group['items'] as $item)
                         @continue(($item['route'] ?? null) === 'users.index' && !auth()->user()->can('manage-users'))
+                        @continue(($item['route'] ?? null) === 'activity-logs.index' && !auth()->user()->can('view-activity-logs'))
                         @if ($item['route'])
                             <div class="sidebar-item">
                                 <a href="{{ route($item['route']) }}" @class(['sidebar-link', 'sidebar-link--with-action' => $item['create'] ?? false, 'sidebar-link--active' => request()->routeIs($item['active'])]) @if(request()->routeIs($item['active'])) aria-current="page" @endif title="{{ $item['label'] }}">

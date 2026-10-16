@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\CompetitorObservationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DistributorController;
@@ -54,6 +55,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/reports/workshops', [ReportLookupController::class, 'workshops'])->name('reports.workshops.store');
     Route::post('/reports/work-types', [ReportLookupController::class, 'workTypes'])->name('reports.work-types.store');
     Route::post('/reports/expenses', [ReportController::class, 'storeExpense'])->name('reports.expenses.store');
+
+    Route::get('/activity-logs/export', [ActivityLogController::class, 'export'])->name('activity-logs.export');
+    Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
 
     // Users Management
     Route::get('/users/export', [UserController::class, 'export'])->name('users.export');

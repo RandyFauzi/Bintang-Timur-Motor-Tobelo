@@ -6,6 +6,28 @@
     html:has(dialog[open]) { overflow: hidden; }
 }
 @layer components {
+    .audit-summary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; margin-bottom: 24px; }
+    @media(max-width:767px) { .audit-summary { grid-template-columns: minmax(0,1fr); } }
+
+    .audit-detail { display: grid; grid-template-columns: minmax(100px,160px) minmax(0,1fr); gap: 12px 20px; font-size: 14px; }
+    .audit-detail dt { color: var(--color-muted); }
+    .audit-detail dd { overflow-wrap: anywhere; }
+    .audit-states { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+    .audit-states pre { max-height: 320px; overflow: auto; border-radius: 8px; background: var(--color-page); padding: 12px; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    @media(max-width:639px) { .audit-detail, .audit-states { grid-template-columns: minmax(0,1fr); } }
+
+    .finance-heading { flex-wrap: wrap; }
+    .finance-page .finance-periods { margin: 0 0 24px; padding-top: 0; }
+    .finance-stats { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 16px; margin-bottom: 16px; }
+    .finance-panels { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 24px; }
+    .finance-panels > section { min-width: 0; }
+    .finance-table { min-width: 420px; }
+    .finance-description { overflow-wrap: anywhere; }
+    .finance-stat--profit .stat-card__value { color: var(--color-success); }
+    .finance-stat--loss .stat-card__value { color: var(--color-danger); }
+    @media(max-width:1279px) { .finance-stats { grid-template-columns: repeat(2,minmax(0,1fr)); } .finance-panels { grid-template-columns: minmax(0,1fr); } }
+    @media(max-width:639px) { .finance-stats { grid-template-columns: minmax(0,1fr); } .finance-stats .stat-card { grid-column: auto; } .finance-page .dialog-actions { flex-wrap: wrap; } }
+
     .catalogue-page { max-width: 1600px; margin-inline: auto; }
     .catalogue-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; min-height: 29px; }
     .catalogue-heading h1 { font-size: 24px; font-weight: 600; line-height: 1.2; }

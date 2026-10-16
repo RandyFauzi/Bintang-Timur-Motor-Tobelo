@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Expense;
 use App\Models\Sale;
 use App\Models\SaleItem;
-use App\Models\Expense;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -30,10 +30,10 @@ class ReportService
 
         // Modal (Cost of Goods Sold)
         $cogs = SaleItem::whereHas('sale', function ($q) use ($startDate, $endDate) {
-                $q->where('status', 'completed')
-                  ->whereBetween('sold_at', [$startDate, $endDate]);
-            })
-            // we join products to get historical purchase_price if not stored in sale_item, 
+            $q->where('status', 'completed')
+                ->whereBetween('sold_at', [$startDate, $endDate]);
+        })
+            // we join products to get historical purchase_price if not stored in sale_item,
             // but ideally we should store purchase_price snapshot in sale_items!
             // Assuming it's simple and getting from product currently.
             ->join('products', 'sale_items.product_id', '=', 'products.id')
@@ -51,9 +51,9 @@ class ReportService
 
         // Total products sold
         $itemsSold = SaleItem::whereHas('sale', function ($q) use ($startDate, $endDate) {
-                $q->where('status', 'completed')
-                  ->whereBetween('sold_at', [$startDate, $endDate]);
-            })
+            $q->where('status', 'completed')
+                ->whereBetween('sold_at', [$startDate, $endDate]);
+        })
             ->sum('quantity');
 
         return [
@@ -76,10 +76,10 @@ class ReportService
         $endDate = $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay();
 
         return SaleItem::whereHas('sale', function ($q) use ($startDate, $endDate) {
-                $q->where('status', 'completed')
-                  ->whereBetween('sold_at', [$startDate, $endDate]);
-            })
-            ->select('product_name', DB::raw('SUM(quantity) as total_sold'))
+            $q->where('status', 'completed')
+                ->whereBetween('sold_at', [$startDate, $endDate]);
+        })
+            ->select('product_name', DB::raw('SUM(quantity) as total_sold'), DB::raw('SUM(subtotal) as total_revenue'))
             ->groupBy('product_name')
             ->orderByDesc('total_sold')
             ->limit($limit)

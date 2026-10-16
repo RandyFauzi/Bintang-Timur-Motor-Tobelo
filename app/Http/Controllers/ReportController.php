@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ReportFilterRequest;
+use App\Http\Requests\StoreExpenseRequest;
 use App\Models\CompetitorObservation;
 use App\Models\Expense;
 use App\Models\WorkType;
@@ -30,7 +31,7 @@ class ReportController extends Controller
 
     public function finance(ReportService $reportService, Request $request): View
     {
-        $period = $request->get('period', 'today'); // today, 7days, 30days
+        $period = in_array($request->query('period'), ['7days', '30days'], true) ? $request->query('period') : 'today';
 
         if ($period == '7days') {
             $start = now()->subDays(6)->startOfDay();
@@ -54,17 +55,9 @@ class ReportController extends Controller
         return view('reports.finance', compact('summary', 'topProducts', 'period', 'totalExpenses', 'netProfit', 'recentExpenses'));
     }
 
-    public function storeExpense(Request $request): RedirectResponse
+    public function storeExpense(StoreExpenseRequest $request): RedirectResponse
     {
-        $data = $request->validate([
-            'category' => 'required|string|max:100',
-            'description' => 'nullable|string',
-            'amount' => 'required|numeric|min:1',
-            'expense_date' => 'required|date',
-        ]);
-
-        $data['created_by'] = auth()->id();
-        Expense::create($data);
+        Expense::create($request->validated() + ['created_by' => $request->user()->id]);
 
         return redirect()->back()->with('success', 'Catatan pengeluaran berhasil ditambahkan.');
     }
