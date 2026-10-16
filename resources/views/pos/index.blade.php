@@ -8,7 +8,7 @@
                     <div class="catalogue-toolbar__actions pos-cart-launcher"><button type="button" class="ui-button pos-cart-trigger" @click="openCart()" aria-controls="pos-cart"><x-ui.icon name="pos-cart" :size="18" />Lihat Keranjang <span class="pos-cart-count" x-cloak x-show="units" x-text="units" :aria-label="units + ' item di keranjang'" aria-live="polite" aria-atomic="true"></span></button></div>
                 </div>
                 @if(request()->filled('per_page'))<input type="hidden" name="per_page" value="{{ request('per_page') }}">@endif
-                <div class="catalogue-filters">
+                <div class="catalogue-filters catalogue-filters--scroll" role="region" aria-label="Filter kasir, geser untuk melihat pilihan lainnya" tabindex="0">
                     <x-ui.multiselect name="color_ids" label="Semua Warna" :options="$colors" icon="color" />
                     <x-ui.multiselect name="brand_ids" label="Semua Merk" :options="$brands" icon="barcode" />
                     <x-ui.multiselect name="distributor_ids" label="Semua Distributor" :options="$distributors" icon="workshop" />
