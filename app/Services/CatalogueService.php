@@ -22,8 +22,21 @@ class CatalogueService
     {
         $query = Product::query()->with(['brand', 'type', 'color', 'stock', 'distributors'])->where('is_active', true);
         if (! empty($filters['search'])) {
-            $term = '%'.$filters['search'].'%';
-            $query->where(fn (Builder $relatedQuery) => $relatedQuery->where('name', 'like', $term)->orWhere('sku', 'like', $term)->orWhere('barcode', 'like', $term));
+            $words = preg_split('/\s+/u', trim($filters['search']), -1, PREG_SPLIT_NO_EMPTY);
+            foreach ($words as $word) {
+                $term = '%'.$word.'%';
+                $normalized = preg_replace('/[\s_-]+/u', '', mb_strtolower($word));
+                $kinds = array_keys(array_filter(Product::KINDS, fn (string $label, string $key): bool => str_contains(preg_replace('/[\s_-]+/u', '', mb_strtolower($label.' '.$key)), $normalized), ARRAY_FILTER_USE_BOTH));
+                $query->where(function (Builder $relatedQuery) use ($term, $kinds): void {
+                    $relatedQuery->where('name', 'like', $term)->orWhere('sku', 'like', $term)->orWhere('barcode', 'like', $term);
+                    foreach (['brand', 'type', 'color', 'distributors'] as $relation) {
+                        $relatedQuery->orWhereHas($relation, fn (Builder $relationQuery) => $relationQuery->where('name', 'like', $term));
+                    }
+                    if ($kinds !== []) {
+                        $relatedQuery->orWhereIn('product_kind', $kinds);
+                    }
+                });
+            }
         }
         if (! empty($filters['kind'])) {
             $query->where('product_kind', $filters['kind']);

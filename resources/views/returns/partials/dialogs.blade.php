@@ -1,7 +1,7 @@
 @php
     $mode = old('_dialog') ? str_replace('return-', '', old('_dialog')) : request('mode', 'edit');
     $mode = in_array($mode, ['edit','status','cancel','delete','activity'], true) ? $mode : 'edit';
-    $initialProduct = $selectedProduct ? ['id'=>$selectedProduct->id, 'name'=>$selectedProduct->name, 'sku'=>$selectedProduct->sku, 'available'=>max(0, ($selectedProduct->stock?->quantity ?? 0) - ($selectedProduct->stock?->reserved_quantity ?? 0))] : null;
+    $initialProduct = $selectedProduct ? ['id'=>$selectedProduct->id, 'name'=>$selectedProduct->name, 'sku'=>$selectedProduct->sku, 'brand'=>$selectedProduct->brand?->name, 'type'=>$selectedProduct->type?->name, 'color'=>$selectedProduct->color?->name, 'kind'=>\App\Models\Product::KINDS[$selectedProduct->product_kind] ?? null, 'available'=>max(0, ($selectedProduct->stock?->quantity ?? 0) - ($selectedProduct->stock?->reserved_quantity ?? 0))] : null;
 @endphp
 <x-ui.dialog class="return-dialog" name="return-create" title="Tambah Retur" description="Cari dan tambahkan barang yang ingin diretur dari stok." :show="request()->boolean('create') || old('_dialog') === 'return-create'">
     <form method="POST" action="{{ route('returns.store') }}" class="dialog-form" @submit="submitting = true">

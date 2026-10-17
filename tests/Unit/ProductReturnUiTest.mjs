@@ -90,3 +90,41 @@ test('failed product searches show an error and retain the selected product', as
         globalThis.window = originalWindow;
     }
 });
+
+
+test('choosing a search result uses a single product selection and shows its metadata', () => {
+    const product = { id: 9, name: 'Kampas', sku: 'BREM', brand: 'Brembo', type: 'Rem', kind: 'Variasi', color: 'Merah', available: 7 };
+    const picker = productPicker('/returns/products');
+    picker.products = [product];
+    picker.select(product);
+    assert.equal(picker.selected, '9');
+    assert.equal(picker.search, 'Kampas');
+    assert.equal(picker.open, false);
+    assert.deepEqual(picker.choice, product);
+    assert.equal(picker.description(product), 'BREM · Brembo · Rem · Variasi · Merah');
+    picker.onSearchInput();
+    assert.equal(picker.selected, '');
+    assert.equal(picker.choice, undefined);
+    assert.equal(picker.open, true);
+    assert.equal(picker.busy, true);
+});
+
+test('editing search invalidates pending requests before the debounce finishes', async () => {
+    const originalFetch = globalThis.fetch;
+    const originalWindow = globalThis.window;
+    try {
+        globalThis.window = { location: { origin: 'https://example.test' } };
+        let resolve;
+        globalThis.fetch = () => new Promise((done) => { resolve = done; });
+        const picker = productPicker('/returns/products');
+        const request = picker.load();
+        picker.onSearchInput();
+        resolve({ ok: true, json: async () => ({ data: [{ id: 1, name: 'Old' }] }) });
+        await request;
+        assert.deepEqual(picker.products, []);
+        assert.equal(picker.busy, true);
+    } finally {
+        globalThis.fetch = originalFetch;
+        globalThis.window = originalWindow;
+    }
+});

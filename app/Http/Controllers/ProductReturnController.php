@@ -27,7 +27,7 @@ class ProductReturnController extends Controller
         $editingId = is_string($editingId) && Str::isUuid($editingId) ? $editingId : null;
         $editing = $editingId ? ProductReturn::withTrashed()->with('events')->findOrFail($editingId) : null;
         $oldProductId = filter_var(old('product_id', $request->validated('product_id')), FILTER_VALIDATE_INT);
-        $selectedProduct = $oldProductId ? Product::with('stock')->find($oldProductId) : null;
+        $selectedProduct = $oldProductId ? Product::with(['stock', 'brand', 'type', 'color'])->where('is_active', true)->find($oldProductId) : null;
         $requestId = old('request_id');
         $requestId = is_string($requestId) && Str::isUuid($requestId) ? $requestId : (string) Str::uuid();
 
@@ -44,6 +44,8 @@ class ProductReturnController extends Controller
         $products = $catalogue->products($request->safe()->only('search'))->limit(20)->get()
             ->map(fn (Product $product): array => [
                 'id' => $product->id, 'name' => $product->name, 'sku' => $product->sku,
+                'brand' => $product->brand?->name, 'type' => $product->type?->name,
+                'color' => $product->color?->name, 'kind' => Product::KINDS[$product->product_kind] ?? null,
                 'available' => max(0, ($product->stock?->quantity ?? 0) - ($product->stock?->reserved_quantity ?? 0)),
             ]);
 
@@ -101,12 +103,12 @@ class ProductReturnController extends Controller
             ->map(fn (ProductReturn $record): array => [
                 $record->id, $record->created_at->format('Y-m-d H:i:s'), $record->product_snapshot['name'], $record->product_snapshot['sku'],
                 $record->note_status === 'credited' ? 'Sudah Dikurangi' : 'Belum Dikurangi', $record->quantity,
-                $record->product_snapshot['purchase_price'], $record->product_snapshot['selling_price'],
+                $record->product_snapshot['purchase_price'], $record->totalPurchaseCost(),
                 Product::KINDS[$record->product_snapshot['kind']] ?? '–',
                 $record->product_snapshot['brand'], $record->product_snapshot['color'], $record->product_snapshot['type'],
                 $record->product_snapshot['distributors'], $record->status,
             ]);
-        $headers = ['ID Retur', 'Tanggal', 'Produk', 'SKU', 'Status Nota', 'Jumlah Retur', 'Modal', 'Harga Jual', 'Tipe', 'Merk', 'Warna', 'Jenis Part', 'Distributor', 'Status Retur'];
+        $headers = ['ID Retur', 'Tanggal', 'Produk', 'SKU', 'Status Nota', 'Jumlah Retur', 'Modal', 'Total Modal', 'Tipe', 'Merk', 'Warna', 'Jenis Part', 'Distributor', 'Status Retur'];
 
         if ($request->query('format') === 'xlsx' || $request->query('format') === 'excel') {
             return $excel->download(

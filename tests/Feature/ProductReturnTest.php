@@ -77,6 +77,25 @@ class ProductReturnTest extends TestCase
         $this->get(route('returns.index'))->assertOk()->assertSee('Blok Set Lama')->assertSee('Rp 300.000')->assertDontSee('Blok Baru');
     }
 
+    public function test_total_purchase_cost_uses_return_quantity_and_original_unit_cost_in_views_and_export(): void
+    {
+        $user = User::factory()->create();
+        $product = Product::factory()->withStock(10)->create(['purchase_price' => 400000, 'selling_price' => 480000]);
+        $record = $this->createReturn($user, $product, 2);
+        $this->actingAs($user);
+        $product->update(['purchase_price' => 500000]);
+        foreach (['list', 'cards'] as $view) {
+            $this->get(route('returns.index', ['view' => $view]))->assertOk()
+                ->assertSee('Total Modal')->assertSee('Rp 800.000')->assertDontSee('Harga Jual');
+        }
+        $content = $this->get(route('returns.export'))->assertOk()->streamedContent();
+        $this->assertStringContainsString('Total Modal', $content);
+        $this->assertStringContainsString('800000', $content);
+        $this->patch(route('returns.update', $record), ['quantity' => 3, 'version' => $record->version])
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $this->get(route('returns.index'))->assertOk()->assertSee('Rp 1.200.000');
+    }
+
     public function test_replaying_create_does_not_deduct_stock_twice(): void
     {
         $user = User::factory()->create();
@@ -269,6 +288,29 @@ class ProductReturnTest extends TestCase
         Product::factory()->inactive()->create(['name' => 'Cari Nonaktif']);
         $this->actingAs(User::factory()->create())->getJson(route('returns.products', ['search' => 'Cari']))
             ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $product->id)->assertJsonPath('data.0.available', 5);
+    }
+
+    public function test_product_lookup_searches_combined_catalogue_attributes_in_one_query(): void
+    {
+        $brand = Brand::factory()->create(['name' => 'Brembo']);
+        $type = ProductType::factory()->create(['name' => 'Sistem Pengereman']);
+        $color = Color::factory()->create(['name' => 'Merah']);
+        $supplier = Distributor::factory()->create(['name' => 'Distributor Tobelo']);
+        $product = Product::factory()->withStock(7)->create([
+            'name' => 'Kampas Racing', 'sku' => 'BREM-001', 'barcode' => '89912345',
+            'brand_id' => $brand->id, 'type_id' => $type->id, 'color_id' => $color->id,
+            'product_kind' => 'variation',
+        ]);
+        $product->distributors()->attach($supplier);
+        Product::factory()->withStock(3)->create(['name' => 'Kampas Lain', 'product_kind' => 'daily']);
+        $this->actingAs(User::factory()->create());
+        foreach (['Brembo', 'Pengereman', 'Variasi', 'Merah', 'Tobelo', '89912345', 'BREM-001', '  racing   merah variasi '] as $search) {
+            $this->getJson(route('returns.products', ['search' => $search]))
+                ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $product->id)
+                ->assertJsonPath('data.0.brand', 'Brembo')->assertJsonPath('data.0.type', 'Sistem Pengereman')
+                ->assertJsonPath('data.0.kind', 'Variasi')->assertJsonPath('data.0.color', 'Merah');
+        }
+        $this->getJson(route('returns.products', ['search' => 'Brembo Biru']))->assertOk()->assertJsonCount(0, 'data');
     }
 
     public function test_all_dialogs_render_with_escaped_product_names(): void

@@ -21,6 +21,11 @@ class ProductReturn extends Model
         return ['product_snapshot' => 'array', 'quantity' => 'integer', 'version' => 'integer'];
     }
 
+    public function totalPurchaseCost(): float
+    {
+        return round((float) ($this->product_snapshot['purchase_price'] ?? 0) * $this->quantity, 2);
+    }
+
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class)->withTrashed();
