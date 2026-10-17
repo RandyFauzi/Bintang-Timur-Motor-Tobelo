@@ -59,6 +59,7 @@ test('late product responses cannot overwrite results from a newer search', asyn
         const pending = [];
         globalThis.fetch = () => new Promise((resolve) => pending.push(resolve));
         const picker = productPicker('/returns/products');
+        picker.search = 'Oli';
         const first = picker.load();
         const second = picker.load();
         pending[1]({ ok: true, json: async () => ({ data: [{ id: 2, name: 'New' }] }) });
@@ -81,6 +82,7 @@ test('failed product searches show an error and retain the selected product', as
         globalThis.fetch = async () => ({ ok: false });
         const chosen = { id: 1, name: 'Oli' };
         const picker = productPicker('/returns/products', chosen);
+        picker.search = 'Cari';
         await picker.load();
         assert.equal(picker.busy, false);
         assert.notEqual(picker.error, '');
@@ -102,6 +104,7 @@ test('choosing a search result uses a single product selection and shows its met
     assert.equal(picker.open, false);
     assert.deepEqual(picker.choice, product);
     assert.equal(picker.description(product), 'BREM · Brembo · Rem · Variasi · Merah');
+    picker.search = 'Rem';
     picker.onSearchInput();
     assert.equal(picker.selected, '');
     assert.equal(picker.choice, undefined);
@@ -117,6 +120,7 @@ test('editing search invalidates pending requests before the debounce finishes',
         let resolve;
         globalThis.fetch = () => new Promise((done) => { resolve = done; });
         const picker = productPicker('/returns/products');
+        picker.search = 'Oli';
         const request = picker.load();
         picker.onSearchInput();
         resolve({ ok: true, json: async () => ({ data: [{ id: 1, name: 'Old' }] }) });
@@ -126,5 +130,30 @@ test('editing search invalidates pending requests before the debounce finishes',
     } finally {
         globalThis.fetch = originalFetch;
         globalThis.window = originalWindow;
+    }
+});
+
+
+test('recommendations stay hidden initially and clearing search does not fetch the catalogue', async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+        let requests = 0;
+        globalThis.fetch = async () => { requests++; };
+        const picker = productPicker('/returns/products');
+        assert.equal(picker.open, false);
+        await picker.load();
+        assert.equal(requests, 0);
+        picker.search = 'Rem';
+        picker.onSearchInput();
+        assert.equal(picker.open, true);
+        picker.search = '   ';
+        picker.onSearchInput();
+        await picker.load();
+        assert.equal(picker.open, false);
+        assert.equal(picker.busy, false);
+        assert.equal(requests, 0);
+        assert.deepEqual(picker.products, []);
+    } finally {
+        globalThis.fetch = originalFetch;
     }
 });

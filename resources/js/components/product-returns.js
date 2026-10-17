@@ -17,10 +17,13 @@ export function returnSelection(initial = []) {
 
 export function productPicker(endpoint, initial = null) {
     return {
-        endpoint, search: initial?.name ?? '', open: !initial, products: initial ? [initial] : [], selected: initial ? String(initial.id) : '',
+        endpoint, search: initial?.name ?? '', open: false, products: initial ? [initial] : [], selected: initial ? String(initial.id) : '',
         busy: false, error: '', controller: null, sequence: 0,
         get choice() { return this.products.find((product) => String(product.id) === String(this.selected)); },
         select(product) {
+            this.controller?.abort();
+            this.sequence++;
+            this.busy = false;
             this.selected = String(product.id);
             this.search = product.name;
             this.open = false;
@@ -30,8 +33,8 @@ export function productPicker(endpoint, initial = null) {
             this.sequence++;
             this.selected = '';
             this.products = [];
-            this.open = true;
-            this.busy = true;
+            this.open = this.search.trim().length > 0;
+            this.busy = this.open;
             this.error = '';
         },
         description(product) {
@@ -40,12 +43,17 @@ export function productPicker(endpoint, initial = null) {
         async load() {
             this.controller?.abort();
             const sequence = ++this.sequence;
+            if (!this.search.trim() || (this.choice && this.search === this.choice.name)) {
+                this.busy = false;
+                this.open = false;
+                return;
+            }
             this.controller = new AbortController();
             this.busy = true;
             this.error = '';
             try {
                 const url = new URL(this.endpoint, window.location.origin);
-                url.searchParams.set('search', this.choice && this.search === this.choice.name ? '' : this.search.trim());
+                url.searchParams.set('search', this.search.trim());
                 const response = await fetch(url, { signal: this.controller.signal, headers: { Accept: 'application/json' } });
                 if (!response.ok) throw new Error('lookup');
                 const result = await response.json();
