@@ -15,7 +15,7 @@ class ActivityLogController extends Controller
     /** @param array<string, mixed> $filters */
     private function query(array $filters): Builder
     {
-        $query = ActivityLog::query();
+        $query = ActivityLog::where('action', '!=', 'view');
         if (! empty($filters['search'])) {
             $search = '%'.$filters['search'].'%';
             $query->where(fn (Builder $query) => $query->where('actor_name', 'like', $search)->orWhere('route_name', 'like', $search)->orWhere('request_id', 'like', $search));
@@ -41,15 +41,15 @@ class ActivityLogController extends Controller
         $query = $this->query($filters);
         $summary = ['total' => (clone $query)->count(), 'failed' => (clone $query)->whereIn('result', ['failed', 'denied'])->count(), 'users' => (clone $query)->whereNotNull('user_id')->distinct()->count('user_id')];
         $logs = $query->orderByDesc('occurred_at')->orderByDesc('id')->paginate($filters['per_page'] ?? 25)->withQueryString()->appends(['detail' => null]);
-        $detail = ! empty($filters['detail']) ? ActivityLog::findOrFail($filters['detail']) : null;
+        $detail = ! empty($filters['detail']) ? ActivityLog::where('action', '!=', 'view')->findOrFail($filters['detail']) : null;
 
-        return view('activity-logs.index', ['logs' => $logs, 'summary' => $summary, 'detail' => $detail, 'users' => ActivityLog::whereNotNull('user_id')->select(['user_id as id', 'actor_name as name'])->distinct()->orderBy('name')->limit(500)->get(), 'actions' => ActivityLog::ACTIONS, 'results' => ActivityLog::RESULTS, 'modules' => ActivityLog::MODULES]);
+        return view('activity-logs.index', ['logs' => $logs, 'summary' => $summary, 'detail' => $detail, 'users' => ActivityLog::where('action', '!=', 'view')->whereNotNull('user_id')->select(['user_id as id', 'actor_name as name'])->distinct()->orderBy('name')->limit(500)->get(), 'actions' => ActivityLog::ACTIONS, 'results' => ActivityLog::RESULTS, 'modules' => ActivityLog::MODULES]);
     }
 
     public function export(ActivityLogFilterRequest $request, CsvExportService $csv, ExcelExportService $excel): StreamedResponse
     {
-        $rows = $this->query($request->validated())->orderByDesc('id')->lazyByIdDesc(200)->map(fn (ActivityLog $log): array => [$log->request_id, $log->occurred_at->format('Y-m-d H:i:s.u').' '.config('app.timezone'), $log->actor_name, $log->user_id, $log->actor_role, ActivityLog::MODULES[$log->module] ?? $log->module, ActivityLog::ACTIONS[$log->action] ?? $log->action, ActivityLog::RESULTS[$log->result] ?? $log->result, $log->route_name, $log->method, $log->status_code, $log->ip_address, json_encode($log->changes, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE)]);
-        $headers = ['ID Permintaan', 'Waktu', 'Akun', 'ID Akun', 'Peran', 'Modul', 'Aktivitas', 'Hasil', 'Rute', 'Metode', 'HTTP', 'Alamat IP', 'Perubahan'];
+        $rows = $this->query($request->validated())->orderByDesc('id')->lazyByIdDesc(200)->map(fn (ActivityLog $log): array => [$log->request_id, $log->occurred_at->format('Y-m-d H:i:s.u').' '.config('app.timezone'), $log->actor_name, $log->user_id, $log->actor_role, ActivityLog::MODULES[$log->module] ?? $log->module, ActivityLog::ACTIONS[$log->action] ?? $log->action, ActivityLog::RESULTS[$log->result] ?? $log->result, $log->route_name, $log->method, $log->status_code, json_encode($log->changes, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE)]);
+        $headers = ['ID Permintaan', 'Waktu', 'Akun', 'ID Akun', 'Peran', 'Modul', 'Aktivitas', 'Hasil', 'Rute', 'Metode', 'HTTP', 'Perubahan'];
 
         if ($request->query('format') === 'xlsx' || $request->query('format') === 'excel') {
             return $excel->download(

@@ -132,6 +132,30 @@ class NotificationTest extends TestCase
             ->assertDontSee('Halaman ini menampilkan kondisi terkini.');
     }
 
+    public function test_automatic_refresh_removes_resolved_items_and_preserves_filters(): void
+    {
+        $product = Product::factory()->withStock(0)->create(['name' => 'Barang Perlu Diisi']);
+        $this->actingAs(User::factory()->create());
+        $url = route('notifications.index', ['type' => 'out_of_stock']);
+        $response = $this->getJson($url)->assertOk()->assertJsonPath('total', 1);
+        $this->assertStringContainsString('Barang Perlu Diisi', $response->json('html'));
+        $this->assertStringNotContainsString('Perbarui Notifikasi', $response->json('html'));
+        $product->stock->update(['quantity' => 20]);
+        $response = $this->getJson($url)->assertOk()->assertJsonPath('total', 0)->assertJsonPath('counts.out_of_stock', 0);
+        $this->assertStringNotContainsString('Barang Perlu Diisi', $response->json('html'));
+        $this->assertStringContainsString('Tidak ada notifikasi', $response->json('html'));
+        $this->get($url)->assertOk()->assertDontSee('Perbarui Notifikasi')->assertSee('notification-metric__mark', false);
+    }
+
+    public function test_automatic_refresh_returns_a_valid_page_when_resolved_items_remove_the_current_page(): void
+    {
+        $this->actingAs(User::factory()->create());
+        Product::factory()->withStock(0)->create();
+        $response = $this->getJson(route('notifications.index', ['type' => 'out_of_stock', 'page' => 2]))->assertOk();
+        $this->assertStringContainsString('type=out_of_stock', $response->json('page_url'));
+        $this->assertStringContainsString('page=1', $response->json('page_url'));
+    }
+
     public function test_sidebar_provides_access_even_when_there_are_no_alerts(): void
     {
         $this->actingAs(User::factory()->create())->get(route('dashboard'))->assertOk()

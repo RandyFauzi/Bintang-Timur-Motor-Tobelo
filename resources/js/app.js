@@ -1,4 +1,5 @@
 import Alpine from 'alpinejs';
+import { notificationCenter } from './components/notifications';
 import { shipmentForm, shippingVoyage } from './components/shipments';
 import { productSelection } from './components/product-selection';
 import { appShell, dateRangeFilter, stockNotifications, toast } from './components/ui';
@@ -13,6 +14,7 @@ import.meta.glob('../images/**/*', { eager: true, query: '?url', import: 'defaul
 Alpine.data('appShell', appShell);
 Alpine.data('dateRangeFilter', dateRangeFilter);
 Alpine.data('stockNotifications', stockNotifications);
+Alpine.data('notificationCenter', notificationCenter);
 Alpine.data('shipmentForm', shipmentForm);
 Alpine.data('shippingVoyage', shippingVoyage);
 Alpine.data('toast', toast);

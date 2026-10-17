@@ -143,6 +143,12 @@ class ActivityRecorder
 
             return;
         }
+        $routeName = $request->route()?->getName() ?? '';
+        if ($request->isMethodSafe() && $status < 400 && ! $this->authentication && $this->changes === [] && ! str_contains($routeName, 'export')) {
+            $this->actor = null;
+
+            return;
+        }
         $requestId = (string) Str::uuid();
         $route = $request->route();
         $name = $route?->getName();
@@ -157,7 +163,7 @@ class ActivityRecorder
         $validationFailed = ! $request->isMethodSafe() && $request->hasSession() && $request->session()->get('errors')?->any() && $request->session()->get('errors') !== $request->attributes->get('audit.initial_errors');
         $result = in_array($status, [401, 403, 419, 429], true) ? 'denied' : (($status >= 400 || $validationFailed || $this->authentication === 'login_failed') ? 'failed' : 'success');
         $action = $this->authentication ?? (str_contains($name ?? '', 'export') ? 'export' : match ($request->method()) {
-            'GET','HEAD' => 'view', 'POST' => str_ends_with($name ?? '', '.store') ? 'create' : 'submit', 'PUT','PATCH' => 'update', 'DELETE' => 'delete', default => 'submit'
+            'GET','HEAD' => $status >= 400 ? ($result === 'denied' ? 'access_denied' : 'request_failed') : 'update', 'POST' => str_ends_with($name ?? '', '.store') ? 'create' : 'submit', 'PUT','PATCH' => 'update', 'DELETE' => 'delete', default => 'submit'
         });
         $action = match ($name) {
             'pos.checkout' => 'checkout', 'pos.scan' => 'scan', 'returns.cancel' => 'cancel', 'returns.bulk' => 'bulk', default => $action
@@ -166,8 +172,8 @@ class ActivityRecorder
             ActivityLog::create(($this->actor ?? ['user_id' => null, 'actor_name' => 'Tamu', 'actor_role' => null]) + [
                 'request_id' => $requestId, 'action' => $action, 'module' => $module, 'route_name' => $name,
                 'method' => $request->method(), 'route_path' => Str::limit($route?->uri() ?? 'unknown', 255, ''),
-                'status_code' => $status, 'result' => $result, 'ip_address' => $request->ip(),
-                'user_agent' => Str::limit($request->userAgent() ?? '', 500, ''),
+                'status_code' => $status, 'result' => $result, 'ip_address' => null,
+                'user_agent' => null,
                 'duration_ms' => (int) min(4294967295, max(0, round((microtime(true) - $startedAt) * 1000))),
                 'changes' => array_map(fn (array $change): array => Arr::except($change, ['level']), $this->changes),
                 'metadata' => ['targets' => $this->targets($request), 'changes_truncated' => $this->truncated, 'parameters' => array_values(array_intersect(array_keys($request->all()), ['search', 'period', 'view', 'kind', 'low_stock', 'category', 'amount', 'expense_date', 'items', 'quantity', 'role', 'user_id', 'module', 'action', 'result', 'start_date', 'end_date', 'detail', 'edit', 'invoice']))],

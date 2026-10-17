@@ -14,7 +14,7 @@ class ActivityLog extends Model
 
     protected $guarded = [];
 
-    public const ACTIONS = ['view' => 'Lihat Halaman', 'export' => 'Export Data', 'create' => 'Tambah Data', 'update' => 'Ubah Data', 'delete' => 'Hapus Data', 'submit' => 'Kirim Tindakan', 'login' => 'Login', 'logout' => 'Logout', 'login_failed' => 'Login Gagal', 'register' => 'Registrasi Akun', 'password_reset' => 'Reset Password', 'password_reset_request' => 'Minta Reset Password', 'checkout' => 'Transaksi Kasir', 'scan' => 'Pindai Produk', 'cancel' => 'Batalkan Data', 'bulk' => 'Ubah Massal'];
+    public const ACTIONS = ['access_denied' => 'Akses Ditolak', 'request_failed' => 'Permintaan Gagal', 'export' => 'Export Data', 'create' => 'Tambah Data', 'update' => 'Ubah Data', 'delete' => 'Hapus Data', 'submit' => 'Kirim Tindakan', 'login' => 'Login', 'logout' => 'Logout', 'login_failed' => 'Login Gagal', 'register' => 'Registrasi Akun', 'password_reset' => 'Reset Password', 'password_reset_request' => 'Minta Reset Password', 'checkout' => 'Transaksi Kasir', 'scan' => 'Pindai Produk', 'cancel' => 'Batalkan Data', 'bulk' => 'Ubah Massal'];
 
     public const RESULTS = ['success' => 'Berhasil', 'failed' => 'Gagal', 'denied' => 'Ditolak'];
 

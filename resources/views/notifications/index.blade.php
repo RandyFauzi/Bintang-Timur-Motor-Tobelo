@@ -1,10 +1,10 @@
 <x-app-layout>
-    <div class="catalogue-page notification-page">
-        <header class="notification-heading"><div><h1>Notifikasi</h1><p>Semua yang perlu ditindaklanjuti, dalam satu halaman.</p></div><a href="{{ request()->fullUrl() }}" class="ui-button ui-button--secondary">Perbarui Notifikasi</a></header>
-        <div class="notification-overview"><div><span class="notification-overview__dot" aria-hidden="true"></span><strong>{{ $total }}</strong><span>notifikasi aktif</span></div><p>Prioritas utama ditampilkan lebih dulu. Notifikasi akan hilang saat kondisinya sudah ditangani.</p></div>
+    <div class="catalogue-page notification-page" x-data="notificationCenter(@js(request()->fullUrl()), @js($counts), @js($total))" @focus.window="refresh()" @notification-count.window="if ($event.detail.count !== total) refresh()">
+        <header class="notification-heading"><div><h1>Notifikasi</h1><p>Semua yang perlu ditindaklanjuti, dalam satu halaman.</p></div></header>
+        <div class="notification-overview"><div><span class="notification-overview__dot" aria-hidden="true"></span><strong x-text="total">{{ $total }}</strong><span>notifikasi aktif</span></div><p>Prioritas utama ditampilkan lebih dulu. Notifikasi akan hilang saat kondisinya sudah ditangani.</p></div>
         <div class="notification-metrics">
             @foreach(\App\Services\NotificationService::TYPES as $type=>$label)
-                <a href="{{ route('notifications.index',['type'=>$type]) }}" @class(['notification-metric', 'notification-metric--urgent'=>in_array($type,['out_of_stock','shipment_delayed'])])><span>{{ $label }}</span><strong>{{ $counts[$type] }}</strong></a>
+                <a href="{{ route('notifications.index',['type'=>$type]) }}" @class(['notification-metric', 'is-active'=>request('type') === $type, 'notification-metric--urgent'=>in_array($type,['out_of_stock','shipment_delayed'])]) @if(request('type') === $type) aria-current="page" @endif>@if(request('type') === $type)<span class="notification-metric__mark" aria-hidden="true">✓</span>@endif<span>{{ $label }}</span><strong x-text="counts[@js($type)]">{{ $counts[$type] }}</strong></a>
             @endforeach
         </div>
         <section class="catalogue-surface" aria-label="Daftar notifikasi aktif">
@@ -14,30 +14,7 @@
                 <button type="submit" class="ui-button ui-button--secondary">Cari</button>
                 @if(request()->filled('type') || request()->filled('search'))<a href="{{ route('notifications.index') }}" class="filter-reset">Reset filter</a>@endif
             </form>
-            <div class="notification-list">
-                @forelse($notifications as $notification)
-                    @php($urgent = (int) $notification->priority <= 1)
-                    <article @class(['notification-item','notification-item--urgent'=>$urgent])>
-                        <span class="notification-item__icon" aria-hidden="true"><x-ui.icon :name="$notification->source === 'product' ? 'stock-box' : 'ship'" :size="24" /></span>
-                        <div class="notification-item__body">
-                            <div class="notification-item__labels"><span class="notification-kind">{{ \App\Services\NotificationService::TYPES[$notification->category] }}</span>@if($urgent)<span class="notification-priority">Perlu tindakan</span>@endif</div>
-                            <h2>{{ $notification->title }}</h2>
-                            @if($notification->source === 'product')
-                                <p>{{ $notification->category === 'out_of_stock' ? 'Stok produk sudah habis.' : 'Stok produk mencapai batas minimum.' }} Sisa <strong>{{ (int) $notification->quantity }}</strong> unit · Stok minimum {{ (int) $notification->minimum }} unit.</p>
-                                <small>SKU: {{ $notification->reference }} · Perbarui stok setelah barang tersedia.</small>
-                            @else
-                                <p>{{ $notification->context }} · {{ $notification->origin }} → {{ $notification->destination }}</p>
-                                <small>Resi {{ $notification->reference }} · Estimasi tiba {{ \Carbon\CarbonImmutable::parse($notification->due_on)->locale('id')->translatedFormat('j M Y') }} (WIT)</small>
-                                <p class="notification-item__hint">{{ $notification->category === 'shipment_delayed' ? 'Estimasi tiba terlewati. Hubungi ekspedisi atau konfirmasi jika barang sudah diterima.' : 'Cargo diperkirakan tiba dalam 2 hari atau kurang. Siapkan penerimaan barang.' }}</p>
-                            @endif
-                        </div>
-                        <a href="{{ $notification->source === 'product' ? route('products.index',['edit'=>$notification->source_id]) : route('shipments.index',['shipment'=>$notification->source_id]).'#shipment-detail' }}" class="ui-button ui-button--secondary notification-item__action">{{ $notification->source === 'product' ? 'Perbarui Stok' : 'Lihat Pengiriman' }}<span class="sr-only">: {{ $notification->title }}</span><span aria-hidden="true">→</span></a>
-                    </article>
-                @empty
-                    <x-ui.empty-state title="Tidak ada notifikasi" description="Semua kondisi sudah aman, atau tidak ada hasil yang sesuai dengan filter Anda." />
-                @endforelse
-            </div>
-            <x-ui.pagination :paginator="$notifications" :always-show-navigation="true" />
+            <div x-ref="feed">@include('notifications.partials.feed')</div>
         </section>
     </div>
 </x-app-layout>

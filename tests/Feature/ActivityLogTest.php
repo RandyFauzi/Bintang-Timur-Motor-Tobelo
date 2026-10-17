@@ -97,6 +97,38 @@ class ActivityLogTest extends TestCase
         $this->delete('/activity-logs/'.$record->id)->assertNotFound();
     }
 
+    public function test_reading_pages_and_background_refreshes_are_not_logged(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'admin']));
+        $this->get(route('dashboard'))->assertOk();
+        $this->get(route('notifications.index'))->assertOk();
+        $this->getJson(route('notifications.index'))->assertOk();
+        $this->getJson(route('shipments.notifications'))->assertOk();
+        $this->assertDatabaseCount('activity_logs', 0);
+        $this->post(route('reports.expenses.store'), ['category' => 'Konsumsi', 'amount' => 1000, 'expense_date' => now()->toDateString()])->assertRedirect();
+        $log = ActivityLog::sole();
+        $this->assertSame('create', $log->action);
+        $this->assertNull($log->ip_address);
+        $this->assertNull($log->user_agent);
+    }
+
+    public function test_legacy_views_and_device_metadata_are_hidden_from_the_log_interface_and_export(): void
+    {
+        $legacy = ActivityLog::factory()->create(['action' => 'view', 'actor_name' => 'Legacy Page Visit']);
+        $change = ActivityLog::factory()->create(['action' => 'update', 'actor_name' => 'Meaningful Change', 'ip_address' => '157.85.219.12', 'user_agent' => 'Mozilla private device']);
+        $this->actingAs(User::factory()->create(['role' => 'admin']));
+        $response = $this->get(route('activity-logs.index', ['detail' => $change->id]))->assertOk();
+        $this->assertSame(1, $response->viewData('logs')->total());
+        $response->assertSee('Meaningful Change')->assertDontSee('Legacy Page Visit')->assertDontSee('Lihat Halaman')
+            ->assertDontSee('Alamat IP')->assertDontSee('Perangkat')->assertDontSee('157.85.219.12')->assertDontSee('Mozilla private device');
+        $export = $this->get(route('activity-logs.export'))->streamedContent();
+        $this->assertStringNotContainsString('Legacy Page Visit', $export);
+        $this->assertStringNotContainsString('157.85.219.12', $export);
+        $this->assertStringNotContainsString('Alamat IP', $export);
+        $this->get(route('activity-logs.index', ['detail' => $legacy->id]))->assertNotFound();
+        $this->assertDatabaseHas('activity_logs', ['id' => $legacy->id, 'action' => 'view']);
+    }
+
     public function test_model_rejects_rewriting_existing_audit_entries(): void
     {
         $log = ActivityLog::factory()->create();
