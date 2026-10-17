@@ -34,7 +34,7 @@
 @endphp
 <aside id="app-sidebar" class="app-sidebar" x-data="{ activeNotificationCount: @js($stockOverview['count'] + $shipmentNotifications['count'] + $invoiceNotifications['count']) }" @notification-count.window="activeNotificationCount = $event.detail.count" :class="{ 'app-sidebar--collapsed': collapsed, 'app-sidebar--open': mobileMenuOpen }" :inert="isMobile && !mobileMenuOpen" aria-label="Navigasi utama" @keydown.tab="trapMobileFocus($event)">
     <div class="sidebar-brand">
-        <a href="{{ route('dashboard') }}" class="flex min-w-0 items-center gap-3" aria-label="{{ \App\Models\BusinessSetting::current()->business_name }} â€” Dashboard">
+        <a href="{{ route('dashboard') }}" class="flex min-w-0 items-center gap-3" aria-label="{{ \App\Models\BusinessSetting::current()->business_name }} &mdash; Dashboard">
             <x-ui.business-logo :size="24" />
             <span x-show="!collapsed || isMobile" class="truncate text-base font-medium">{{ \App\Models\BusinessSetting::current()->business_name }}</span>
         </a>
@@ -67,7 +67,7 @@
                                 @endif
                             </div>
                         @else
-                            <button type="button" class="sidebar-link sidebar-link--upcoming" title="{{ $item['label'] }} â€” segera tersedia" @click="$dispatch('notify', { message: '{{ $item['label'] }} belum tersedia. Modul ini akan ditambahkan pada tahap berikutnya.', type: 'info' })">
+                            <button type="button" class="sidebar-link sidebar-link--upcoming" title="{{ $item['label'] }} &mdash; segera tersedia" @click="$dispatch('notify', { message: '{{ $item['label'] }} belum tersedia. Modul ini akan ditambahkan pada tahap berikutnya.', type: 'info' })">
                                 <x-ui.icon :name="$item['icon']" :style="$item['icon'] === 'ship' ? 'filter: brightness(0) invert(1)' : null" />
                                 <span x-show="!collapsed || isMobile">{{ $item['label'] }}</span>
                                 <span x-show="!collapsed || isMobile" class="sidebar-coming" aria-label="Segera tersedia">+</span>
@@ -91,10 +91,10 @@
             </div>
             <template x-if="alerts.length"><a :href="current.url" class="stock-notification__message" x-text="current.message"></a></template>
             <template x-if="!alerts.length"><p class="stock-notification__message">Belum ada stok, pengiriman, atau tagihan yang perlu perhatian.</p></template>
-            <a x-cloak x-show="shipmentCount > 0" href="{{ route('shipments.index') }}" class="stock-notification__more"><span x-text="shipmentCount + ' pengiriman perlu perhatian'"></span><span aria-hidden="true">â€º</span></a>
+            <a x-cloak x-show="shipmentCount > 0" href="{{ route('shipments.index') }}" class="stock-notification__more"><span x-text="shipmentCount + ' pengiriman perlu perhatian'"></span><span aria-hidden="true">&rsaquo;</span></a>
             <a x-cloak x-show="invoiceCount > 0" href="{{ route('distributor-invoices.index') }}" class="stock-notification__more"><span x-text="invoiceCount + ' tagihan perlu pembayaran'"></span><span aria-hidden="true">›</span></a>
-            <a x-cloak x-show="stockCount > 0" href="{{ route('dashboard') }}#low-stock" class="stock-notification__more"><span x-text="stockCount + ' produk perlu perhatian'"></span><span aria-hidden="true">â€º</span></a>
-            <a href="{{ route('notifications.index') }}" class="stock-notification__more mt-3 border-t border-white/10 pt-3 font-medium">Lihat Semua Notifikasi <span aria-hidden="true">â†’</span></a>
+            <a x-cloak x-show="stockCount > 0" href="{{ route('dashboard') }}#low-stock" class="stock-notification__more"><span x-text="stockCount + ' produk perlu perhatian'"></span><span aria-hidden="true">&rsaquo;</span></a>
+            <a href="{{ route('notifications.index') }}" class="stock-notification__more mt-3 border-t border-white/10 pt-3 font-medium">Lihat Semua Notifikasi <span aria-hidden="true">&rarr;</span></a>
         </div>
         <div class="sidebar-profile" x-data="{ profileOpen: false }" @click.outside="profileOpen = false" @keydown.escape.stop="profileOpen = false; $refs.profile.focus()">
             <span class="profile-avatar relative overflow-hidden" aria-hidden="true">{{ mb_strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}@if(auth()->user()->avatar_path)<img src="{{ auth()->user()->avatarUrl() }}" alt="" class="absolute inset-0 h-full w-full object-cover" x-on:error="$el.remove()">@endif</span>
