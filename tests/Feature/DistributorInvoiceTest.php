@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\ActivityLog;
 use App\Models\Distributor;
 use App\Models\DistributorInvoice;
-use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\User;
@@ -33,9 +32,8 @@ class DistributorInvoiceTest extends TestCase
     #[TestWith([3, '2026-05-15', '2026-05-15'])]
     public function test_po_automatically_creates_one_invoice_with_exact_total_and_payment_term(?int $months, ?string $dueOn, string $expected): void
     {
-        $product = Product::factory()->create();
         $distributor = Distributor::factory()->create();
-        $payload = ['request_id' => (string) Str::uuid(), 'distributor_id' => $distributor->id, 'ordered_on' => '2026-01-31', 'payment_term_months' => $months, 'due_on' => $dueOn, 'items' => [['product_id' => $product->id, 'quantity' => 3, 'unit_price' => '123.45']]];
+        $payload = ['request_id' => (string) Str::uuid(), 'distributor_id' => $distributor->id, 'ordered_on' => '2026-01-31', 'payment_term_months' => $months, 'due_on' => $dueOn, 'items' => [['product_name' => 'Nama Barang Distributor', 'unit' => 'pcs', 'quantity' => 3, 'unit_price' => '123.45']]];
         $this->actingAs(User::factory()->create())->post(route('purchase-orders.store'), $payload)->assertSessionHasNoErrors()->assertRedirect();
         $invoice = DistributorInvoice::sole();
         $this->assertSame('unpaid', $invoice->status());
@@ -173,14 +171,13 @@ class DistributorInvoiceTest extends TestCase
 
     public function test_invoice_and_po_roll_back_if_total_exceeds_supported_limit(): void
     {
-        $product = Product::factory()->create();
-        $this->actingAs(User::factory()->create())->postJson(route('purchase-orders.store'), ['request_id' => (string) Str::uuid(), 'distributor_id' => Distributor::factory()->create()->id, 'ordered_on' => now()->toDateString(), 'items' => [['product_id' => $product->id, 'quantity' => 1000000, 'unit_price' => '999999999']]])->assertUnprocessable()->assertJsonValidationErrors('items');
+        $this->actingAs(User::factory()->create())->postJson(route('purchase-orders.store'), ['request_id' => (string) Str::uuid(), 'distributor_id' => Distributor::factory()->create()->id, 'ordered_on' => now()->toDateString(), 'items' => [['product_name' => 'Nama Barang Distributor', 'unit' => 'pcs', 'quantity' => 1000000, 'unit_price' => '999999999']]])->assertUnprocessable()->assertJsonValidationErrors('items');
         $this->assertDatabaseCount('purchase_orders', 0);
         $this->assertDatabaseCount('distributor_invoices', 0);
     }
 
     /** @return array<string,mixed> */
-    private function payment(string $amount,int $version = 1): array
+    private function payment(string $amount, int $version = 1): array
     {
         return ['request_id' => (string) Str::uuid(), 'version' => $version, 'amount' => $amount, 'paid_on' => DistributorInvoice::today()->toDateString(), 'method' => 'transfer', 'reference' => 'TRF-123'];
     }

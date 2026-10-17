@@ -7,7 +7,9 @@ use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\User;
+use App\Services\DistributorInvoiceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\TestWith;
 use Tests\TestCase;
@@ -19,7 +21,7 @@ class PurchaseOrderTest extends TestCase
     public function test_guests_cannot_access_orders_or_receipts(): void
     {
         $order = PurchaseOrder::factory()->create();
-        foreach (['purchase-orders.index', 'purchase-orders.create', 'purchase-orders.products'] as $route) {
+        foreach (['purchase-orders.index', 'purchase-orders.create'] as $route) {
             $this->get(route($route))->assertRedirect(route('login'));
         }
         $this->get(route('purchase-orders.show', $order))->assertRedirect(route('login'));
@@ -32,7 +34,7 @@ class PurchaseOrderTest extends TestCase
     {
         $distributor = Distributor::factory()->create(['name' => 'Distributor Tobelo']);
         $product = Product::factory()->withStock(7)->create(['name' => 'Kampas Rem']);
-        $payload = ['request_id' => (string) Str::uuid(), 'distributor_id' => $distributor->id, 'ordered_on' => '2026-10-17', 'items' => [['product_id' => $product->id, 'quantity' => 10, 'unit_price' => '12500.50']]];
+        $payload = ['request_id' => (string) Str::uuid(), 'distributor_id' => $distributor->id, 'ordered_on' => '2026-10-17', 'items' => [['product_name' => 'Kampas Rem', 'unit' => 'pcs', 'quantity' => 10, 'unit_price' => '12500.50']]];
         $this->actingAs(User::factory()->create())->post(route('purchase-orders.store'), $payload)->assertSessionHasNoErrors()->assertRedirect();
         $order = PurchaseOrder::with('items')->sole();
         $this->assertSame(125005.0, $order->total());
@@ -79,29 +81,25 @@ class PurchaseOrderTest extends TestCase
         $this->assertSame(5, $item->refresh()->actual_quantity);
     }
 
-    public function test_duplicate_products_and_inactive_catalogue_entries_are_rejected(): void
+    public function test_invalid_manual_items_and_inactive_distributor_are_rejected(): void
     {
         $distributor = Distributor::factory()->create(['is_active' => false]);
-        $product = Product::factory()->create(['is_active' => false]);
-        $row = ['product_id' => $product->id, 'quantity' => 0, 'unit_price' => -1];
-        $this->actingAs(User::factory()->create())->postJson(route('purchase-orders.store'), ['request_id' => (string) Str::uuid(), 'distributor_id' => $distributor->id, 'ordered_on' => '2026-10-17', 'items' => [$row, $row]])->assertUnprocessable()->assertJsonValidationErrors(['distributor_id', 'items.0.product_id', 'items.0.quantity', 'items.0.unit_price']);
+        $row = ['product_name' => '', 'unit' => '', 'quantity' => 0, 'unit_price' => -1];
+        $this->actingAs(User::factory()->create())->postJson(route('purchase-orders.store'), ['request_id' => (string) Str::uuid(), 'distributor_id' => $distributor->id, 'ordered_on' => '2026-10-17', 'items' => [$row, $row]])->assertUnprocessable()->assertJsonValidationErrors(['distributor_id', 'items.0.product_name', 'items.0.unit', 'items.0.quantity', 'items.0.unit_price']);
         $this->assertDatabaseCount('purchase_orders', 0);
     }
 
-    public function test_distributor_registration_returns_to_order_form_and_product_search_is_active_only(): void
+    public function test_distributor_registration_returns_to_manual_order_form(): void
     {
         $this->actingAs(User::factory()->create())->post(route('purchase-orders.distributors.store'), ['name' => 'Pemasok Baru'])->assertSessionHasNoErrors()->assertRedirect();
         $distributor = Distributor::sole();
         $this->get(route('purchase-orders.create', ['distributor_id' => $distributor->id]))->assertOk()->assertSee('Pemasok Baru');
-        Product::factory()->create(['name' => 'Produk Aktif']);
-        Product::factory()->create(['name' => 'Produk Arsip', 'is_active' => false]);
-        $this->getJson(route('purchase-orders.products', ['search' => 'Produk']))->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.name', 'Produk Aktif');
+
     }
 
     public function test_reused_order_token_with_different_items_or_payment_term_is_rejected(): void
     {
-        $product = Product::factory()->create();
-        $payload = ['request_id' => (string) Str::uuid(), 'distributor_id' => Distributor::factory()->create()->id, 'ordered_on' => '2026-10-17', 'items' => [['product_id' => $product->id, 'quantity' => 10, 'unit_price' => '10000']]];
+        $payload = ['request_id' => (string) Str::uuid(), 'distributor_id' => Distributor::factory()->create()->id, 'ordered_on' => '2026-10-17', 'items' => [['product_name' => 'Kampas Rem', 'unit' => 'pcs', 'quantity' => 10, 'unit_price' => '10000']]];
         $this->actingAs(User::factory()->create())->post(route('purchase-orders.store'), $payload)->assertSessionHasNoErrors();
         $payload['payment_term_months'] = 2;
         $this->postJson(route('purchase-orders.store'), $payload)->assertUnprocessable()->assertJsonValidationErrors('request_id');
@@ -114,7 +112,37 @@ class PurchaseOrderTest extends TestCase
 
     public function test_invalid_form_payload_can_be_rendered_after_validation_failure(): void
     {
-        $this->actingAs(User::factory()->create())->withSession(['_old_input' => ['items' => [['product_id' => ['bad'], 'quantity' => ['bad']]], 'distributor_id' => ['bad'], 'request_id' => ['bad']]])->get(route('purchase-orders.create'))->assertOk();
+        $this->actingAs(User::factory()->create())->withSession(['_old_input' => ['items' => [['product_name' => ['bad'], 'quantity' => ['bad']]], 'distributor_id' => ['bad'], 'request_id' => ['bad']]])->get(route('purchase-orders.create'))->assertOk();
+    }
+
+    public function test_manual_po_works_without_products_and_allows_repeated_supplier_names(): void
+    {
+        $row = ['product_name' => 'Nama Nota Distributor', 'sku' => 'KODE-SAMA', 'unit' => 'dus', 'quantity' => 2, 'unit_price' => '15000'];
+        $this->actingAs(User::factory()->create())->post(route('purchase-orders.store'), [
+            'request_id' => (string) Str::uuid(), 'distributor_id' => Distributor::factory()->create()->id,
+            'ordered_on' => '2026-10-17', 'items' => [$row, $row],
+        ])->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertDatabaseCount('products', 0);
+        $this->assertDatabaseCount('product_stocks', 0);
+        $this->assertDatabaseCount('purchase_order_items', 2);
+        $this->assertDatabaseHas('distributor_invoices', ['total_cents' => 6000000]);
+        $order = PurchaseOrder::sole();
+        $this->get(route('purchase-orders.show', $order))->assertSee('Nama Nota Distributor')->assertSee('KODE-SAMA');
+    }
+
+    public function test_detaching_existing_items_preserves_names_receipts_and_invoices(): void
+    {
+        $migration = require database_path('migrations/2026_10_17_085657_detach_purchase_order_items_from_products.php');
+        $migration->down();
+        $product = Product::factory()->withStock(7)->create();
+        $item = PurchaseOrderItem::factory()->create(['product_name' => 'Nama PO Lama', 'actual_quantity' => 5]);
+        DB::table('purchase_order_items')->where('id', $item->id)->update(['product_id' => $product->id]);
+        $invoice = app(DistributorInvoiceService::class)->createForOrder(PurchaseOrder::findOrFail($item->purchase_order_id));
+        $migration->up();
+        $product->forceDelete();
+        $this->assertDatabaseHas('purchase_order_items', ['id' => $item->id, 'product_name' => 'Nama PO Lama', 'actual_quantity' => 5]);
+        $this->assertModelExists($invoice);
+        $this->actingAs(User::factory()->create())->get(route('purchase-orders.show', $item->purchase_order_id))->assertOk()->assertSee('Nama PO Lama')->assertSee('Kurang 5');
     }
 
     public function test_order_search_filters_distributor_and_escapes_notes(): void

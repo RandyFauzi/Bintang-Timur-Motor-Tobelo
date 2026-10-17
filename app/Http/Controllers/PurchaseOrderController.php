@@ -6,13 +6,11 @@ use App\Http\Requests\DistributorRequest;
 use App\Http\Requests\PurchaseOrderReceiptRequest;
 use App\Http\Requests\PurchaseOrderRequest;
 use App\Models\Distributor;
-use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Services\DistributorInvoiceService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -38,18 +36,17 @@ class PurchaseOrderController extends Controller
 
     public function create(Request $request): View
     {
-        $rows = collect(is_array(old('items')) ? old('items') : [])->filter(fn (mixed $row): bool => is_array($row) && is_scalar($row['product_id'] ?? null));
-        $products = Product::whereIn('id', $rows->pluck('product_id'))->get()->keyBy('id');
-        $initialItems = $rows->filter(fn (mixed $row): bool => isset($products[$row['product_id']]))->map(fn (array $row): array => ['product_id' => $row['product_id'], 'name' => $products[$row['product_id']]->name, 'sku' => $products[$row['product_id']]->sku, 'quantity' => is_scalar($row['quantity'] ?? null) ? $row['quantity'] : 1, 'unit_price' => is_scalar($row['unit_price'] ?? null) ? $row['unit_price'] : 0])->values();
+        $initialItems = collect(is_array(old('items')) ? old('items') : [])
+            ->filter(fn (mixed $row): bool => is_array($row))
+            ->map(fn (array $row): array => [
+                'product_name' => is_string($row['product_name'] ?? null) ? $row['product_name'] : '',
+                'sku' => is_string($row['sku'] ?? null) ? $row['sku'] : '',
+                'unit' => is_string($row['unit'] ?? null) ? $row['unit'] : 'pcs',
+                'quantity' => is_scalar($row['quantity'] ?? null) ? $row['quantity'] : 1,
+                'unit_price' => is_scalar($row['unit_price'] ?? null) ? $row['unit_price'] : 0,
+            ])->values();
 
         return view('purchase-orders.create', ['distributors' => Distributor::where('is_active', true)->orderBy('name')->get(), 'requestId' => (string) Str::uuid(), 'initialItems' => $initialItems, 'selectedDistributor' => is_scalar(old('distributor_id')) ? old('distributor_id') : $request->integer('distributor_id')]);
-    }
-
-    public function products(Request $request): JsonResponse
-    {
-        $data = $request->validate(['search' => ['nullable', 'string', 'max:255']]);
-
-        return response()->json(['data' => Product::where('is_active', true)->where(fn (Builder $q): Builder => $q->where('name', 'like', '%'.($data['search'] ?? '').'%')->orWhere('sku', 'like', '%'.($data['search'] ?? '').'%'))->orderBy('name')->limit(20)->get(['id', 'name', 'sku', 'unit', 'purchase_price'])]);
     }
 
     public function store(PurchaseOrderRequest $request, DistributorInvoiceService $billing): RedirectResponse
@@ -65,10 +62,11 @@ class PurchaseOrderController extends Controller
                     && $existing->notes === ($data['notes'] ?? null)
                     && $existing->invoice?->due_on->toDateString() === ($data['due_on'] ?? CarbonImmutable::parse($data['ordered_on'])->addMonthsNoOverflow((int) ($data['payment_term_months'] ?? 3))->toDateString())
                     && $existing->items()->count() === count($data['items']);
-                $existingItems = $existing->items->keyBy('product_id');
-                foreach ($data['items'] as $item) {
-                    $saved = $existingItems->get($item['product_id']);
-                    $matches = $matches && $saved !== null && $saved->quantity === (int) $item['quantity']
+                $existingItems = $existing->items->sortBy('id')->values();
+                foreach (array_values($data['items']) as $index => $item) {
+                    $saved = $existingItems->get($index);
+                    $matches = $matches && $saved !== null && $saved->product_name === $item['product_name']
+                        && $saved->sku === ($item['sku'] ?? '') && $saved->unit === $item['unit'] && $saved->quantity === (int) $item['quantity']
                         && DistributorInvoiceService::cents($saved->unit_price) === DistributorInvoiceService::cents($item['unit_price']);
                 }
                 if (! $matches) {
@@ -79,10 +77,8 @@ class PurchaseOrderController extends Controller
             }
 
             $order = PurchaseOrder::create(collect($data)->except(['items', 'due_on', 'payment_term_months'])->all() + ['reference' => 'PO-'.now()->format('Ymd').'-'.Str::upper(Str::random(8)), 'distributor_name' => $distributor->name]);
-            $products = Product::whereIn('id', array_column($data['items'], 'product_id'))->get()->keyBy('id');
             foreach ($data['items'] as $item) {
-                $product = $products[$item['product_id']];
-                $order->items()->create($item + ['product_name' => $product->name, 'sku' => $product->sku, 'unit' => $product->unit]);
+                $order->items()->create(array_replace($item, ['sku' => $item['sku'] ?? '']));
             }
 
             $billing->createForOrder($order, $data['due_on'] ?? null, (int) ($data['payment_term_months'] ?? 3));

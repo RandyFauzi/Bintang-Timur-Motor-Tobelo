@@ -10,18 +10,29 @@ test('receipt distinguishes unchecked, missing, short, excess and matching deliv
     }
 });
 
-test('order editor prevents duplicate products and recalculates totals after edits and removal', () => {
+test('manual order editor keeps supplier names independent and totals edited rows', () => {
     const state = purchaseOrderForm();
-    state.add({id:1, name:'Kampas', sku:'K-1', purchase_price:'123.45'});
-    state.rows[0].quantity = '3';
+    state.add();
+    Object.assign(state.rows[0], {product_name:'Nama di nota', unit:'dus', quantity:'3', unit_price:'123.45'});
     assert.equal(state.total, 370.35);
-    state.add({id:1, name:'Kampas', sku:'K-1', purchase_price:'123.45'});
-    assert.equal(state.rows.length, 1);
-    assert.equal(state.error, 'Barang ini sudah ada di pesanan.');
-    state.add({id:2, name:'Oli', sku:'O-2', purchase_price:'10000'});
+    state.add();
+    Object.assign(state.rows[1], {product_name:'Nama di nota', unit:'pcs', quantity:1, unit_price:'10000'});
+    assert.equal(state.rows.length, 2);
     assert.equal(state.total, 10370.35);
+    assert.equal(Object.hasOwn(state.rows[0], 'product_id'), false);
     state.rows.splice(0,1);
     assert.equal(state.total, 10000);
+});
+
+test('restored manual rows retain entered names and use unique row keys', () => {
+    const state = purchaseOrderForm([{product_name:'Barang A',sku:'',unit:'pcs',quantity:2,unit_price:100}]);
+    state.add();
+    assert.equal(state.rows[0].product_name,'Barang A');
+    assert.notEqual(state.rows[0].key,state.rows[1].key);
+    for (let i=state.rows.length;i<100;i++) state.add();
+    state.add();
+    assert.equal(state.rows.length,100);
+    assert.equal(state.error,'Maksimal 100 barang per PO.');
 });
 
 test('invoice reminder badge and sidebar clear resolved bills during refresh', async () => {

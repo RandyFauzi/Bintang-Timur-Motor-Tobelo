@@ -21,8 +21,10 @@ class PurchaseOrderRequest extends FormRequest
             'payment_term_months' => ['nullable', 'integer', Rule::in([2, 3])],
             'due_on' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:ordered_on'],
             'notes' => ['nullable', 'string', 'max:2000'], 'items' => ['required', 'array', 'min:1', 'max:100'],
-            'items.*' => ['required', 'array:product_id,quantity,unit_price'],
-            'items.*.product_id' => ['required', 'integer', 'distinct', Rule::exists('products', 'id')->whereNull('deleted_at')->where('is_active', true)],
+            'items.*' => ['required', 'array:product_name,sku,unit,quantity,unit_price'],
+            'items.*.product_name' => ['required', 'string', 'max:255'],
+            'items.*.sku' => ['nullable', 'string', 'max:255'],
+            'items.*.unit' => ['required', 'string', 'max:50'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:1000000'],
             'items.*.unit_price' => ['required', 'numeric', 'min:0', 'max:999999999', 'decimal:0,2'],
         ];
