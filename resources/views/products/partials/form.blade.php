@@ -50,7 +50,7 @@
                 <ul class="list-disc pl-5 text-sm text-muted space-y-2">
                     <li>ID produk yang sama memperbarui data. ID kosong menambah produk baru; SKU kosong dibuat otomatis. ID yang tidak ditemukan ditolak.</li>
                     <li>Isi angka tanpa Rp atau pemisah ribuan; desimal memakai titik. Kolom yang tidak ada di file tetap dipertahankan untuk produk lama. Kolom opsional yang kosong akan dikosongkan.</li>
-                    <li>Tipe Produk: Harian, Non-Harian, atau Variasi. Distributor boleh kosong. Jika diisi, namanya harus sudah terdaftar; pisahkan beberapa nama dengan tanda |.</li>
+                    <li>Tipe Produk: Harian, Non-Harian, atau Variasi. Distributor boleh kosong. Nama distributor yang belum terdaftar akan dibuat otomatis; pisahkan beberapa nama dengan tanda |.</li>
                     <li>Kolom opsional menerima sel kosong, NULL, atau tanda -. Tipe Produk kosong menjadi Harian untuk produk baru; tipe produk lama tetap dipertahankan.</li>
                     <li>Format kolom SKU dan Barcode sebagai Teks agar angka nol di depan tidak hilang.</li>
                     <li>Semua baris diperiksa terlebih dahulu. Jika ada kesalahan, seluruh import dibatalkan.</li>

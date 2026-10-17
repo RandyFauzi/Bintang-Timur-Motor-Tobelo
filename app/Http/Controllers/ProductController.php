@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CatalogueFilterRequest;
+use App\Http\Requests\ProductBulkRequest;
 use App\Http\Requests\ProductRequest;
 use App\Models\Product;
 use App\Models\ProductImportColumn;
@@ -52,6 +53,23 @@ class ProductController extends Controller
         $catalogue->saveProduct($request->validated(), $request->user()->id, $product);
 
         return redirect()->route('products.index')->with('success', $product->name.' berhasil diperbarui.');
+    }
+
+    public function bulkUpdate(ProductBulkRequest $request, CatalogueService $catalogue): RedirectResponse
+    {
+        $data = $request->validated();
+        $changes = array_filter($data['changes'], fn (mixed $value): bool => $value !== null && $value !== '');
+        $catalogue->bulkProducts($data['selected'], $changes, $request->user()->id);
+
+        return redirect()->route('products.index')->with('success', count($data['selected']).' produk berhasil diperbarui.');
+    }
+
+    public function bulkDestroy(ProductBulkRequest $request, CatalogueService $catalogue): RedirectResponse
+    {
+        $ids = $request->validated('selected');
+        $catalogue->bulkProducts($ids, [], $request->user()->id, true);
+
+        return redirect()->route('products.index')->with('success', count($ids).' produk berhasil dihapus. Riwayat tetap tersimpan.');
     }
 
     public function destroy(Product $product, CatalogueService $catalogue): RedirectResponse

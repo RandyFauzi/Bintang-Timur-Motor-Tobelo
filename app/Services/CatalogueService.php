@@ -107,6 +107,26 @@ class CatalogueService
         });
     }
 
+    /** @param list<int|string> $ids
+     * @param  array<string, mixed>  $changes
+     */
+    public function bulkProducts(array $ids, array $changes, int $userId, bool $deleting = false): void
+    {
+        DB::transaction(function () use ($ids, $changes, $userId, $deleting): void {
+            $products = Product::whereKey($ids)->where('is_active', true)->orderBy('id')->lockForUpdate()->get();
+            if ($products->count() !== count($ids)) {
+                throw ValidationException::withMessages(['selected' => 'Sebagian produk tidak tersedia. Muat ulang halaman.']);
+            }
+            foreach ($products as $product) {
+                if ($deleting) {
+                    $this->deleteProduct($product);
+                } else {
+                    $this->saveProduct($changes, $userId, $product);
+                }
+            }
+        });
+    }
+
     public function deleteProduct(Product $product): void
     {
         DB::transaction(function () use ($product): void {

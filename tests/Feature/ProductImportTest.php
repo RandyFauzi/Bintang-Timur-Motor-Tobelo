@@ -64,14 +64,14 @@ class ProductImportTest extends TestCase
         $this->assertDatabaseCount('stock_movements', 0);
     }
 
-    public function test_duplicate_sku_within_file_and_unknown_supplier_are_rejected(): void
+    public function test_duplicate_sku_within_file_is_rejected_without_creating_distributors(): void
     {
         $this->actingAs(User::factory()->create());
         $response = $this->postJson(route('products.import'), ['file' => $this->workbook([$this->row(), $this->row()])]);
 
         $response->assertUnprocessable()->assertJsonValidationErrors('file');
         $this->assertStringContainsString('duplikat', implode(' ', $response->json('errors.file')));
-        $this->assertStringContainsString('Distributor', implode(' ', $response->json('errors.file')));
+        $this->assertDatabaseCount('distributors', 0);
         $this->assertDatabaseCount('products', 0);
     }
 
@@ -246,6 +246,47 @@ class ProductImportTest extends TestCase
         $invalid = $this->workbook([[(string) $product->id, 'Asal']], headers: ['ID', 'Tipe Produk']);
         $this->postJson(route('products.import'), ['file' => $invalid])->assertUnprocessable()
             ->assertJsonPath('errors.file.0', 'Baris 7: Tipe Produk harus Harian, Non-Harian, atau Variasi. Boleh dikosongkan.');
+    }
+
+    public function test_unknown_distributors_are_created_once_and_existing_names_are_reused(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $existing = Distributor::factory()->create(['name' => 'WMS']);
+        $first = $this->row();
+        $first[7] = ' wms | Baru | baru | - ';
+        $second = $this->row();
+        $second[8] = 'BARCODE-2';
+        $second[9] = 'SKU-2';
+        $second[7] = 'BARU';
+        $this->post(route('products.import'), ['file' => $this->workbook([$first, $second])])->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('distributors', 2);
+        $new = Distributor::where('name', 'Baru')->sole();
+        $this->assertSame([$existing->id, $new->id], Product::where('sku', 'IMP-001')->sole()->distributors->modelKeys());
+        $this->assertSame([$new->id], Product::where('sku', 'SKU-2')->sole()->distributors->modelKeys());
+    }
+
+    public function test_new_distributors_are_rolled_back_when_stock_update_fails(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $product = Product::factory()->withStock(10)->create();
+        $product->stock->update(['reserved_quantity' => 5]);
+        $file = $this->workbook([[(string) $product->id, '4', 'Distributor Baru']], headers: ['ID', 'Stok', 'Distributor']);
+        $this->postJson(route('products.import'), ['file' => $file])->assertUnprocessable()->assertJsonValidationErrors('file');
+        $this->assertDatabaseCount('distributors', 0);
+        $this->assertSame(10, $product->fresh()->stock->quantity);
+    }
+
+    public function test_inactive_or_oversized_distributor_names_are_not_imported(): void
+    {
+        $this->actingAs(User::factory()->create());
+        Distributor::factory()->create(['name' => 'WMS', 'is_active' => false]);
+        foreach (['WMS', str_repeat('A', 256)] as $name) {
+            $row = $this->row();
+            $row[7] = $name;
+            $this->postJson(route('products.import'), ['file' => $this->workbook([$row])])->assertUnprocessable()->assertJsonValidationErrors('file');
+        }
+        $this->assertDatabaseCount('products', 0);
+        $this->assertDatabaseCount('distributors', 1);
     }
 
     public function test_import_validation_reopens_import_tab(): void

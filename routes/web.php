@@ -30,6 +30,8 @@ Route::middleware('auth')->group(function () {
     Route::get('products/import/template', [ProductImportController::class, 'template'])->name('products.import.template');
     Route::post('products/import', [ProductImportController::class, 'store'])->middleware('throttle:10,1')->name('products.import');
     Route::get('products/export', [ProductController::class, 'export'])->name('products.export');
+    Route::patch('products/bulk', [ProductController::class, 'bulkUpdate'])->name('products.bulk.update');
+    Route::delete('products/bulk', [ProductController::class, 'bulkDestroy'])->name('products.bulk.destroy');
     Route::resource('products', ProductController::class);
 
     // POS (Kasir)

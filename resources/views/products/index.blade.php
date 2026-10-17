@@ -1,5 +1,6 @@
 <x-app-layout :stock-overview="$stockOverview">
-    <div class="catalogue-page">
+    <div class="catalogue-page" x-data="productSelection(@js(old('selected', [])))">
+        @php($pageProductIds = $products->modelKeys())
         <header class="catalogue-heading"><h1>Stok & Produk</h1></header>
         <div class="catalogue-summary">
             <div class="catalogue-summary__metric"><span class="text-sm text-muted">Stok Menipis</span><strong>{{ $stockOverview['count'] }}</strong><span class="text-xs text-muted">Kondisi stok saat ini</span><x-ui.icon name="stock-box" /></div>
@@ -27,6 +28,7 @@
                 <div class="catalogue-card-grid">
                     @forelse($products as $product)
                         <article class="product-card">
+                            <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="rounded" :checked="has({{ $product->id }})" @change="toggle({{ $product->id }}, $event.target.checked)" aria-label="Pilih {{ $product->name }}">Pilih produk</label>
                             <header><div><h2>{{ $product->name }}</h2><p class="mt-2 text-sm text-muted">{{ $product->color?->name ?? '–' }}</p></div><div class="product-card__actions">
                                 <x-ui.product-actions :product="$product" />
                             </div></header>
@@ -47,20 +49,28 @@
                 </div>
             @else
                 <div class="catalogue-table-scroll"><table class="catalogue-table"><caption class="sr-only">Daftar stok dan produk</caption>
-                    <thead><tr>@foreach(['Info Produk','Modal','Harga Jual','Tipe Produk','Merk','Jenis Part','Distributor','Stok','Aksi'] as $heading)<th scope="col">{{ $heading }}</th>@endforeach</tr></thead>
+                    <thead><tr><th scope="col"><input type="checkbox" class="rounded" :checked="pageSelected(@js($pageProductIds))" x-effect="$el.indeterminate = @js($pageProductIds).some(id => has(id)) && !pageSelected(@js($pageProductIds))" @change="togglePage(@js($pageProductIds), $event.target.checked)" aria-label="Pilih semua produk pada halaman ini"></th>@foreach(['Info Produk','Modal','Harga Jual','Tipe Produk','Merk','Jenis Part','Distributor','Stok','Aksi'] as $heading)<th scope="col">{{ $heading }}</th>@endforeach</tr></thead>
                     <tbody>@forelse($products as $product)<tr>
+                        <td><input type="checkbox" class="rounded" :checked="has({{ $product->id }})" @change="toggle({{ $product->id }}, $event.target.checked)" aria-label="Pilih {{ $product->name }}"></td>
                         <td><span class="font-medium">{{ $product->name }}</span><span class="mt-1 block text-muted">{{ $product->color?->name ?? '–' }}</span></td>
                         <td class="whitespace-nowrap">Rp {{ number_format($product->purchase_price,0,',','.') }}</td><td class="whitespace-nowrap">Rp {{ number_format($product->selling_price,0,',','.') }}</td>
                         <td>{{ \App\Models\Product::KINDS[$product->product_kind] ?? '–' }}</td><td><span class="neutral-badge">{{ $product->brand?->name ?? '–' }}</span></td>
                         <td>{{ $product->type?->name ?? '–' }}</td><td>{{ $product->distributors->pluck('name')->join(', ') ?: '–' }}</td>
                         <td><span @class(['stock-badge'=>($product->stock?->quantity ?? 0) <= $product->stock_minimum])>{{ $product->stock?->quantity ?? 0 }}</span></td>
                         <td><div class="flex items-center gap-2"><a href="{{ request()->fullUrlWithQuery(['edit'=>$product->id,'create'=>null]) }}" class="edit-link">Edit</a><x-ui.product-actions :product="$product" /></div></td>
-                    </tr>@empty<tr><td colspan="9"><x-ui.empty-state title="Produk tidak ditemukan" description="Tambahkan produk baru atau ubah pilihan filter." /></td></tr>@endforelse</tbody>
+                    </tr>@empty<tr><td colspan="10"><x-ui.empty-state title="Produk tidak ditemukan" description="Tambahkan produk baru atau ubah pilihan filter." /></td></tr>@endforelse</tbody>
                 </table></div>
             @endif
+            <div x-cloak x-show="selected.length" class="return-bulk-bar">
+                <span class="text-sm" x-text="selected.length + ' Terpilih'"></span>
+                <button type="button" class="ui-button" @click="$dispatch('open-dialog', {id: 'product-bulk-edit'})"><x-ui.icon name="edit" :size="16" />Edit Massal</button>
+                <button type="button" class="ui-button ui-button--secondary" @click="$dispatch('open-dialog', {id: 'product-bulk-delete'})"><x-ui.icon name="trash" :size="16" />Hapus Terpilih</button>
+                <button type="button" class="text-sm underline" @click="selected = []">Batal Pilih</button>
+            </div>
             <x-ui.pagination :paginator="$products" />
         </section>
         @include('products.partials.form', ['product' => $editing])
+        @include('products.partials.bulk')
         <x-ui.dialog name="product-delete" title="Hapus Produk" description="Produk akan dihapus dari katalog. Riwayat transaksi dan retur tetap tersimpan.">
             <form method="POST" class="dialog-form" x-data="{ productName: '', deleteUrl: '' }" :action="deleteUrl" @delete-product.window="productName = $event.detail.name; deleteUrl = $event.detail.url; $dispatch('open-dialog', { id: 'product-delete' })" @submit="submitting = true">
                 @csrf @method('DELETE')

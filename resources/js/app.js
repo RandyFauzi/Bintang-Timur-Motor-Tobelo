@@ -1,4 +1,5 @@
 import Alpine from 'alpinejs';
+import { productSelection } from './components/product-selection';
 import { appShell, dateRangeFilter, stockNotifications, toast } from './components/ui';
 import { revenueChart } from './components/revenue-chart';
 import { appDialog, multiSelect, observationForm } from './components/catalogue';
@@ -17,6 +18,7 @@ Alpine.data('appDialog', appDialog);
 Alpine.data('multiSelect', multiSelect);
 Alpine.data('observationForm', observationForm);
 Alpine.data('returnSelection', returnSelection);
+Alpine.data('productSelection', productSelection);
 Alpine.data('productPicker', productPicker);
 Alpine.data('posRegister', posRegister);
 Alpine.data('transactionEditor', transactionEditor);

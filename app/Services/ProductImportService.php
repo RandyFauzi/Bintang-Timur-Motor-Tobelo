@@ -29,7 +29,7 @@ class ProductImportService
         $rows = $this->read($file, $mapping);
         $request = new ProductRequest;
         $request->setMethod('POST');
-        $suppliers = Distributor::where('is_active', true)->get()->keyBy(fn (Distributor $supplier): string => mb_strtolower($supplier->name));
+        $suppliers = Distributor::all()->keyBy(fn (Distributor $supplier): string => mb_strtolower(trim($supplier->name)));
         $validated = [];
         $errors = [];
         $seen = ['id' => [], 'sku' => [], 'barcode' => []];
@@ -76,20 +76,17 @@ class ProductImportService
                 'product_kind' => $product?->product_kind ?? 'daily',
             ];
             if (array_key_exists('supplier_names', $data)) {
-                $data['distributor_ids'] = [];
-                foreach (array_filter(array_map('trim', explode('|', $data['supplier_names'] ?? ''))) as $name) {
+                $data['supplier_names'] = array_values(array_filter(array_map('trim', explode('|', $data['supplier_names'] ?? '')), fn (string $name): bool => ! in_array(mb_strtolower($name), ['', 'null', '-', '–'], true)));
+                foreach ($data['supplier_names'] as $name) {
                     $supplier = $suppliers->get(mb_strtolower($name));
-                    if (! $supplier) {
-                        $errors[] = 'Baris '.$number.': Distributor "'.$name.'" belum tersedia. Tambahkan distributor terlebih dahulu.';
-                    } else {
-                        $data['distributor_ids'][] = $supplier->id;
+                    if ($supplier && ! $supplier->is_active) {
+                        $errors[] = 'Baris '.$number.': Distributor "'.$name.'" sedang nonaktif. Aktifkan terlebih dahulu atau kosongkan kolom ini.';
                     }
                 }
-                $data['distributor_ids'] = array_values(array_unique($data['distributor_ids']));
-                $provided[] = 'distributor_ids';
-                unset($data['supplier_names']);
             }
             $rules = $request->rules();
+            $rules['supplier_names'] = ['sometimes', 'array', 'max:100'];
+            $rules['supplier_names.*'] = ['string', 'max:255'];
             foreach (['sku', 'barcode'] as $field) {
                 $rules[$field] = ['nullable', 'string', 'max:100', Rule::unique('products', $field)->ignore($product?->id)];
             }
@@ -112,14 +109,33 @@ class ProductImportService
             throw ValidationException::withMessages(['file' => array_slice($errors, 0, 50)]);
         }
         try {
-            DB::transaction(function () use ($validated, $userId): void {
+            DB::transaction(function () use ($validated, $userId, $suppliers): void {
                 foreach ($validated as $row) {
                     $product = $row['id'] ? Product::lockForUpdate()->find($row['id']) : null;
                     if ($row['id'] && ! $product) {
                         $this->invalid('Baris '.$row['row'].': Produk sudah dihapus. Import dibatalkan.');
                     }
+                    $data = $row['data'];
+                    if (array_key_exists('supplier_names', $data)) {
+                        $data['distributor_ids'] = [];
+                        foreach ($data['supplier_names'] as $name) {
+                            $key = mb_strtolower($name);
+                            $supplier = $suppliers->get($key);
+                            if (! $supplier) {
+                                $supplier = Distributor::whereRaw('LOWER(TRIM(name)) = ?', [$key])->first()
+                                    ?? Distributor::create(['name' => $name, 'is_active' => true]);
+                                $suppliers->put($key, $supplier);
+                            }
+                            if (! $supplier->is_active) {
+                                $this->invalid('Baris '.$row['row'].': Distributor sedang nonaktif. Import dibatalkan.');
+                            }
+                            $data['distributor_ids'][] = $supplier->id;
+                        }
+                        $data['distributor_ids'] = array_values(array_unique($data['distributor_ids']));
+                        unset($data['supplier_names']);
+                    }
                     try {
-                        $this->catalogue->saveProduct($row['data'], $userId, $product, true);
+                        $this->catalogue->saveProduct($data, $userId, $product, true);
                     } catch (ValidationException $exception) {
                         $this->invalid('Baris '.$row['row'].': '.implode(' ', $exception->validator->errors()->all()));
                     }
