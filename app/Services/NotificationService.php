@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\DistributorInvoice;
 use App\Models\Product;
 use App\Models\Shipment;
 use Illuminate\Database\Query\Builder;
@@ -10,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 class NotificationService
 {
-    public const TYPES = ['out_of_stock' => 'Stok Habis', 'shipment_delayed' => 'Pengiriman Terlambat', 'low_stock' => 'Stok Menipis', 'shipment_near' => 'Pengiriman Mendekati Tujuan'];
+    public const TYPES = ['out_of_stock' => 'Stok Habis', 'shipment_delayed' => 'Pengiriman Terlambat', 'low_stock' => 'Stok Menipis', 'shipment_near' => 'Pengiriman Mendekati Tujuan', 'invoice_overdue' => 'Tagihan Terlambat', 'invoice_due' => 'Tagihan Mendekati Jatuh Tempo'];
 
     /** @param array<string, mixed> $filters
      * @return array{notifications: LengthAwarePaginator, counts: array<string, int>, total: int}
@@ -48,6 +49,11 @@ class NotificationService
             $shipments = Shipment::withStatus($status)->selectRaw("id AS source_id, cargo_name AS title, reference, 'shipment' AS source, ? AS category, ? AS priority, package_count AS quantity, NULL AS minimum, estimated_arrival_on AS due_on, service_name AS context, origin_port AS origin, destination_port AS destination", [$category, $priority])->toBase();
             $stock->unionAll($shipments);
         }
+
+        $today = DistributorInvoice::today()->toDateString();
+        $invoices = DistributorInvoice::needsReminder()->join('purchase_orders', 'purchase_orders.id', '=', 'distributor_invoices.purchase_order_id')
+            ->selectRaw("distributor_invoices.id AS source_id, purchase_orders.distributor_name AS title, distributor_invoices.reference, 'invoice' AS source, CASE WHEN due_on < ? THEN 'invoice_overdue' ELSE 'invoice_due' END AS category, CASE WHEN due_on < ? THEN 0 ELSE 2 END AS priority, (total_cents - paid_cents) AS quantity, NULL AS minimum, due_on, purchase_orders.reference AS context, '' AS origin, '' AS destination", [$today, $today])->toBase();
+        $stock->unionAll($invoices);
 
         return $stock;
     }

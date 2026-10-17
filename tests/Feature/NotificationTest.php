@@ -41,7 +41,7 @@ class NotificationTest extends TestCase
         Shipment::factory()->create(['estimated_arrival_on' => '2026-10-16', 'delivered_at' => now()]);
         $response = $this->actingAs(User::factory()->create())->get(route('notifications.index'))->assertOk();
         $this->assertSame(5, $response->viewData('total'));
-        $this->assertSame(['out_of_stock' => 2, 'shipment_delayed' => 1, 'low_stock' => 1, 'shipment_near' => 1], $response->viewData('counts'));
+        $this->assertSame(['out_of_stock' => 2, 'shipment_delayed' => 1, 'low_stock' => 1, 'shipment_near' => 1, 'invoice_overdue' => 0, 'invoice_due' => 0], $response->viewData('counts'));
         $this->assertSame('shipment_delayed', $response->viewData('notifications')->first()->category);
         $response->assertSee('Stok Kosong')->assertSee('Belum Ada Stok')->assertSee('Stok Tipis')->assertSee('Cargo Mendekat')
             ->assertSee(route('shipments.index', ['shipment' => $late->id]).'#shipment-detail', false);

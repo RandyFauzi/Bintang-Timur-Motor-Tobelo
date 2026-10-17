@@ -4,7 +4,7 @@
         <div class="notification-overview"><div><span class="notification-overview__dot" aria-hidden="true"></span><strong x-text="total">{{ $total }}</strong><span>notifikasi aktif</span></div><p>Prioritas utama ditampilkan lebih dulu. Notifikasi akan hilang saat kondisinya sudah ditangani.</p></div>
         <div class="notification-metrics">
             @foreach(\App\Services\NotificationService::TYPES as $type=>$label)
-                <a href="{{ route('notifications.index',['type'=>$type]) }}" @class(['notification-metric', 'is-active'=>request('type') === $type, 'notification-metric--urgent'=>in_array($type,['out_of_stock','shipment_delayed'])]) @if(request('type') === $type) aria-current="page" @endif>@if(request('type') === $type)<span class="notification-metric__mark" aria-hidden="true">✓</span>@endif<span>{{ $label }}</span><strong x-text="counts[@js($type)]">{{ $counts[$type] }}</strong></a>
+                <a href="{{ route('notifications.index',['type'=>$type]) }}" @class(['notification-metric', 'is-active'=>request('type') === $type, 'notification-metric--urgent'=>in_array($type,['out_of_stock','shipment_delayed','invoice_overdue'])]) @if(request('type') === $type) aria-current="page" @endif>@if(request('type') === $type)<span class="notification-metric__mark" aria-hidden="true">✓</span>@endif<span>{{ $label }}</span><strong x-text="counts[@js($type)]">{{ $counts[$type] }}</strong></a>
             @endforeach
         </div>
         <section class="catalogue-surface" aria-label="Daftar notifikasi aktif">

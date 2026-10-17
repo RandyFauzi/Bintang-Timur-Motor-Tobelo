@@ -62,9 +62,9 @@ export function dateRangeFilter() {
     };
 }
 
-export function stockNotifications(stockAlerts, shipmentOverview = { count: 0, alerts: [] }, endpoint = null, stockCount = stockAlerts.length) {
+export function stockNotifications(stockAlerts, shipmentOverview = { count: 0, alerts: [] }, endpoint = null, stockCount = stockAlerts.length, invoiceOverview = { count: 0, alerts: [] }) {
     return {
-        stockAlerts, stockCount, alerts: [...shipmentOverview.alerts, ...stockAlerts], shipmentCount: shipmentOverview.count, index: 0,
+        stockAlerts, stockCount, invoiceAlerts: invoiceOverview.alerts, invoiceCount: invoiceOverview.count, alerts: [...invoiceOverview.alerts, ...shipmentOverview.alerts, ...stockAlerts], shipmentCount: shipmentOverview.count, index: 0,
         ids: [], timer: null, controller: null, busy: false,
         get current() { return this.alerts[this.index] ?? { name: '', message: '', quantity: 0, url: '#' }; },
         next() { if (this.alerts.length) this.index = (this.index + 1) % this.alerts.length; },
@@ -86,10 +86,12 @@ export function stockNotifications(stockAlerts, shipmentOverview = { count: 0, a
                 this.shipmentCount = result.count;
                 this.stockAlerts = result.stock_alerts ?? this.stockAlerts;
                 this.stockCount = result.stock_count ?? this.stockCount;
-                this.alerts = [...result.alerts, ...this.stockAlerts];
+                this.invoiceCount = result.invoice_count ?? this.invoiceCount;
+                this.invoiceAlerts = result.invoice_alerts ?? this.invoiceAlerts;
+                this.alerts = [...this.invoiceAlerts, ...result.alerts, ...this.stockAlerts];
                 this.index = this.alerts.length ? this.index % this.alerts.length : 0;
                 window.dispatchEvent(new CustomEvent('shipment-updates', { detail: result }));
-                window.dispatchEvent(new CustomEvent('notification-count', { detail: { count: result.active_count ?? this.stockCount + this.shipmentCount } }));
+                window.dispatchEvent(new CustomEvent('notification-count', { detail: { count: result.active_count ?? this.stockCount + this.shipmentCount + this.invoiceCount } }));
             } catch { /* Retain the last known alerts until the next successful refresh. */ }
             finally { this.busy = false; }
         },

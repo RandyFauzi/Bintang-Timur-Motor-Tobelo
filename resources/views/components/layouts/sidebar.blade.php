@@ -1,4 +1,4 @@
-@props(['stockOverview', 'shipmentNotifications' => ['count'=>0,'alerts'=>[]]])
+@props(['stockOverview', 'shipmentNotifications' => ['count'=>0,'alerts'=>[]], 'invoiceNotifications' => ['count'=>0,'alerts'=>[]]])
 @php
     $navigation = [
         ['label' => null, 'items' => [
@@ -8,12 +8,14 @@
         ]],
         ['label' => 'Manajemen Produk', 'items' => [
             ['label' => 'Stok & Produk', 'icon' => 'box', 'route' => 'products.index', 'active' => 'products.*'],
+            ['label' => 'PO / Order Barang', 'icon' => 'cart', 'route' => 'purchase-orders.index', 'active' => 'purchase-orders.*'],
             ['label' => 'Distributor', 'icon' => 'buildings', 'route' => 'distributors.index', 'active' => 'distributors.*'],
             ['label' => 'Pelacak Pengiriman', 'icon' => 'ship', 'route' => 'shipments.index', 'active' => 'shipments.*'],
             ['label' => 'Retur Produk', 'icon' => 'return', 'route' => 'returns.index', 'active' => 'returns.*'],
             ['label' => 'Histori Transaksi', 'icon' => 'history', 'route' => 'transactions.index', 'active' => 'transactions.*'],
         ]],
         ['label' => 'Laporan & Analisa', 'items' => [
+            ['label' => 'Tagihan Distributor', 'icon' => 'wallet', 'route' => 'distributor-invoices.index', 'active' => 'distributor-invoices.*'],
             ['label' => 'Laporan', 'icon' => 'report', 'route' => 'reports.finance', 'active' => 'reports.finance'],
             ['label' => 'Riset Kompetitor', 'icon' => 'chart', 'route' => 'reports.index', 'active' => 'reports.index', 'create' => true],
         ]],
@@ -30,9 +32,9 @@
         'url' => route('products.index', ['search' => $product->name]),
     ])->values();
 @endphp
-<aside id="app-sidebar" class="app-sidebar" x-data="{ activeNotificationCount: @js($stockOverview['count'] + $shipmentNotifications['count']) }" @notification-count.window="activeNotificationCount = $event.detail.count" :class="{ 'app-sidebar--collapsed': collapsed, 'app-sidebar--open': mobileMenuOpen }" :inert="isMobile && !mobileMenuOpen" aria-label="Navigasi utama" @keydown.tab="trapMobileFocus($event)">
+<aside id="app-sidebar" class="app-sidebar" x-data="{ activeNotificationCount: @js($stockOverview['count'] + $shipmentNotifications['count'] + $invoiceNotifications['count']) }" @notification-count.window="activeNotificationCount = $event.detail.count" :class="{ 'app-sidebar--collapsed': collapsed, 'app-sidebar--open': mobileMenuOpen }" :inert="isMobile && !mobileMenuOpen" aria-label="Navigasi utama" @keydown.tab="trapMobileFocus($event)">
     <div class="sidebar-brand">
-        <a href="{{ route('dashboard') }}" class="flex min-w-0 items-center gap-3" aria-label="{{ \App\Models\BusinessSetting::current()->business_name }} — Dashboard">
+        <a href="{{ route('dashboard') }}" class="flex min-w-0 items-center gap-3" aria-label="{{ \App\Models\BusinessSetting::current()->business_name }} â€” Dashboard">
             <x-ui.business-logo :size="24" />
             <span x-show="!collapsed || isMobile" class="truncate text-base font-medium">{{ \App\Models\BusinessSetting::current()->business_name }}</span>
         </a>
@@ -57,7 +59,7 @@
                                     <x-ui.icon :name="$item['icon']" :style="$item['icon'] === 'ship' ? 'filter: brightness(0) invert(1)' : null" />
                                     <span x-show="!collapsed || isMobile">{{ $item['label'] }}</span>
                                     @if($item['route'] === 'notifications.index')
-                                        <span data-notification-badge class="notification-nav-badge" :class="{'notification-nav-badge--compact': collapsed && !isMobile}" x-show="activeNotificationCount > 0" x-cloak x-text="activeNotificationCount > 99 ? '99+' : activeNotificationCount" :aria-label="activeNotificationCount + ' notifikasi aktif'" role="status" aria-live="polite">{{ $stockOverview['count'] + $shipmentNotifications['count'] }}</span>
+                                        <span data-notification-badge class="notification-nav-badge" :class="{'notification-nav-badge--compact': collapsed && !isMobile}" x-show="activeNotificationCount > 0" x-cloak x-text="activeNotificationCount > 99 ? '99+' : activeNotificationCount" :aria-label="activeNotificationCount + ' notifikasi aktif'" role="status" aria-live="polite">{{ $stockOverview['count'] + $shipmentNotifications['count'] + $invoiceNotifications['count'] }}</span>
                                     @endif
                                 </a>
                                 @if($item['create'] ?? false)
@@ -65,7 +67,7 @@
                                 @endif
                             </div>
                         @else
-                            <button type="button" class="sidebar-link sidebar-link--upcoming" title="{{ $item['label'] }} — segera tersedia" @click="$dispatch('notify', { message: '{{ $item['label'] }} belum tersedia. Modul ini akan ditambahkan pada tahap berikutnya.', type: 'info' })">
+                            <button type="button" class="sidebar-link sidebar-link--upcoming" title="{{ $item['label'] }} â€” segera tersedia" @click="$dispatch('notify', { message: '{{ $item['label'] }} belum tersedia. Modul ini akan ditambahkan pada tahap berikutnya.', type: 'info' })">
                                 <x-ui.icon :name="$item['icon']" :style="$item['icon'] === 'ship' ? 'filter: brightness(0) invert(1)' : null" />
                                 <span x-show="!collapsed || isMobile">{{ $item['label'] }}</span>
                                 <span x-show="!collapsed || isMobile" class="sidebar-coming" aria-label="Segera tersedia">+</span>
@@ -77,7 +79,7 @@
         @endforeach
     </nav>
 
-    <div class="sidebar-footer" x-data="stockNotifications(@js($stockAlerts), @js($shipmentNotifications), @js(route('shipments.notifications')), @js($stockOverview['count']))" @focus.window="refresh()" @watch-shipments.window="watch($event.detail.ids)">
+    <div class="sidebar-footer" x-data="stockNotifications(@js($stockAlerts), @js($shipmentNotifications), @js(route('shipments.notifications')), @js($stockOverview['count']), @js($invoiceNotifications))" @focus.window="refresh()" @watch-shipments.window="watch($event.detail.ids)">
         <div class="stock-notification" x-show="!collapsed || isMobile">
             <div class="flex items-center gap-2">
                 <x-ui.icon name="notification" />
@@ -88,10 +90,11 @@
                 </span></template>
             </div>
             <template x-if="alerts.length"><a :href="current.url" class="stock-notification__message" x-text="current.message"></a></template>
-            <template x-if="!alerts.length"><p class="stock-notification__message">Belum ada stok atau pengiriman yang perlu perhatian.</p></template>
-            <a x-cloak x-show="shipmentCount > 0" href="{{ route('shipments.index') }}" class="stock-notification__more"><span x-text="shipmentCount + ' pengiriman perlu perhatian'"></span><span aria-hidden="true">›</span></a>
-            <a x-cloak x-show="stockCount > 0" href="{{ route('dashboard') }}#low-stock" class="stock-notification__more"><span x-text="stockCount + ' produk perlu perhatian'"></span><span aria-hidden="true">›</span></a>
-            <a href="{{ route('notifications.index') }}" class="stock-notification__more mt-3 border-t border-white/10 pt-3 font-medium">Lihat Semua Notifikasi <span aria-hidden="true">→</span></a>
+            <template x-if="!alerts.length"><p class="stock-notification__message">Belum ada stok, pengiriman, atau tagihan yang perlu perhatian.</p></template>
+            <a x-cloak x-show="shipmentCount > 0" href="{{ route('shipments.index') }}" class="stock-notification__more"><span x-text="shipmentCount + ' pengiriman perlu perhatian'"></span><span aria-hidden="true">â€º</span></a>
+            <a x-cloak x-show="invoiceCount > 0" href="{{ route('distributor-invoices.index') }}" class="stock-notification__more"><span x-text="invoiceCount + ' tagihan perlu pembayaran'"></span><span aria-hidden="true">›</span></a>
+            <a x-cloak x-show="stockCount > 0" href="{{ route('dashboard') }}#low-stock" class="stock-notification__more"><span x-text="stockCount + ' produk perlu perhatian'"></span><span aria-hidden="true">â€º</span></a>
+            <a href="{{ route('notifications.index') }}" class="stock-notification__more mt-3 border-t border-white/10 pt-3 font-medium">Lihat Semua Notifikasi <span aria-hidden="true">â†’</span></a>
         </div>
         <div class="sidebar-profile" x-data="{ profileOpen: false }" @click.outside="profileOpen = false" @keydown.escape.stop="profileOpen = false; $refs.profile.focus()">
             <span class="profile-avatar relative overflow-hidden" aria-hidden="true">{{ mb_strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}@if(auth()->user()->avatar_path)<img src="{{ auth()->user()->avatarUrl() }}" alt="" class="absolute inset-0 h-full w-full object-cover" x-on:error="$el.remove()">@endif</span>

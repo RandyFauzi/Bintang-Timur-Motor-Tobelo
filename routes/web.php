@@ -5,12 +5,14 @@ use App\Http\Controllers\BusinessSettingController;
 use App\Http\Controllers\CompetitorObservationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DistributorController;
+use App\Http\Controllers\DistributorInvoiceController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductImportController;
 use App\Http\Controllers\ProductReturnController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReportLookupController;
 use App\Http\Controllers\ShipmentController;
@@ -38,6 +40,16 @@ Route::middleware('auth')->group(function () {
     Route::patch('shipments/{shipment}/arrive', [ShipmentController::class, 'arrive'])->name('shipments.arrive');
     Route::post('shipping-services', [ShippingServiceController::class, 'store'])->name('shipping-services.store');
     Route::patch('shipping-services/{shippingService}', [ShippingServiceController::class, 'update'])->name('shipping-services.update');
+
+    Route::get('distributor-invoices', [DistributorInvoiceController::class, 'index'])->name('distributor-invoices.index');
+    Route::get('distributor-invoices/{distributorInvoice}', [DistributorInvoiceController::class, 'show'])->name('distributor-invoices.show');
+    Route::patch('distributor-invoices/{distributorInvoice}', [DistributorInvoiceController::class, 'update'])->name('distributor-invoices.update');
+    Route::post('distributor-invoices/{distributorInvoice}/payments', [DistributorInvoiceController::class, 'pay'])->name('distributor-invoices.pay');
+
+    Route::get('purchase-orders/products', [PurchaseOrderController::class, 'products'])->name('purchase-orders.products');
+    Route::post('purchase-orders/distributors', [PurchaseOrderController::class, 'distributor'])->name('purchase-orders.distributors.store');
+    Route::patch('purchase-orders/{purchaseOrder}/receipt', [PurchaseOrderController::class, 'receive'])->name('purchase-orders.receive');
+    Route::resource('purchase-orders', PurchaseOrderController::class)->only(['index', 'create', 'store', 'show'])->parameters(['purchase-orders' => 'purchaseOrder']);
 
     // Products
     Route::get('products/import/template', [ProductImportController::class, 'template'])->name('products.import.template');

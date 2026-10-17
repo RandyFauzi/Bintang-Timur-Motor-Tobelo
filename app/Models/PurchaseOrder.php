@@ -1,0 +1,47 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+
+class PurchaseOrder extends Model
+{
+    use HasFactory;
+
+    protected $fillable = ['request_id', 'reference', 'distributor_id', 'distributor_name', 'ordered_on', 'expected_on', 'notes'];
+
+    protected function casts(): array
+    {
+        return ['ordered_on' => 'date', 'expected_on' => 'date', 'version' => 'integer'];
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(PurchaseOrderItem::class);
+    }
+
+    public function invoice(): HasOne
+    {
+        return $this->hasOne(DistributorInvoice::class);
+    }
+
+    public function statusLabel(): string
+    {
+        if ($this->items->every(fn (PurchaseOrderItem $item): bool => $item->actual_quantity === null)) {
+            return 'Belum diperiksa';
+        }
+        if ($this->items->contains(fn (PurchaseOrderItem $item): bool => $item->actual_quantity === null)) {
+            return 'Sedang diperiksa';
+        }
+
+        return $this->items->contains(fn (PurchaseOrderItem $item): bool => $item->actual_quantity !== $item->quantity) ? 'Ada selisih' : 'Sesuai';
+    }
+
+    public function total(): float
+    {
+        return $this->items->sum(fn (PurchaseOrderItem $item): float => $item->quantity * (float) $item->unit_price);
+    }
+}

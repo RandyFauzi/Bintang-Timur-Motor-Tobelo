@@ -1,0 +1,22 @@
+<x-app-layout>
+<div class="catalogue-page grid gap-5">
+    <header class="catalogue-heading !mb-0 flex flex-wrap items-center justify-between gap-4"><div><h1>Tagihan Distributor</h1><p class="mt-2 text-sm text-muted">Pantau invoice, jatuh tempo, dan pembayaran pesanan distributor.</p></div><a class="ui-button" href="{{ route('purchase-orders.create') }}"><x-ui.icon name="add" :size="18" />Buat PO</a></header>
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        @foreach(['total'=>'Total Tagihan','paid'=>'Sudah Dibayarkan','outstanding'=>'Sisa Tagihan','overdue'=>'Sisa Terlambat'] as $key=>$label)<div class="catalogue-surface p-5"><p class="text-sm text-muted">{{ $label }}</p><p @class(['mt-3 text-xl font-semibold','text-danger'=>$key === 'overdue'])>Rp {{ number_format($summary[$key]/100,2,',','.') }}</p></div>@endforeach
+    </div>
+    <p class="text-xs text-muted">Ringkasan mengikuti pencarian dan distributor. Filter status hanya mengubah daftar di bawah.</p>
+    <section class="catalogue-surface" aria-label="Daftar tagihan distributor">
+        <form method="GET" class="flex flex-wrap items-end gap-3 p-5">
+            <label class="form-field flex-1"><span class="form-field__label">Cari tagihan</span><input class="form-input" type="search" name="search" value="{{ request()->string('search') }}" placeholder="Invoice, nomor PO, distributor…"></label>
+            <label class="form-field"><span class="form-field__label">Distributor</span><select class="form-input" name="distributor_id"><option value="">Semua distributor</option>@foreach($distributors as $distributor)<option value="{{ $distributor->id }}" @selected(request()->string('distributor_id')->toString() === (string) $distributor->id)>{{ $distributor->name }}</option>@endforeach</select></label>
+            <label class="form-field"><span class="form-field__label">Pembayaran</span><select class="form-input" name="status"><option value="">Semua status</option>@foreach(\App\Models\DistributorInvoice::STATUSES as $value=>$label)<option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>@endforeach</select></label>
+            <label class="form-field"><span class="form-field__label">Jatuh Tempo</span><select class="form-input" name="timing"><option value="">Semua waktu</option><option value="near" @selected(request('timing') === 'near')>Dalam 7 hari</option><option value="overdue" @selected(request('timing') === 'overdue')>Terlambat</option></select></label>
+            <button class="ui-button">Cari</button><a class="ui-button ui-button--secondary" href="{{ route('distributor-invoices.index') }}">Reset</a>
+        </form>
+        <div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead class="border-y bg-gray-50 text-muted"><tr>@foreach(['Invoice / PO','Distributor','Jatuh Tempo','Total Tagihan','Dibayarkan','Sisa','Status','Aksi'] as $label)<th class="whitespace-nowrap p-4 font-medium">{{ $label }}</th>@endforeach</tr></thead><tbody>
+        @forelse($invoices as $invoice)<tr class="border-b hover:bg-gray-50"><td class="p-4"><a class="whitespace-nowrap font-medium underline underline-offset-4" href="{{ route('distributor-invoices.show',$invoice) }}">{{ $invoice->reference }}</a><p class="mt-1 text-xs text-muted">{{ $invoice->purchaseOrder->reference }}</p>@if($invoice->supplier_reference)<p class="mt-1 text-xs text-muted">Nota: {{ $invoice->supplier_reference }}</p>@endif</td><td class="p-4">{{ $invoice->purchaseOrder->distributor_name }}</td><td class="whitespace-nowrap p-4">{{ $invoice->due_on->format('d/m/Y') }}<p class="mt-1 text-xs text-muted">{{ $invoice->timingLabel() }}</p></td><td class="whitespace-nowrap p-4">Rp {{ number_format($invoice->total_cents/100,2,',','.') }}</td><td class="whitespace-nowrap p-4">Rp {{ number_format($invoice->paid_cents/100,2,',','.') }}</td><td class="whitespace-nowrap p-4 font-medium">Rp {{ number_format($invoice->remainingCents()/100,2,',','.') }}</td><td class="p-4"><x-ui.invoice-status :status="$invoice->status()" /></td><td class="p-4"><a class="ui-button ui-button--secondary" href="{{ route('distributor-invoices.show',$invoice) }}">Detail</a></td></tr>
+        @empty<tr><td colspan="8"><x-ui.empty-state title="Belum ada tagihan yang ditemukan" description="Tagihan otomatis muncul setelah PO dibuat. Coba ubah pencarian atau filter." /></td></tr>@endforelse
+        </tbody></table></div><x-ui.pagination :paginator="$invoices" />
+    </section>
+</div>
+</x-app-layout>
