@@ -48,7 +48,7 @@
                     @endforelse
                 </div>
             @else
-                <div class="catalogue-table-scroll"><table class="catalogue-table"><caption class="sr-only">Daftar stok dan produk</caption>
+                <div class="catalogue-table-scroll"><table class="catalogue-table catalogue-table--selectable"><caption class="sr-only">Daftar stok dan produk</caption>
                     <thead><tr><th scope="col"><input type="checkbox" class="rounded" :checked="pageSelected(@js($pageProductIds))" x-effect="$el.indeterminate = @js($pageProductIds).some(id => has(id)) && !pageSelected(@js($pageProductIds))" @change="togglePage(@js($pageProductIds), $event.target.checked)" aria-label="Pilih semua produk pada halaman ini"></th>@foreach(['Info Produk','Modal','Harga Jual','Tipe Produk','Merk','Jenis Part','Distributor','Stok','Aksi'] as $heading)<th scope="col">{{ $heading }}</th>@endforeach</tr></thead>
                     <tbody>@forelse($products as $product)<tr>
                         <td><input type="checkbox" class="rounded" :checked="has({{ $product->id }})" @change="toggle({{ $product->id }}, $event.target.checked)" aria-label="Pilih {{ $product->name }}"></td>
