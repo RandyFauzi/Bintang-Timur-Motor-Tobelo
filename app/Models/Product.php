@@ -14,6 +14,8 @@ class Product extends Model
 {
     use HasFactory, SoftDeletes;
 
+    public const KINDS = ['daily' => 'Harian', 'non_daily' => 'Non-Harian', 'variation' => 'Variasi'];
+
     protected $fillable = ['sku', 'barcode', 'brand_id', 'type_id', 'color_id', 'name', 'description', 'purchase_price', 'selling_price', 'stock_minimum', 'stock_maximum', 'unit', 'image', 'is_active', 'product_kind'];
 
     public function brand(): BelongsTo

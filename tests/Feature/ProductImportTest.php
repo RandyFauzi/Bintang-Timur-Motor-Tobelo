@@ -125,6 +125,18 @@ class ProductImportTest extends TestCase
         $this->assertDatabaseCount('products', 1);
     }
 
+    public function test_variation_product_type_can_be_imported_from_excel(): void
+    {
+        $this->actingAs(User::factory()->create());
+        Distributor::factory()->create(['name' => 'WMS']);
+        $row = $this->row();
+        $row[6] = 'Variasi';
+
+        $this->post(route('products.import'), ['file' => $this->workbook([$row])])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('products', ['sku' => 'IMP-001', 'product_kind' => 'variation']);
+    }
+
     public function test_import_validation_reopens_import_tab(): void
     {
         $this->actingAs(User::factory()->create());

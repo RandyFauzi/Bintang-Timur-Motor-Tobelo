@@ -50,6 +50,23 @@ class CatalogueTest extends TestCase
         $this->assertNotSoftDeleted($product);
     }
 
+    public function test_variation_products_can_be_created_edited_filtered_and_exported(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $this->post(route('products.store'), [
+            'name' => 'Aksesori Variasi', 'product_kind' => 'variation', 'quantity' => 5,
+            'stock_minimum' => 1, 'purchase_price' => 10000, 'selling_price' => 15000,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $product = Product::where('name', 'Aksesori Variasi')->sole();
+        Product::factory()->withStock()->create(['name' => 'Produk Harian Lain', 'product_kind' => 'daily']);
+        $page = $this->get(route('products.index', ['kind' => 'variation', 'view' => 'cards']));
+        $page->assertOk()->assertSee('Produk Variasi')->assertSee('Aksesori Variasi')->assertDontSee('Produk Harian Lain');
+        $this->assertSame([$product->id], $page->viewData('products')->modelKeys());
+        $this->patch(route('products.update', $product), ['quantity' => 4, 'stock_minimum' => 1, 'product_kind' => 'variation'])->assertSessionHasNoErrors();
+        $this->assertSame('variation', $product->fresh()->product_kind);
+        $this->assertStringContainsString('Variasi', $this->get(route('products.export', ['kind' => 'variation']))->streamedContent());
+    }
+
     public function test_guests_cannot_manage_catalogues(): void
     {
         $this->get(route('products.index'))->assertRedirect(route('login'));

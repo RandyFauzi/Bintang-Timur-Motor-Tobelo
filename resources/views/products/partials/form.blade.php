@@ -20,7 +20,7 @@
             <x-ui.field name="color_name" label="Warna" :value="$product?->color?->name" list="color-options" placeholder="Tulis atau cari warna" maxlength="255" />
             <x-ui.field name="purchase_price" label="Modal" type="number" :value="$product?->purchase_price ?? 0" min="0" step="0.01" required />
             <x-ui.field name="selling_price" label="Harga Jual" type="number" :value="$product?->selling_price ?? 0" min="0" step="0.01" required />
-            <x-ui.field name="product_kind" label="Tipe Produk"><select id="product_kind" name="product_kind" class="form-input"><option value="daily" @selected(old('product_kind',$product?->product_kind ?? 'daily') === 'daily')>Harian</option><option value="non_daily" @selected(old('product_kind',$product?->product_kind) === 'non_daily')>Non-Harian</option></select></x-ui.field>
+            <x-ui.field name="product_kind" label="Tipe Produk"><select id="product_kind" name="product_kind" class="form-input">@foreach(\App\Models\Product::KINDS as $value => $kindLabel)<option value="{{ $value }}" @selected(old('product_kind',$product?->product_kind ?? 'daily') === $value)>{{ $kindLabel }}</option>@endforeach</select></x-ui.field>
             <x-ui.field name="distributor_ids" label="Distributor">
                 <x-ui.multiselect name="distributor_ids" id="distributor_ids" label="Pilih Distributor" :options="$distributors" :selected="old('distributor_ids',$product?->distributors->modelKeys() ?? [])" :submit-on-apply="false" icon="workshop" />
                 <input type="hidden" name="_sync_distributors" value="1"><p class="mt-1 text-xs text-muted">Bisa memilih lebih dari satu distributor.</p>
@@ -50,7 +50,7 @@
                 <ul class="list-disc pl-5 text-sm text-muted space-y-2">
                     <li>SKU wajib unik. Import hanya menambah produk baru.</li>
                     <li>Isi angka tanpa Rp atau pemisah ribuan; desimal memakai titik. Jumlah Stok dan Stok Minimum wajib diisi.</li>
-                    <li>Tipe Produk: Harian atau Non-Harian. Distributor harus sudah terdaftar; pisahkan beberapa nama dengan tanda |.</li>
+                    <li>Tipe Produk: Harian, Non-Harian, atau Variasi. Distributor harus sudah terdaftar; pisahkan beberapa nama dengan tanda |.</li>
                     <li>Format kolom SKU dan Barcode sebagai Teks agar angka nol di depan tidak hilang.</li>
                     <li>Semua baris diperiksa terlebih dahulu. Jika ada kesalahan, seluruh import dibatalkan.</li>
                 </ul>

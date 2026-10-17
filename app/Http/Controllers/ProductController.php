@@ -68,7 +68,7 @@ class ProductController extends Controller
             $product->color?->name,
             $product->purchase_price,
             $product->selling_price,
-            $product->product_kind === 'daily' ? 'Harian' : 'Non-Harian',
+            Product::KINDS[$product->product_kind] ?? '–',
             $product->brand?->name,
             $product->type?->name,
             $product->distributors->pluck('name')->join(', '),

@@ -9,7 +9,7 @@
             <form method="GET" action="{{ route('products.index') }}" class="catalogue-query">
                 <x-ui.catalogue-toolbar export-route="products.export" create-label="Tambah Produk" dialog="product-form" />
                 <nav class="catalogue-tabs" aria-label="Tipe produk">
-                    @foreach(['' => 'Semua Produk', 'daily' => 'Produk Harian', 'non_daily' => 'Produk Non Harian'] as $kind => $label)
+                    @foreach(['' => 'Semua Produk', 'daily' => 'Produk Harian', 'non_daily' => 'Produk Non Harian', 'variation' => 'Produk Variasi'] as $kind => $label)
                         <a href="{{ request()->fullUrlWithQuery(['kind'=>$kind ?: null,'page'=>1,'edit'=>null,'create'=>null]) }}" @class(['catalogue-tab','is-active'=>request('kind','') === $kind]) @if(request('kind','') === $kind) aria-current="page" @endif>{{ $label }}</a>
                     @endforeach
                 </nav>
@@ -32,7 +32,7 @@
                             </div></header>
                             <dl class="product-card__details">
                                 <dt>Total Stok</dt><dd><span @class(['stock-badge'=>($product->stock?->quantity ?? 0) <= $product->stock_minimum])>{{ $product->stock?->quantity ?? 0 }}</span></dd>
-                                <dt>Tipe Produk</dt><dd>{{ $product->product_kind === 'daily' ? 'Harian' : 'Non-Harian' }}</dd>
+                                <dt>Tipe Produk</dt><dd>{{ \App\Models\Product::KINDS[$product->product_kind] ?? '–' }}</dd>
                                 <dt>Modal</dt><dd>Rp {{ number_format($product->purchase_price,0,',','.') }}</dd>
                                 <dt>Harga Jual</dt><dd>Rp {{ number_format($product->selling_price,0,',','.') }}</dd>
                                 <dt>Merk Produk</dt><dd><span class="neutral-badge">{{ $product->brand?->name ?? '–' }}</span></dd>
@@ -51,7 +51,7 @@
                     <tbody>@forelse($products as $product)<tr>
                         <td><span class="font-medium">{{ $product->name }}</span><span class="mt-1 block text-muted">{{ $product->color?->name ?? '–' }}</span></td>
                         <td class="whitespace-nowrap">Rp {{ number_format($product->purchase_price,0,',','.') }}</td><td class="whitespace-nowrap">Rp {{ number_format($product->selling_price,0,',','.') }}</td>
-                        <td>{{ $product->product_kind === 'daily' ? 'Harian' : 'Non-Harian' }}</td><td><span class="neutral-badge">{{ $product->brand?->name ?? '–' }}</span></td>
+                        <td>{{ \App\Models\Product::KINDS[$product->product_kind] ?? '–' }}</td><td><span class="neutral-badge">{{ $product->brand?->name ?? '–' }}</span></td>
                         <td>{{ $product->type?->name ?? '–' }}</td><td>{{ $product->distributors->pluck('name')->join(', ') ?: '–' }}</td>
                         <td><span @class(['stock-badge'=>($product->stock?->quantity ?? 0) <= $product->stock_minimum])>{{ $product->stock?->quantity ?? 0 }}</span></td>
                         <td><div class="flex items-center gap-2"><a href="{{ request()->fullUrlWithQuery(['edit'=>$product->id,'create'=>null]) }}" class="edit-link">Edit</a><x-ui.product-actions :product="$product" /></div></td>

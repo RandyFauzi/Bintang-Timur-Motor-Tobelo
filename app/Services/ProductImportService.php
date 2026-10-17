@@ -35,6 +35,7 @@ class ProductImportService
             $data = array_combine(['name', 'brand_name', 'type_name', 'color_name', 'purchase_price', 'selling_price', 'product_kind', 'supplier_names', 'barcode', 'sku', 'quantity', 'stock_minimum'], $row);
             $data['product_kind'] = match (mb_strtolower($data['product_kind'] ?? 'harian')) {
                 'harian', 'daily' => 'daily',
+                'variasi', 'variation' => 'variation',
                 'non harian', 'non-harian', 'non_daily' => 'non_daily',
                 default => $data['product_kind'],
             };

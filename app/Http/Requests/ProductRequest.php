@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -34,7 +35,7 @@ class ProductRequest extends FormRequest
             'stock_minimum' => ['required', 'integer', 'min:0', 'max:100000000'],
             'quantity' => ['required_without:initial_stock', 'integer', 'min:0', 'max:100000000'],
             'initial_stock' => ['sometimes', 'integer', 'min:0', 'max:100000000'],
-            'product_kind' => ['sometimes', Rule::in(['daily', 'non_daily'])],
+            'product_kind' => ['sometimes', Rule::in(array_keys(Product::KINDS))],
             'brand_id' => ['nullable', Rule::exists('brands', 'id')->whereNull('deleted_at')],
             'type_id' => ['nullable', Rule::exists('product_types', 'id')->whereNull('deleted_at')],
             'color_id' => ['nullable', Rule::exists('colors', 'id')->whereNull('deleted_at')],

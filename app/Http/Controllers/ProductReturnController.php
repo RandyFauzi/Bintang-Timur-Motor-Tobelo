@@ -102,7 +102,7 @@ class ProductReturnController extends Controller
                 $record->id, $record->created_at->format('Y-m-d H:i:s'), $record->product_snapshot['name'], $record->product_snapshot['sku'],
                 $record->note_status === 'credited' ? 'Sudah Dikurangi' : 'Belum Dikurangi', $record->quantity,
                 $record->product_snapshot['purchase_price'], $record->product_snapshot['selling_price'],
-                $record->product_snapshot['kind'] === 'daily' ? 'Harian' : 'Non-Harian',
+                Product::KINDS[$record->product_snapshot['kind']] ?? '–',
                 $record->product_snapshot['brand'], $record->product_snapshot['color'], $record->product_snapshot['type'],
                 $record->product_snapshot['distributors'], $record->status,
             ]);
