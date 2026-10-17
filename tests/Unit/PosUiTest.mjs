@@ -127,3 +127,40 @@ test('server validation errors preserve the cart and release the submit lock', a
         globalThis.document = originalDocument;
     }
 });
+
+test('manual quantity input immediately restores values that exceed available stock', () => {
+    const state = register();
+    state.add(product);
+    const input = { value: '4' };
+    state.updateQuantityInput(1, input);
+    assert.equal(input.value, '1');
+    assert.equal(state.quantity(1), 1);
+    input.value = '3';
+    state.updateQuantityInput(1, input);
+    assert.equal(state.quantity(1), 3);
+    state.add(product);
+    assert.equal(state.quantity(1), 3);
+    input.value = '';
+    state.updateQuantityInput(1, input);
+    assert.equal(input.value, '');
+    assert.equal(state.quantity(1), 3);
+    state.updateQuantityInput(1, input, true);
+    assert.equal(input.value, '3');
+});
+
+test('cart cannot advance to review with quantities above refreshed stock', () => {
+    const state = register();
+    state.add(product);
+    state.cart[0].available = 0;
+    const events = [];
+    state.$dispatch = (...args) => events.push(args);
+    assert.equal(state.canCheckout, false);
+    state.review();
+    assert.equal(events.some(([name]) => name === 'open-dialog'), false);
+    assert.equal(events[0][1].type, 'error');
+    state.cart[0].available = 3;
+    state.cart[0].quantity = -1;
+    assert.equal(state.canCheckout, false);
+    state.cart[0].quantity = 1.5;
+    assert.equal(state.canCheckout, false);
+});

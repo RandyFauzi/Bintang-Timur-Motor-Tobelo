@@ -20,7 +20,7 @@ export function posRegister(products, endpoints, storageKey) {
         get total() { return this.totalCents / 100; },
         get units() { return this.cart.reduce((sum, row) => sum + row.quantity, 0); },
         get canCheckout() {
-            return !this.busy && this.cart.length > 0 && this.cart.every((row) => row.quantity <= row.available)
+            return !this.busy && this.cart.length > 0 && this.cart.every((row) => Number.isInteger(row.quantity) && row.quantity >= 1 && row.quantity <= row.available)
                 && Number.isFinite(this.total) && this.total >= 0;
         },
         money(amount) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(Number(amount) || 0); },
@@ -56,6 +56,11 @@ export function posRegister(products, endpoints, storageKey) {
             row.quantity = quantity;
             this.persist();
         },
+        updateQuantityInput(id, input, commit = false) {
+            if (!commit && input.value === '') return;
+            this.setQuantity(id, input.value);
+            input.value = String(this.quantity(id));
+        },
         remove(id) {
             if (this.busy) return;
             this.cart = this.cart.filter((row) => row.id !== id);
@@ -63,7 +68,10 @@ export function posRegister(products, endpoints, storageKey) {
         },
         openCart() { this.$dispatch('open-dialog', { id: 'pos-cart' }); },
         review() {
-            if (!this.cart.length) return;
+            if (!this.canCheckout) {
+                if (!this.busy) this.notify('Periksa jumlah produk. Jumlah tidak boleh melebihi stok tersedia.');
+                return;
+            }
             this.error = '';
             document.getElementById('pos-cart').close();
             this.$dispatch('open-dialog', { id: 'pos-review' });
