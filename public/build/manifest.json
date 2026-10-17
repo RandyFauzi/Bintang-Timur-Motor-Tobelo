@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-CmiQMo94.css",
+    "file": "assets/app-DIT5ThAw.css",
     "name": "app",
     "names": [
       "app.css"
@@ -183,6 +183,10 @@
     "file": "assets/settings-G-HvdFFi.svg",
     "src": "resources/images/icons/settings.svg"
   },
+  "resources/images/icons/ship.svg": {
+    "file": "assets/ship-DsEASBR9.svg",
+    "src": "resources/images/icons/ship.svg"
+  },
   "resources/images/icons/sidebar-add.svg": {
     "file": "assets/sidebar-add-l5tqPX-r.svg",
     "src": "resources/images/icons/sidebar-add.svg"
@@ -224,7 +228,7 @@
     "src": "resources/images/icons/workshop.svg"
   },
   "resources/js/app.js": {
-    "file": "assets/app-Do5lQyO_.js",
+    "file": "assets/app-kKpCzL4V.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true

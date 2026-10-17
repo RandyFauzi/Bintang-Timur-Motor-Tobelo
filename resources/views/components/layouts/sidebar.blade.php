@@ -1,4 +1,4 @@
-@props(['stockOverview'])
+@props(['stockOverview', 'shipmentNotifications' => ['count'=>0,'alerts'=>[]]])
 @php
     $navigation = [
         ['label' => null, 'items' => [
@@ -8,6 +8,7 @@
         ['label' => 'Manajemen Produk', 'items' => [
             ['label' => 'Stok & Produk', 'icon' => 'box', 'route' => 'products.index', 'active' => 'products.*'],
             ['label' => 'Distributor', 'icon' => 'buildings', 'route' => 'distributors.index', 'active' => 'distributors.*'],
+            ['label' => 'Pelacak Pengiriman', 'icon' => 'ship', 'route' => 'shipments.index', 'active' => 'shipments.*'],
             ['label' => 'Retur Produk', 'icon' => 'return', 'route' => 'returns.index', 'active' => 'returns.*'],
             ['label' => 'Histori Transaksi', 'icon' => 'history', 'route' => 'transactions.index', 'active' => 'transactions.*'],
         ]],
@@ -21,9 +22,10 @@
             ['label' => 'Pengaturan', 'icon' => 'settings', 'route' => 'profile.edit', 'active' => 'profile.*'],
         ]],
     ];
-    $alerts = $stockOverview['products']->map(fn ($product) => [
+    $stockAlerts = $stockOverview['products']->map(fn ($product) => [
         'name' => $product->name,
         'quantity' => (int) $product->current_stock,
+        'message' => (int) $product->current_stock === 0 ? $product->name.' habis' : 'Stok '.$product->name.' menipis',
         'url' => route('products.index', ['search' => $product->name]),
     ])->values();
 @endphp
@@ -71,21 +73,21 @@
         @endforeach
     </nav>
 
-    <div class="sidebar-footer" x-data="stockNotifications(@js($alerts))">
+    <div class="sidebar-footer" x-data="stockNotifications(@js($stockAlerts), @js($shipmentNotifications), @js(route('shipments.notifications')))" @watch-shipments.window="watch($event.detail.ids)">
         <div class="stock-notification" x-show="!collapsed || isMobile">
             <div class="flex items-center gap-2">
                 <x-ui.icon name="notification" />
                 <h2 class="flex-1 text-sm font-medium">Notifikasi</h2>
-                @if ($alerts->count() > 1)
+                <template x-if="alerts.length > 1"><span class="inline-flex items-center gap-2">
                     <button type="button" class="notification-arrow" @click="previous()" aria-label="Notifikasi sebelumnya"><x-ui.icon name="chevron" :size="12" class="rotate-180" /></button>
                     <button type="button" class="notification-arrow" @click="next()" aria-label="Notifikasi berikutnya"><x-ui.icon name="chevron" :size="12" /></button>
-                @endif
+                </span></template>
             </div>
-            @if ($alerts->isNotEmpty())
-                <a :href="current.url" class="stock-notification__message" x-text="current.quantity === 0 ? current.name + ' habis' : 'Stok ' + current.name + ' menipis'"></a>
+            <template x-if="alerts.length"><a :href="current.url" class="stock-notification__message" x-text="current.message"></a></template>
+            <template x-if="!alerts.length"><p class="stock-notification__message">Belum ada stok atau pengiriman yang perlu perhatian.</p></template>
+            <a x-cloak x-show="shipmentCount > 0" href="{{ route('shipments.index') }}" class="stock-notification__more"><span x-text="shipmentCount + ' pengiriman perlu perhatian'"></span><span aria-hidden="true">›</span></a>
+            @if ($stockOverview['count'] > 0)
                 <a href="{{ route('dashboard') }}#low-stock" class="stock-notification__more">{{ $stockOverview['count'] }} produk perlu perhatian <span aria-hidden="true">›</span></a>
-            @else
-                <p class="stock-notification__message">Stok produk aman. Belum ada stok yang perlu ditambah.</p>
             @endif
         </div>
         <div class="sidebar-profile" x-data="{ profileOpen: false }" @click.outside="profileOpen = false" @keydown.escape.stop="profileOpen = false; $refs.profile.focus()">

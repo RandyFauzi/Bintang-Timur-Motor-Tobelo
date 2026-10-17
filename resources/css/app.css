@@ -3,6 +3,7 @@
 @import './components/pos.css';
 @import './components/transactions.css';
 @import './components/auth.css';
+@import './components/shipments.css';
 
 @font-face {
     font-family: Roboto;

@@ -12,7 +12,7 @@
     <body class="app-shell font-sans antialiased" x-data="appShell" @keydown.escape.window="closeMobileMenu()">
         <a href="#main-content" class="skip-link">Lewati navigasi</a>
         <div class="sidebar-backdrop" x-show="mobileMenuOpen" x-cloak x-transition.opacity @click="closeMobileMenu()" aria-hidden="true"></div>
-        <x-layouts.sidebar :stock-overview="$stockOverview" />
+        <x-layouts.sidebar :stock-overview="$stockOverview" :shipment-notifications="$shipmentNotifications" />
         <div class="app-content">
             <header class="mobile-header" :inert="isMobile && mobileMenuOpen">
                 <button type="button" x-ref="menuTrigger" class="mobile-menu-trigger" @click="openMobileMenu()" :aria-expanded="mobileMenuOpen" aria-controls="app-sidebar" aria-label="Buka navigasi"><span aria-hidden="true">☰</span></button>

@@ -12,6 +12,8 @@ use App\Http\Controllers\ProductReturnController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReportLookupController;
+use App\Http\Controllers\ShipmentController;
+use App\Http\Controllers\ShippingServiceController;
 use App\Http\Controllers\TransactionHistoryController;
 use App\Http\Controllers\UserAvatarController;
 use App\Http\Controllers\UserController;
@@ -25,6 +27,14 @@ Route::get('/settings/business/logo', [BusinessSettingController::class, 'logo']
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    Route::get('shipments', [ShipmentController::class, 'index'])->name('shipments.index');
+    Route::get('shipments/notifications', [ShipmentController::class, 'notifications'])->name('shipments.notifications');
+    Route::post('shipments', [ShipmentController::class, 'store'])->name('shipments.store');
+    Route::patch('shipments/{shipment}', [ShipmentController::class, 'update'])->name('shipments.update');
+    Route::patch('shipments/{shipment}/arrive', [ShipmentController::class, 'arrive'])->name('shipments.arrive');
+    Route::post('shipping-services', [ShippingServiceController::class, 'store'])->name('shipping-services.store');
+    Route::patch('shipping-services/{shippingService}', [ShippingServiceController::class, 'update'])->name('shipping-services.update');
 
     // Products
     Route::get('products/import/template', [ProductImportController::class, 'template'])->name('products.import.template');

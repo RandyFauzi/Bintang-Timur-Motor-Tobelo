@@ -62,12 +62,35 @@ export function dateRangeFilter() {
     };
 }
 
-export function stockNotifications(alerts) {
+export function stockNotifications(stockAlerts, shipmentOverview = { count: 0, alerts: [] }, endpoint = null) {
     return {
-        alerts, index: 0,
-        get current() { return this.alerts[this.index] ?? { name: '', quantity: 0, url: '#' }; },
-        next() { this.index = (this.index + 1) % this.alerts.length; },
-        previous() { this.index = (this.index - 1 + this.alerts.length) % this.alerts.length; },
+        stockAlerts, alerts: [...shipmentOverview.alerts, ...stockAlerts], shipmentCount: shipmentOverview.count, index: 0,
+        ids: [], timer: null, controller: null, busy: false,
+        get current() { return this.alerts[this.index] ?? { name: '', message: '', quantity: 0, url: '#' }; },
+        next() { if (this.alerts.length) this.index = (this.index + 1) % this.alerts.length; },
+        previous() { if (this.alerts.length) this.index = (this.index - 1 + this.alerts.length) % this.alerts.length; },
+        init() {
+            if (endpoint) this.timer = window.setInterval(() => this.refresh(), 60000);
+        },
+        watch(ids) { this.ids = ids; this.refresh(); },
+        async refresh() {
+            if (!endpoint || this.busy || document.hidden) return;
+            this.busy = true;
+            this.controller = new AbortController();
+            try {
+                const url = new URL(endpoint, window.location.origin);
+                this.ids.forEach((id) => url.searchParams.append('ids[]', id));
+                const response = await fetch(url, { headers: { Accept: 'application/json' }, signal: this.controller.signal });
+                if (!response.ok) return;
+                const result = await response.json();
+                this.shipmentCount = result.count;
+                this.alerts = [...result.alerts, ...this.stockAlerts];
+                this.index = this.alerts.length ? this.index % this.alerts.length : 0;
+                window.dispatchEvent(new CustomEvent('shipment-updates', { detail: result }));
+            } catch { /* Retain the last known alerts until the next successful refresh. */ }
+            finally { this.busy = false; }
+        },
+        destroy() { window.clearInterval(this.timer); this.controller?.abort(); },
     };
 }
 
