@@ -5,6 +5,7 @@ use App\Http\Controllers\BusinessSettingController;
 use App\Http\Controllers\CompetitorObservationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DistributorController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductImportController;
@@ -26,6 +27,8 @@ Route::get('/', function () {
 Route::get('/settings/business/logo', [BusinessSettingController::class, 'logo'])->name('business.logo');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('shipments', [ShipmentController::class, 'index'])->name('shipments.index');

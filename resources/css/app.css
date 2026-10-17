@@ -4,6 +4,7 @@
 @import './components/transactions.css';
 @import './components/auth.css';
 @import './components/shipments.css';
+@import './components/notifications.css';
 
 @font-face {
     font-family: Roboto;

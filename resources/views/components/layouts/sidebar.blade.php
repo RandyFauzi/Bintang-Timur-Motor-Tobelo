@@ -3,6 +3,7 @@
     $navigation = [
         ['label' => null, 'items' => [
             ['label' => 'Dashboard', 'icon' => 'home', 'route' => 'dashboard', 'active' => 'dashboard'],
+            ['label' => 'Notifikasi', 'icon' => 'notification', 'route' => 'notifications.index', 'active' => 'notifications.*'],
             ['label' => 'Kasir / POS', 'icon' => 'cart', 'route' => 'pos.index', 'active' => 'pos.*'],
         ]],
         ['label' => 'Manajemen Produk', 'items' => [
@@ -89,6 +90,7 @@
             @if ($stockOverview['count'] > 0)
                 <a href="{{ route('dashboard') }}#low-stock" class="stock-notification__more">{{ $stockOverview['count'] }} produk perlu perhatian <span aria-hidden="true">›</span></a>
             @endif
+            <a href="{{ route('notifications.index') }}" class="stock-notification__more mt-3 border-t border-white/10 pt-3 font-medium">Lihat Semua Notifikasi <span aria-hidden="true">→</span></a>
         </div>
         <div class="sidebar-profile" x-data="{ profileOpen: false }" @click.outside="profileOpen = false" @keydown.escape.stop="profileOpen = false; $refs.profile.focus()">
             <span class="profile-avatar relative overflow-hidden" aria-hidden="true">{{ mb_strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}@if(auth()->user()->avatar_path)<img src="{{ auth()->user()->avatarUrl() }}" alt="" class="absolute inset-0 h-full w-full object-cover" x-on:error="$el.remove()">@endif</span>
