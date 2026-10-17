@@ -37,8 +37,7 @@
                     <x-ui.empty-state title="Tidak ada notifikasi" description="Semua kondisi sudah aman, atau tidak ada hasil yang sesuai dengan filter Anda." />
                 @endforelse
             </div>
-            <x-ui.pagination :paginator="$notifications" />
+            <x-ui.pagination :paginator="$notifications" :always-show-navigation="true" />
         </section>
-        <p class="notification-note">Halaman ini menampilkan kondisi terkini. Menambah stok atau mengonfirmasi penerimaan cargo akan memperbarui daftar secara otomatis saat halaman dimuat ulang.</p>
     </div>
 </x-app-layout>

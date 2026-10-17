@@ -100,6 +100,38 @@ class NotificationTest extends TestCase
         $this->get(route('notifications.index'))->assertOk()->assertSee('&lt;script&gt;alert(1)&lt;/script&gt;', false)->assertDontSee('<script>alert(1)</script>', false);
     }
 
+    public function test_badge_counts_all_alerts_and_refreshes_after_stock_and_arrival_changes(): void
+    {
+        $products = Product::factory()->count(7)->withStock(0)->create();
+        $shipments = Shipment::factory()->count(2)->create(['estimated_arrival_on' => '2026-10-16']);
+        $this->actingAs(User::factory()->create());
+        $this->get(route('dashboard'))->assertOk()->assertSee('data-notification-badge', false)->assertSee('aria-live="polite">9</span>', false);
+        $this->getJson(route('shipments.notifications'))->assertOk()->assertJsonPath('stock_count', 7)->assertJsonPath('active_count', 9)->assertJsonCount(5, 'stock_alerts');
+        $products->first()->stock->update(['quantity' => 20]);
+        $this->patch(route('shipments.arrive', $shipments->first()), ['version' => 1])->assertSessionHasNoErrors();
+        $this->getJson(route('shipments.notifications'))->assertOk()->assertJsonPath('stock_count', 6)->assertJsonPath('active_count', 7);
+        foreach ($products as $product) {
+            $product->stock->update(['quantity' => 20]);
+        }
+        $this->patch(route('shipments.arrive', $shipments->last()), ['version' => 1])->assertSessionHasNoErrors();
+        $this->getJson(route('shipments.notifications'))->assertOk()->assertJsonPath('active_count', 0)->assertJsonCount(0, 'stock_alerts');
+        $products->first()->stock->update(['quantity' => 5]);
+        $this->getJson(route('shipments.notifications'))->assertOk()->assertJsonPath('active_count', 1);
+        $this->assertSame('low_stock', $this->get(route('notifications.index'))->viewData('notifications')->first()->category);
+        $products->first()->stock->update(['quantity' => 6]);
+        $this->getJson(route('shipments.notifications'))->assertOk()->assertJsonPath('active_count', 0);
+        $products->first()->stock->update(['quantity' => 0]);
+        $this->getJson(route('shipments.notifications'))->assertOk()->assertJsonPath('active_count', 1);
+    }
+
+    public function test_notification_pagination_remains_visible_and_footer_note_is_removed(): void
+    {
+        Product::factory()->withStock(0)->create();
+        $this->actingAs(User::factory()->create())->get(route('notifications.index'))->assertOk()
+            ->assertSee('aria-label="Halaman data"', false)->assertSee('aria-disabled="true"', false)
+            ->assertDontSee('Halaman ini menampilkan kondisi terkini.');
+    }
+
     public function test_sidebar_provides_access_even_when_there_are_no_alerts(): void
     {
         $this->actingAs(User::factory()->create())->get(route('dashboard'))->assertOk()

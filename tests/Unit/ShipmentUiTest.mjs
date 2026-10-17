@@ -25,9 +25,9 @@ test('shipping alerts refresh without losing stock alerts and disappear after re
         globalThis.CustomEvent = class { constructor(type, options) { this.type = type; this.detail = options.detail; } };
         let requested;
         const cargo = { message: 'Cargo terlambat', url: '/shipments?shipment=7' };
-        let result = { count: 1, alerts: [cargo], states: { 7: { status: 'delayed' } }, counts: { delayed: 1 } };
-        globalThis.fetch = async (url) => { requested = url; return { ok: true, json: async () => result }; };
         const stock = { name: 'Oli', message: 'Oli habis', quantity: 0, url: '/products' };
+        let result = { stock_count: 7, stock_alerts: [stock], active_count: 8, count: 1, alerts: [cargo], states: { 7: { status: 'delayed' } }, counts: { delayed: 1 } };
+        globalThis.fetch = async (url) => { requested = url; return { ok: true, json: async () => result }; };
         const state = stockNotifications([stock], { count: 0, alerts: [] }, '/shipments/notifications');
         state.ids = [7];
         await state.refresh();
@@ -35,16 +35,20 @@ test('shipping alerts refresh without losing stock alerts and disappear after re
         assert.equal(state.shipmentCount, 1);
         assert.deepEqual(state.alerts, [cargo, stock]);
         assert.equal(events[0].type, 'shipment-updates');
+        assert.equal(events[1].type, 'notification-count');
+        assert.equal(events[1].detail.count, 8);
+        assert.equal(state.stockCount, 7);
         assert.equal(events[0].detail.states[7].status, 'delayed');
         state.index = 1;
-        result = { count: 0, alerts: [], states: { 7: { status: 'delivered' } }, counts: { delivered: 1 } };
+        result = { stock_count: 0, stock_alerts: [], active_count: 0, count: 0, alerts: [], states: { 7: { status: 'delivered' } }, counts: { delivered: 1 } };
         await state.refresh();
-        assert.deepEqual(state.alerts, [stock]);
-        assert.equal(state.current.name, 'Oli');
+        assert.deepEqual(state.alerts, []);
+        assert.equal(state.stockCount, 0);
+        assert.equal(events.at(-1).detail.count, 0);
         assert.equal(state.index, 0);
         globalThis.fetch = async () => { throw new Error('offline'); };
         await state.refresh();
-        assert.deepEqual(state.alerts, [stock]);
+        assert.deepEqual(state.alerts, []);
         assert.equal(state.busy, false);
     } finally {
         Object.assign(globalThis, original);

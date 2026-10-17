@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ShipmentRequest;
+use App\Models\Product;
 use App\Models\Shipment;
 use App\Models\ShippingService;
+use App\Services\DashboardService;
 use App\Services\ShipmentService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -60,10 +62,22 @@ class ShipmentController extends Controller
         return redirect()->route('shipments.index', ['shipment' => $shipment->id])->with('success', 'Cargo dikonfirmasi sudah sampai.');
     }
 
-    public function notifications(ShipmentRequest $request, ShipmentService $tracking): JsonResponse
+    public function notifications(ShipmentRequest $request, ShipmentService $tracking, DashboardService $dashboard): JsonResponse
     {
         $states = Shipment::whereKey($request->validated('ids', []))->get()->mapWithKeys(fn (Shipment $shipment): array => [$shipment->id => $shipment->trackingState()]);
 
-        return response()->json($tracking->notifications() + ['states' => $states, 'counts' => $tracking->counts()])->header('Cache-Control', 'private, no-store');
+        $shipping = $tracking->notifications();
+        $stock = $dashboard->stockOverview();
+        $stockAlerts = $stock['products']->map(fn (Product $product): array => [
+            'name' => $product->name, 'quantity' => (int) $product->current_stock,
+            'message' => (int) $product->current_stock === 0 ? $product->name.' habis' : 'Stok '.$product->name.' menipis',
+            'url' => route('products.index', ['search' => $product->name]),
+        ])->values();
+
+        return response()->json($shipping + [
+            'states' => $states, 'counts' => $tracking->counts(),
+            'stock_count' => $stock['count'], 'stock_alerts' => $stockAlerts,
+            'active_count' => $stock['count'] + $shipping['count'],
+        ])->header('Cache-Control', 'private, no-store');
     }
 }
