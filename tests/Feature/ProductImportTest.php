@@ -220,6 +220,34 @@ class ProductImportTest extends TestCase
         $this->assertDatabaseCount('products', 0);
     }
 
+    public function test_optional_import_fields_accept_blank_null_and_placeholder_values(): void
+    {
+        $this->actingAs(User::factory()->create());
+        foreach (['', 'NULL', '-', '–'] as $index => $empty) {
+            $row = $this->row();
+            foreach ([1, 2, 3, 6, 7, 8, 9] as $column) {
+                $row[$column] = $empty;
+            }
+            $row[0] = 'Produk Kosong '.$index;
+            $this->post(route('products.import'), ['file' => $this->workbook([$row])])->assertSessionHasNoErrors();
+        }
+        $this->assertDatabaseCount('products', 4);
+        $this->assertSame(4, Product::where('product_kind', 'daily')->whereNull('barcode')->whereNull('brand_id')->count());
+        $this->assertDatabaseCount('product_distributors', 0);
+    }
+
+    public function test_unknown_product_kind_has_a_clear_message_and_blank_update_preserves_existing_kind(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $product = Product::factory()->withStock()->create(['product_kind' => 'variation']);
+        $file = $this->workbook([[(string) $product->id, 'NULL']], headers: ['ID', 'Tipe Produk']);
+        $this->post(route('products.import'), ['file' => $file])->assertSessionHasNoErrors();
+        $this->assertSame('variation', $product->fresh()->product_kind);
+        $invalid = $this->workbook([[(string) $product->id, 'Asal']], headers: ['ID', 'Tipe Produk']);
+        $this->postJson(route('products.import'), ['file' => $invalid])->assertUnprocessable()
+            ->assertJsonPath('errors.file.0', 'Baris 7: Tipe Produk harus Harian, Non-Harian, atau Variasi. Boleh dikosongkan.');
+    }
+
     public function test_import_validation_reopens_import_tab(): void
     {
         $this->actingAs(User::factory()->create());

@@ -34,6 +34,11 @@ class ProductImportService
         $errors = [];
         $seen = ['id' => [], 'sku' => [], 'barcode' => []];
         foreach ($rows as $number => $data) {
+            foreach (['id', 'brand_name', 'type_name', 'color_name', 'product_kind', 'supplier_names', 'sku', 'barcode'] as $field) {
+                if (array_key_exists($field, $data) && in_array(mb_strtolower(trim($data[$field] ?? '')), ['', 'null', '-', '–'], true)) {
+                    $data[$field] = null;
+                }
+            }
             $id = $data['id'] ?? null;
             $product = null;
             if ($id !== null) {
@@ -55,10 +60,10 @@ class ProductImportService
             unset($data['id']);
             $provided = array_keys($data);
             if (array_key_exists('product_kind', $data)) {
-                $data['product_kind'] = match (mb_strtolower($data['product_kind'] ?? 'harian')) {
-                    'harian', 'daily' => 'daily',
-                    'variasi', 'variation' => 'variation',
-                    'non harian', 'non-harian', 'non_daily' => 'non_daily',
+                $data['product_kind'] = match (mb_strtolower($data['product_kind'] ?? $product?->product_kind ?? 'harian')) {
+                    'harian', 'produk harian', 'daily' => 'daily',
+                    'variasi', 'produk variasi', 'variation' => 'variation',
+                    'non harian', 'non-harian', 'produk non harian', 'produk non-harian', 'non_daily' => 'non_daily',
                     default => $data['product_kind'],
                 };
             }
@@ -88,7 +93,7 @@ class ProductImportService
             foreach (['sku', 'barcode'] as $field) {
                 $rules[$field] = ['nullable', 'string', 'max:100', Rule::unique('products', $field)->ignore($product?->id)];
             }
-            $validator = Validator::make($data, $rules, $request->messages());
+            $validator = Validator::make($data, $rules, array_merge($request->messages(), ['product_kind.in' => 'Tipe Produk harus Harian, Non-Harian, atau Variasi. Boleh dikosongkan.']));
             foreach ($validator->errors()->all() as $message) {
                 $errors[] = 'Baris '.$number.': '.$message;
             }
