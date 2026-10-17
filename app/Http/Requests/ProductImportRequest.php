@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\ProductImportColumn;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ProductImportRequest extends FormRequest
@@ -14,7 +15,7 @@ class ProductImportRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        return ['file' => ['required', 'file', 'mimes:xlsx', 'extensions:xlsx', 'max:5120']];
+        return ['file' => ['required', 'file', 'mimes:xlsx', 'extensions:xlsx', 'max:5120'], 'mapping' => ['sometimes', 'array:'.implode(',', array_keys(ProductImportColumn::DEFAULTS))], 'mapping.*' => ['nullable', 'string', 'max:100']];
     }
 
     /** @return array<string, string> */

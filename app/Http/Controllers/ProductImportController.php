@@ -12,13 +12,13 @@ class ProductImportController extends Controller
 {
     public function template(ExcelExportService $excel): StreamedResponse
     {
-        return $excel->download('template-import-produk.xlsx', 'TEMPLATE IMPORT PRODUK', ProductImportService::HEADERS, [], 'Isi baris di bawah judul kolom. SKU wajib unik. Maksimal 500 produk.');
+        return $excel->download('template-import-produk.xlsx', 'TEMPLATE IMPORT PRODUK', ProductImportService::HEADERS, [], 'Isi baris di bawah judul kolom. ID terisi memperbarui produk; ID kosong menambah produk.');
     }
 
     public function store(ProductImportRequest $request, ProductImportService $importer): RedirectResponse
     {
-        $count = $importer->import($request->file('file'), $request->user()->id);
+        $count = $importer->import($request->file('file'), $request->user()->id, $request->validated('mapping', []));
 
-        return redirect()->route('products.index')->with('success', $count.' produk berhasil diimpor beserta stok awalnya.');
+        return redirect()->route('products.index')->with('success', $count.' baris produk berhasil ditambahkan atau diperbarui.');
     }
 }

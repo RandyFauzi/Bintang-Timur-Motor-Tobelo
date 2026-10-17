@@ -45,15 +45,24 @@
             <form id="product-import-panel" role="tabpanel" aria-labelledby="product-import-tab" x-show="tab === 'import'" x-cloak method="POST" action="{{ route('products.import') }}" enctype="multipart/form-data" class="dialog-form" @submit="submitting = true">
                 @csrf
                 <input type="hidden" name="_dialog" value="product-form"><input type="hidden" name="_tab" value="import">
-                <p class="text-sm text-muted">Tambahkan banyak produk sekaligus melalui template Excel. Maksimal 500 produk per file (5 MB).</p>
+                <p class="text-sm text-muted">Import file Excel dengan urutan kolom bebas, tanpa batas jumlah baris. Ukuran file maksimal 5 MB.</p>
                 <x-ui.field name="file" label="File Excel (.xlsx)" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required hint="Pilih ulang file jika validasi gagal." />
                 <ul class="list-disc pl-5 text-sm text-muted space-y-2">
-                    <li>SKU wajib unik. Import hanya menambah produk baru.</li>
-                    <li>Isi angka tanpa Rp atau pemisah ribuan; desimal memakai titik. Jumlah Stok dan Stok Minimum wajib diisi.</li>
+                    <li>ID produk yang sama memperbarui data. ID kosong menambah produk baru; SKU kosong dibuat otomatis. ID yang tidak ditemukan ditolak.</li>
+                    <li>Isi angka tanpa Rp atau pemisah ribuan; desimal memakai titik. Kolom yang tidak ada di file tetap dipertahankan untuk produk lama. Kolom opsional yang kosong akan dikosongkan.</li>
                     <li>Tipe Produk: Harian, Non-Harian, atau Variasi. Distributor harus sudah terdaftar; pisahkan beberapa nama dengan tanda |.</li>
                     <li>Format kolom SKU dan Barcode sebagai Teks agar angka nol di depan tidak hilang.</li>
                     <li>Semua baris diperiksa terlebih dahulu. Jika ada kesalahan, seluruh import dibatalkan.</li>
                 </ul>
+                <details class="rounded-xl border border-gray-200 p-4">
+                    <summary class="cursor-pointer text-sm font-medium">Atur pemetaan kolom (opsional)</summary>
+                    <p class="my-3 text-sm text-muted">Judul kolom dikenali otomatis. Isi nama judul pada file Anda jika berbeda. Kolom tambahan akan diabaikan.</p>
+                    <div class="form-grid">
+                        @foreach($importColumns as $field => $definition)
+                            <x-ui.field :name="'mapping['.$field.']'" :id="'import-mapping-'.$field" :label="$definition['label']" :value="old('mapping.'.$field)" :placeholder="$definition['label']" maxlength="100" />
+                        @endforeach
+                    </div>
+                </details>
                 <a href="{{ route('products.import.template') }}" class="ui-button ui-button--secondary justify-self-start"><x-ui.icon name="export" :size="18" />Download Template Excel</a>
                 <footer class="dialog-actions"><button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button><button type="submit" class="ui-button" :disabled="submitting" x-text="submitting ? 'Mengimpor…' : 'Import Produk'">Import Produk</button></footer>
             </form>

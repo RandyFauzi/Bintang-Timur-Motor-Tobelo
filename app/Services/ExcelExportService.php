@@ -20,9 +20,10 @@ class ExcelExportService
         array $headers,
         iterable $rows,
         string $subtitle = '',
-        array $meta = []
+        array $meta = [],
+        bool $forImport = false
     ): StreamedResponse {
-        return response()->streamDownload(function () use ($title, $headers, $rows, $subtitle, $meta): void {
+        return response()->streamDownload(function () use ($title, $headers, $rows, $subtitle, $meta, $forImport): void {
             $logo = $this->brandImage();
             $tempFile = tempnam(sys_get_temp_dir(), 'bintang_xlsx_');
             $zip = new ZipArchive;
@@ -33,7 +34,7 @@ class ExcelExportService
             $zip->addFromString('xl/_rels/workbook.xml.rels', $this->getWorkbookRelsXml());
             $zip->addFromString('xl/workbook.xml', $this->getWorkbookXml());
             $zip->addFromString('xl/styles.xml', $this->getStylesXml());
-            $zip->addFromString('xl/worksheets/sheet1.xml', $this->getSheetXml($title, $headers, $rows, $subtitle, $meta));
+            $zip->addFromString('xl/worksheets/sheet1.xml', $this->getSheetXml($title, $headers, $rows, $subtitle, $meta, $forImport));
 
             $this->embedLogo($zip, $logo);
             $zip->close();
@@ -218,7 +219,7 @@ class ExcelExportService
             .'</styleSheet>';
     }
 
-    private function getSheetXml(string $title, array $headers, iterable $rows, string $subtitle, array $meta): string
+    private function getSheetXml(string $title, array $headers, iterable $rows, string $subtitle, array $meta, bool $forImport = false): string
     {
         $colCount = max(count($headers), 1);
         $lastColLetter = $this->getColumnLetter($colCount);
@@ -337,7 +338,7 @@ class ExcelExportService
 
                 if ($val === null || $val === '') {
                     $style = $isZebra ? 8 : 7;
-                    $xml .= '<c r="'.$cellRef.'" s="'.$style.'" t="inlineStr"><is><t>–</t></is></c>';
+                    $xml .= '<c r="'.$cellRef.'" s="'.$style.'" t="inlineStr"><is><t>'.($forImport ? '' : '–').'</t></is></c>';
                 } elseif ($this->isCurrencyColumn($headerName) && is_numeric($val)) {
                     $style = $isZebra ? 12 : 11;
                     $xml .= '<c r="'.$cellRef.'" s="'.$style.'"><v>'.((float) $val).'</v></c>';
@@ -363,7 +364,7 @@ class ExcelExportService
 
         // Summary Row (Footer)
         $hasAnySum = count(array_filter($sums, fn ($s) => $s !== null)) > 0;
-        if ($hasAnySum && count($rowList) > 0) {
+        if (! $forImport && $hasAnySum && count($rowList) > 0) {
             $xml .= '<row r="'.$currentRow.'" ht="26" customHeight="1">';
             $firstSumCol = null;
             foreach ($sums as $cIdx => $s) {

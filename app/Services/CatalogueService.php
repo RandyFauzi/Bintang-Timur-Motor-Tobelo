@@ -50,9 +50,9 @@ class CatalogueService
     }
 
     /** @param array<string, mixed> $data */
-    public function saveProduct(array $data, int $userId, ?Product $product = null): Product
+    public function saveProduct(array $data, int $userId, ?Product $product = null, bool $replaceSku = false): Product
     {
-        return DB::transaction(function () use ($data, $userId, $product): Product {
+        return DB::transaction(function () use ($data, $userId, $product, $replaceSku): Product {
             $creating = $product === null;
             $attributes = Arr::only($data, ['name', 'sku', 'barcode', 'purchase_price', 'selling_price', 'stock_minimum', 'product_kind', 'brand_id', 'type_id', 'color_id']);
             foreach (['brand' => Brand::class, 'type' => ProductType::class, 'color' => Color::class] as $field => $model) {
@@ -71,7 +71,9 @@ class CatalogueService
                 $attributes['sku'] = $attributes['sku'] ?? 'PRD-'.Str::ulid();
                 $product = Product::create($attributes);
             } else {
-                unset($attributes['sku']);
+                if (! $replaceSku || empty($attributes['sku'])) {
+                    unset($attributes['sku']);
+                }
                 $product->fill($attributes)->save();
             }
             $stock = $product->stock()->firstOrCreate([], ['quantity' => 0, 'reserved_quantity' => 0]);

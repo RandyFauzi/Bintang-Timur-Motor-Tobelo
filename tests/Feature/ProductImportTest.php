@@ -4,7 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\Distributor;
 use App\Models\Product;
+use App\Models\ProductImportColumn;
 use App\Models\User;
+use App\Services\ExcelExportService;
+use Database\Seeders\ProductImportColumnSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
@@ -90,16 +93,70 @@ class ProductImportTest extends TestCase
         $this->assertDatabaseCount('products', 0);
     }
 
-    public function test_import_requires_sku_and_limits_the_number_of_products(): void
+    public function test_more_than_500_rows_can_be_imported_with_automatic_skus(): void
     {
         $this->actingAs(User::factory()->create());
+        $rows = [];
+        for ($index = 0; $index < 501; $index++) {
+            $rows[] = ['Produk '.$index];
+        }
+        $this->post(route('products.import'), ['file' => $this->workbook($rows, headers: ['Nama Produk'])])
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('products', 501);
+        $this->assertSame(501, Product::where('sku', 'like', 'PRD-%')->count());
+    }
+
+    public function test_matching_id_replaces_values_and_records_only_stock_difference(): void
+    {
+        $this->actingAs(User::factory()->create());
+        Distributor::factory()->create(['name' => 'WMS']);
+        $this->post(route('products.import'), ['file' => $this->workbook([$this->row()])])->assertSessionHasNoErrors();
+        $product = Product::sole();
         $row = $this->row();
-        $row[9] = '';
-        $this->postJson(route('products.import'), ['file' => $this->workbook([$row])])
-            ->assertUnprocessable()->assertJsonValidationErrors('file');
-        $this->postJson(route('products.import'), ['file' => $this->workbook(array_fill(0, 501, $this->row()))])
-            ->assertUnprocessable()->assertJsonValidationErrors('file');
-        $this->assertDatabaseCount('products', 0);
+        $row[0] = 'Nama Baru';
+        $row[9] = 'SKU-BARU';
+        $row[10] = '10';
+        $row[] = (string) $product->id;
+        $file = $this->workbook([$row]);
+        $this->post(route('products.import'), ['file' => $file])->assertSessionHasNoErrors();
+        $this->post(route('products.import'), ['file' => $file])->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('products', 1);
+        $this->assertDatabaseCount('stock_movements', 2);
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'name' => 'Nama Baru', 'sku' => 'SKU-BARU']);
+        $this->assertDatabaseHas('stock_movements', ['product_id' => $product->id, 'quantity' => 3, 'type' => 'adjustment']);
+        $this->assertSame(10, $product->fresh()->stock->quantity);
+    }
+
+    public function test_dynamic_database_aliases_and_custom_mapping_preserve_missing_fields(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $product = Product::factory()->withStock(12)->create(['selling_price' => 15000, 'stock_minimum' => 4]);
+        ProductImportColumn::factory()->create(['field' => 'id', 'label' => 'Nomor Internal', 'aliases' => ['kode internal']]);
+        $this->seed(ProductImportColumnSeeder::class);
+        $this->assertDatabaseCount('product_import_columns', 13);
+        $file = $this->workbook([['abaikan', 'Nama Diperbarui', (string) $product->id]], headers: ['Catatan', 'Judul Barang', 'Kode Internal']);
+        $this->post(route('products.import'), ['file' => $file, 'mapping' => ['name' => 'Judul Barang']])->assertSessionHasNoErrors();
+        $this->assertSame('Nama Diperbarui', $product->fresh()->name);
+        $this->assertEquals(15000, $product->fresh()->selling_price);
+        $this->assertSame(12, $product->fresh()->stock->quantity);
+        $this->assertSame(4, $product->fresh()->stock_minimum);
+    }
+
+    public function test_invalid_or_duplicate_ids_and_reserved_stock_roll_back_import(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $product = Product::factory()->withStock(10)->create();
+        $product->stock->update(['reserved_quantity' => 5]);
+        foreach ([
+            [[(string) $product->id, '4']],
+            [['99999999', '10']],
+            [[(string) $product->id, '10'], [(string) $product->id, '11']],
+        ] as $rows) {
+            $this->postJson(route('products.import'), ['file' => $this->workbook($rows, headers: ['ID', 'Stok'])])
+                ->assertUnprocessable()->assertJsonValidationErrors('file');
+            $this->assertSame(10, $product->fresh()->stock->quantity);
+            $this->assertDatabaseCount('stock_movements', 0);
+        }
     }
 
     public function test_excel_shared_strings_are_imported_and_unsafe_xml_is_rejected(): void
@@ -137,6 +194,32 @@ class ProductImportTest extends TestCase
         $this->assertDatabaseHas('products', ['sku' => 'IMP-001', 'product_kind' => 'variation']);
     }
 
+    public function test_export_can_be_reimported_by_id_without_duplicating_products(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $product = Product::factory()->withStock(9)->create(['barcode' => '000123', 'stock_minimum' => 3]);
+        $supplier = Distributor::factory()->create();
+        $product->distributors()->attach($supplier);
+        $content = $this->get(route('products.export', ['format' => 'xlsx']))->assertOk()->streamedContent();
+        $file = UploadedFile::fake()->createWithContent('export.xlsx', $content);
+        $this->post(route('products.import'), ['file' => $file])->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('products', 1);
+        $this->assertDatabaseCount('stock_movements', 0);
+        $this->assertSame('000123', $product->fresh()->barcode);
+        $this->assertSame(9, $product->fresh()->stock->quantity);
+        $this->assertSame([$supplier->id], $product->fresh()->distributors->modelKeys());
+    }
+
+    public function test_ambiguous_or_missing_custom_headers_are_rejected(): void
+    {
+        $this->actingAs(User::factory()->create());
+        foreach ([['name' => 'ID'], ['id' => 'Nomor tidak ada']] as $mapping) {
+            $this->postJson(route('products.import'), ['file' => $this->workbook([$this->row()]), 'mapping' => $mapping])
+                ->assertUnprocessable()->assertJsonValidationErrors('file');
+        }
+        $this->assertDatabaseCount('products', 0);
+    }
+
     public function test_import_validation_reopens_import_tab(): void
     {
         $this->actingAs(User::factory()->create());
@@ -153,9 +236,16 @@ class ProductImportTest extends TestCase
     }
 
     /** @param list<list<string>> $rows */
-    private function workbook(array $rows, bool $formula = false, bool $sharedStrings = false): UploadedFile
+    private function workbook(array $rows, bool $formula = false, bool $sharedStrings = false, ?array $headers = null): UploadedFile
     {
-        $template = $this->get(route('products.import.template'))->assertDownload('template-import-produk.xlsx')->streamedContent();
+        $template = $headers === null
+            ? $this->get(route('products.import.template'))->assertDownload('template-import-produk.xlsx')->streamedContent()
+            : app(ExcelExportService::class)->download('custom.xlsx', 'DATA PRODUK', $headers, [], '')->getCallback();
+        if ($headers !== null) {
+            ob_start();
+            $template();
+            $template = ob_get_clean();
+        }
         $path = tempnam(sys_get_temp_dir(), 'import_test_');
         try {
             file_put_contents($path, $template);

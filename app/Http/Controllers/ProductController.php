@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\CatalogueFilterRequest;
 use App\Http\Requests\ProductRequest;
 use App\Models\Product;
+use App\Models\ProductImportColumn;
 use App\Services\CatalogueService;
 use App\Services\CsvExportService;
 use App\Services\DashboardService;
@@ -21,7 +22,7 @@ class ProductController extends Controller
         $products = $catalogue->products($filters)->paginate((int) ($filters['per_page'] ?? ($request->input('view') === 'cards' ? 6 : 15)))->withQueryString();
         $editing = $request->filled('edit') ? Product::with(['stock', 'brand', 'type', 'color', 'distributors'])->findOrFail($request->integer('edit')) : null;
 
-        return view('products.index', array_merge($catalogue->options(), ['products' => $products, 'editing' => $editing, 'categories' => $catalogue->categories(), 'stockOverview' => $dashboard->stockOverview()]));
+        return view('products.index', array_merge($catalogue->options(), ['products' => $products, 'editing' => $editing, 'categories' => $catalogue->categories(), 'stockOverview' => $dashboard->stockOverview(), 'importColumns' => ProductImportColumn::definitions()]));
     }
 
     public function create(): RedirectResponse
@@ -71,10 +72,13 @@ class ProductController extends Controller
             Product::KINDS[$product->product_kind] ?? '–',
             $product->brand?->name,
             $product->type?->name,
-            $product->distributors->pluck('name')->join(', '),
+            $product->distributors->pluck('name')->join(' | '),
             $product->stock?->quantity ?? 0,
+            $product->id,
+            $product->barcode,
+            $product->stock_minimum,
         ]);
-        $headers = ['Nama Produk', 'SKU', 'Warna', 'Modal', 'Harga Jual', 'Tipe Produk', 'Merk', 'Jenis Part', 'Distributor', 'Stok'];
+        $headers = ['Nama Produk', 'SKU', 'Warna', 'Modal', 'Harga Jual', 'Tipe Produk', 'Merk', 'Jenis Part', 'Distributor', 'Stok', 'ID', 'Barcode', 'Stok Minimum'];
 
         if ($request->query('format') === 'xlsx' || $request->query('format') === 'excel') {
             return $excel->download(
@@ -82,7 +86,8 @@ class ProductController extends Controller
                 'DAFTAR PRODUK & STOK BENGKEL',
                 $headers,
                 $rows,
-                'Katalog Suku Cadang & Inventaris Toko'
+                'Katalog Suku Cadang & Inventaris Toko',
+                forImport: true
             );
         }
 
