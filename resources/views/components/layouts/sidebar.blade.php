@@ -54,7 +54,7 @@
                         @if ($item['route'])
                             <div class="sidebar-item">
                                 <a href="{{ route($item['route']) }}" @class(['sidebar-link', 'sidebar-link--with-action' => $item['create'] ?? false, 'sidebar-link--active' => request()->routeIs($item['active'])]) @if(request()->routeIs($item['active'])) aria-current="page" @endif title="{{ $item['label'] }}">
-                                    <x-ui.icon :name="$item['icon']" />
+                                    <x-ui.icon :name="$item['icon']" :style="$item['icon'] === 'ship' ? 'filter: brightness(0) invert(1)' : null" />
                                     <span x-show="!collapsed || isMobile">{{ $item['label'] }}</span>
                                     @if($item['route'] === 'notifications.index')
                                         <span data-notification-badge class="notification-nav-badge" :class="{'notification-nav-badge--compact': collapsed && !isMobile}" x-show="activeNotificationCount > 0" x-cloak x-text="activeNotificationCount > 99 ? '99+' : activeNotificationCount" :aria-label="activeNotificationCount + ' notifikasi aktif'" role="status" aria-live="polite">{{ $stockOverview['count'] + $shipmentNotifications['count'] }}</span>
@@ -66,7 +66,7 @@
                             </div>
                         @else
                             <button type="button" class="sidebar-link sidebar-link--upcoming" title="{{ $item['label'] }} — segera tersedia" @click="$dispatch('notify', { message: '{{ $item['label'] }} belum tersedia. Modul ini akan ditambahkan pada tahap berikutnya.', type: 'info' })">
-                                <x-ui.icon :name="$item['icon']" />
+                                <x-ui.icon :name="$item['icon']" :style="$item['icon'] === 'ship' ? 'filter: brightness(0) invert(1)' : null" />
                                 <span x-show="!collapsed || isMobile">{{ $item['label'] }}</span>
                                 <span x-show="!collapsed || isMobile" class="sidebar-coming" aria-label="Segera tersedia">+</span>
                             </button>
