@@ -76,8 +76,11 @@ export function multiSelect(options, selected, label, submitOnApply = true) {
             const search = this.search.trim().toLocaleLowerCase('id');
             return this.options.filter((item) => item.name.toLocaleLowerCase('id').includes(search));
         },
+        get selectedOptions() { return this.options.filter((item) => item.id !== '' && this.selected.includes(item.id)); },
+        get selectedCount() { return this.selectedOptions.length; },
+        get active() { return this.selectedCount > 0; },
         get summary() {
-            const names = this.options.filter((item) => this.selected.includes(item.id)).map((item) => item.name);
+            const names = this.selectedOptions.map((item) => item.name);
             if (!names.length) return this.label;
             return names.slice(0, 2).join(', ') + (names.length > 2 ? ', +' + (names.length - 2) : '');
         },

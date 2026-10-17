@@ -3,8 +3,8 @@
 @php($items = collect($options)->map(fn ($item) => ['id' => (string) $item->id, 'name' => $item->name])->values())
 <div class="multi-filter" :class="{ 'is-open': open }" x-data="multiSelect(@js($items), @js(array_map('strval', $selected ?? request($name, []))), @js($label), @js($submitOnApply))" @click.outside="close(false)" @keydown.escape.stop="close()">
     <template x-for="id in selected" :key="id"><input type="hidden" name="{{ $name }}{{ $multiple ? '[]' : '' }}" :value="id"></template>
-    <button type="button" id="{{ $id ?? $name.'-filter' }}" class="filter-trigger" x-ref="trigger" @click="toggle()" :aria-expanded="open" :aria-label="label + ': ' + summary" aria-controls="{{ $id ?? $name.'-filter' }}-panel">
-        <x-ui.icon :name="$filterIcon" :size="16" /><span x-text="summary"></span><x-ui.icon name="chevron" :size="16" class="rotate-90" />
+    <button type="button" id="{{ $id ?? $name.'-filter' }}" class="filter-trigger" :class="{ 'is-active': active }" :title="selectedOptions.map(option => option.name).join(', ') || label" x-ref="trigger" @click="toggle()" :aria-expanded="open" :aria-label="label + ': ' + summary" aria-controls="{{ $id ?? $name.'-filter' }}-panel">
+        <x-ui.icon :name="$filterIcon" :size="16" /><span class="filter-trigger__summary" x-text="summary"></span><span class="filter-trigger__count" x-show="selectedCount > 1" x-cloak x-text="selectedCount" :aria-label="selectedCount + ' pilihan aktif'"></span><x-ui.icon name="chevron" :size="16" class="rotate-90" />
     </button>
     <div class="multi-filter__backdrop" x-show="open" x-cloak x-transition.opacity @click="close()" aria-hidden="true"></div>
     <div id="{{ $id ?? $name.'-filter' }}-panel" class="multi-filter__panel" :style="panelPosition" x-show="open" x-cloak x-transition.opacity>

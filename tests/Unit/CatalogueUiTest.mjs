@@ -194,3 +194,25 @@ test('mobile form opens within the visible viewport without scrolling to a text 
         assert.deepEqual(focused, { preventScroll: true });
     } finally { globalThis.window = previousWindow; }
 });
+
+test('active filter indicators reflect applied choices and display both selected names', () => {
+    const filter = multiSelect(options, [], 'Semua');
+    assert.equal(filter.active, false);
+    assert.equal(filter.selectedCount, 0);
+    filter.draft = ['1', '2'];
+    assert.equal(filter.active, false);
+    filter.selected = [...filter.draft];
+    assert.equal(filter.active, true);
+    assert.equal(filter.selectedCount, 2);
+    assert.equal(filter.summary, 'Oli, Rem');
+    filter.selected = ['1', '2', '3'];
+    assert.equal(filter.summary, 'Oli, Rem, +1');
+    filter.selected = [];
+    assert.equal(filter.active, false);
+    assert.equal(filter.summary, 'Semua');
+    const stock = multiSelect([{ id: '', name: 'Semua Stok' }, { id: '1', name: 'Stok Menipis' }], [''], 'Semua Stok');
+    assert.equal(stock.active, false);
+    stock.selected = ['1'];
+    assert.equal(stock.active, true);
+    assert.equal(stock.summary, 'Stok Menipis');
+});
