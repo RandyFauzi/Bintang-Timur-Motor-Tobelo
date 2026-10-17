@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { shipmentForm } from '../../resources/js/components/shipments.js';
+import { shipmentForm, shippingVoyage } from '../../resources/js/components/shipments.js';
 import { stockNotifications } from '../../resources/js/components/ui.js';
 
 test('shipment preview adds calendar days across months and handles missing values', () => {
@@ -57,4 +57,28 @@ test('empty notifications have safe navigation', () => {
     state.previous();
     assert.equal(state.index, 0);
     assert.equal(state.current.url, '#');
+});
+
+
+test('illustrated voyage recognizes port aliases and moves the boat with estimated progress', () => {
+    const state = shippingVoyage('Pelabuhan Tanjung Perak, Surabaya', 'Toko Gamsungi Tobelo', 0);
+    assert.deepEqual(state.boat, { x: state.start.x, y: state.start.y });
+    state.progress = 50;
+    assert.ok(state.boat.x > state.start.x && state.boat.x < state.end.x);
+    assert.ok(state.completedPath.endsWith(`${state.boat.x} ${state.boat.y}`));
+    state.progress = 100;
+    assert.deepEqual(state.boat, { x: state.end.x, y: state.end.y });
+    assert.equal(shippingVoyage('Surabaya', 'Tobelo').start.x, state.start.x);
+    assert.notEqual(shippingVoyage('Jakarta', 'Tobelo').start.x, state.start.x);
+});
+
+test('unknown ports and invalid progress retain a bounded illustrative route', () => {
+    const state = shippingVoyage('Kota Lain', 'Pelabuhan Tujuan', -20);
+    assert.equal(state.fraction, 0);
+    state.progress = 150;
+    assert.equal(state.fraction, 1);
+    state.progress = 'invalid';
+    assert.equal(state.fraction, 0);
+    assert.ok(state.viewBox.split(' ').every((value) => Number.isFinite(Number(value))));
+    assert.ok(!state.path.includes('NaN'));
 });

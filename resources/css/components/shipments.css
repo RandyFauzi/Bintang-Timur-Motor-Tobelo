@@ -69,6 +69,47 @@
     .shipping-service-list > div { display: flex; gap: 16px; align-items: center; justify-content: space-between; border: 1px solid var(--color-border); padding: 14px; border-radius: 12px; }
     .shipping-service-list strong { display: block; font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
     .shipping-service-list small { display: block; margin-top: 4px; color: var(--color-muted); font-size: 12px; }
+    .shipping-list .multi-filter, .shipping-list .filter-trigger { width: 100%; }
+    .shipping-voyage { position: relative; overflow: hidden; border: 1px solid #d5e8f2; border-radius: 18px; background: #f0f8fc; }
+    .shipping-voyage__heading { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 18px 20px 0; }
+    .shipping-voyage__mode { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; letter-spacing: 1px; color: #294861; }
+    .shipping-voyage__tag { border: 1px solid #c9dce8; background: #ffffffb8; border-radius: 999px; padding: 5px 10px; color: #42647b; font-size: 11px; }
+    .shipping-voyage__map { position: relative; background: radial-gradient(ellipse at 65% 35%, #d8eff9, #eaf5fa 65%); margin-top: 12px; }
+    .shipping-voyage__map > svg { display: block; width: 100%; height: 310px; }
+    .voyage-grid { fill: none; stroke: #86bbd0; stroke-width: .6; opacity: .2; }
+    .voyage-islands { fill: #d5e5d5; stroke: #a4c8b0; stroke-width: 1; stroke-linejoin: round; filter: drop-shadow(0 3px 0 #b9d9d37a); }
+    .voyage-island-labels { fill: #678575; font-size: 10px; letter-spacing: 1px; font-weight: 500; }
+    .voyage-island-labels .voyage-sea-label { fill: #749fb3; letter-spacing: 3px; font-size: 11px; }
+    .voyage-route-halo { fill: none; stroke: #fff; stroke-width: 9; stroke-linecap: round; opacity: .7; }
+    .voyage-route-base { fill: none; stroke: #93b8dc; stroke-width: 2.5; stroke-linecap: round; }
+    .voyage-route-complete { fill: none; stroke: #2563eb; stroke-width: 3; stroke-linecap: round; }
+    .voyage-route-flow { fill: none; stroke: #2563eb; stroke-width: 1.8; stroke-dasharray: 4 9; opacity: .65; animation: voyage-current 10s linear infinite; }
+    .voyage-port > circle { fill: #fff; stroke: #2563eb; stroke-width: 3; }
+    .voyage-port .voyage-port__center { fill: #2563eb; stroke: none; }
+    .voyage-port .voyage-port__halo { fill: #2563eb; opacity: .12; stroke: none; }
+    .voyage-port text { fill: #24445c; font-size: 12px; font-weight: 600; letter-spacing: 1px; paint-order: stroke; stroke: #eff8fc; stroke-width: 4; }
+    .voyage-boat__float { animation: voyage-float 4s ease-in-out infinite; filter: drop-shadow(0 5px 5px #2563eb30); }
+    .voyage-boat circle { fill: #2563eb; stroke: white; stroke-width: 3; }
+    .voyage-boat path { fill: none; stroke: white; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .voyage-compass { position: absolute; top: 12px; right: 16px; display: grid; text-align: center; color: #517d95; font-size: 10px; letter-spacing: 1px; }
+    .voyage-compass > span { font-size: 23px; line-height: 1.2; }
+    .shipping-voyage__route { display: flex; align-items: center; gap: 16px; margin: 0 20px; padding: 17px; border: 1px solid #dce8ed; border-radius: 13px; background: #ffffffed; }
+    .shipping-voyage__route > div { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
+    .shipping-voyage__route > div > div { min-width: 0; }
+    .shipping-voyage__route strong { display: block; font-size: 15px; font-weight: 500; color: #17324f; overflow-wrap: anywhere; }
+    .shipping-voyage__route small { display: block; color: #6b8293; font-size: 10px; letter-spacing: .7px; margin-bottom: 5px; }
+    .voyage-route-dot { flex-shrink: 0; width: 11px; height: 11px; border-radius: 50%; border: 3px solid #2563eb; background: white; }
+    .voyage-route-dot--destination { background: #2563eb; }
+    .shipping-voyage__connector { color: #7697b4; }
+    .shipping-voyage__footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 14px 20px 18px; color: #58758b; font-size: 11px; }
+    .shipping-voyage__percent { color: #1d4ed8; font-weight: 500; }
+    .shipping-voyage--delivered .voyage-route-complete { stroke: #15803d; }
+    .shipping-voyage--delivered .voyage-boat circle { fill: #15803d; }
+    .shipping-voyage--stationary .voyage-route-flow, .shipping-voyage--stationary .voyage-boat__float { animation: none; }
+    @keyframes voyage-current { to { stroke-dashoffset: -130; } }
+    @keyframes voyage-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+    @media(prefers-reduced-motion:reduce) { .voyage-route-flow, .voyage-boat__float { animation: none; } }
+    @media(max-width:639px) { .shipping-voyage__map > svg { height: 240px; } .shipping-voyage__heading { padding: 14px 14px 0; } .shipping-voyage__route { margin: 0 12px; padding: 13px; gap: 10px; } .shipping-voyage__route > div { gap: 8px; } .shipping-voyage__route strong { font-size: 14px; } .shipping-voyage__footer { padding: 12px 14px 16px; } }
     @media(min-width:1600px) { .shipping-meta { grid-template-columns: repeat(4,minmax(0,1fr)); } }
     @media(max-width:1100px) { .shipping-workspace { grid-template-columns: minmax(0,1fr); } .shipping-list { border-right: 0; border-bottom: 1px solid var(--color-border); } .shipping-list__items { grid-template-columns: repeat(2,minmax(0,1fr)); } }
     @media(max-width:639px) { .shipping-heading { align-items: start; flex-direction: column; gap: 16px; } .shipping-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; } .shipping-metric { padding: 14px; } .shipping-metric strong { font-size: 26px; } .shipping-list__items, .shipping-detail-grid { grid-template-columns: minmax(0,1fr); } .shipping-main, .shipping-list { padding: 16px; } .shipping-detail__heading { flex-direction: column; } .shipping-meta { padding: 16px; gap: 16px; } .shipping-route-labels { padding: 16px; gap: 10px; } .shipping-route-labels strong { font-size: 16px; } .shipping-timeline { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; } .shipping-detail__actions .ui-button { flex: 1 1 auto; } .shipping-welcome { min-height: 320px; padding: 24px 8px; } }

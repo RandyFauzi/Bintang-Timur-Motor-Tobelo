@@ -4,16 +4,7 @@
     <div class="shipping-meta">
         <div><span>Nomor Resi / Referensi</span><strong>{{ $selected->reference }}</strong></div><div><span>Moda Transportasi</span><strong>Ocean Cargo</strong></div><div><span>Jasa Pengiriman</span><strong>{{ $selected->service_name }}</strong></div><div><span>Estimasi Tiba</span><strong>{{ $selected->estimated_arrival_on->locale('id')->translatedFormat('j F Y') }}</strong></div>
     </div>
-    <div class="shipping-route-panel">
-        <div class="shipping-route-labels"><div><span>BERANGKAT DARI</span><strong>{{ $selected->origin_port }}</strong></div><x-ui.icon name="ship" :size="28" /><div><span>TUJUAN PENGIRIMAN</span><strong>{{ $selected->destination_port }}</strong></div></div>
-        <svg class="shipping-sea" viewBox="0 0 700 175" role="img" aria-label="Skema rute dari {{ $selected->origin_port }} menuju {{ $selected->destination_port }}">
-            <path d="M0 10 75 0 130 30 110 65 60 80 75 130 20 160H0Z M700 0 640 10 625 45 655 80 620 130 670 175H700Z" class="shipping-land"/>
-            <path d="M130 115C260 165 385 0 570 80" class="shipping-sea-line"/>
-            <circle cx="130" cy="115" r="8" fill="#ffffff" stroke="#2563eb" stroke-width="4"/><circle cx="570" cy="80" r="8" fill="#ffffff" stroke="#2563eb" stroke-width="4"/>
-            <g transform="translate(326 60)" fill="none" stroke="#2563eb" stroke-width="3" stroke-linejoin="round"><path d="M0 22 24 12 48 22 40 40H8Z M10 17V0h28v17M24 12v28"/></g>
-        </svg>
-        <p class="shipping-route-caption">Skema rute laut · Progres berdasarkan estimasi waktu</p>
-    </div>
+    @include('shipments.partials.voyage')
     <div class="shipping-progress-heading"><span>Progres estimasi perjalanan</span><strong x-text="state.progress + '%'">{{ $state['progress'] }}%</strong></div><div class="shipping-progress" role="progressbar" aria-label="Progres estimasi perjalanan" :aria-valuenow="state.progress" aria-valuemin="0" aria-valuemax="100"><span :style="'width:' + state.progress + '%'"></span></div>
     <ol class="shipping-timeline">
         <li :class="{'is-complete': state.status !== 'scheduled'}"><span>1</span><strong>Keberangkatan</strong><small>{{ $selected->departed_on->locale('id')->translatedFormat('j M Y') }}</small></li>

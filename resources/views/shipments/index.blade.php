@@ -14,7 +14,7 @@
                 <div class="shipping-list__heading"><h2 class="font-medium">Daftar Pengiriman</h2><span class="text-xs text-muted">{{ $shipments->total() }} pengiriman</span></div>
                 <form method="GET" action="{{ route('shipments.index') }}" class="grid gap-3">
                     <label class="catalogue-search !w-full !min-w-0"><x-ui.icon name="search" :size="18" /><input type="search" name="search" value="{{ request('search') }}" placeholder="Cari cargo, resi, kapal…" aria-label="Cari pengiriman"></label>
-                    <label class="sr-only" for="shipping-status">Status pengiriman</label><select id="shipping-status" name="status" class="form-input" onchange="this.form.submit()"><option value="">Semua Status</option>@foreach(\App\Models\Shipment::STATUSES as $value=>$label)<option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>@endforeach</select>
+                    <x-ui.multiselect name="status" id="shipping-status" label="Semua Status" :options="collect([''=>'Semua Status'] + \App\Models\Shipment::STATUSES)->map(fn (string $label, string $value): object => (object)['id'=>$value,'name'=>$label])->values()" :selected="[request('status','')]" :multiple="false" icon="status-filter" />
                     <button type="submit" class="ui-button ui-button--secondary w-full">Cari Pengiriman</button>
                 </form>
                 <div class="shipping-list__items">

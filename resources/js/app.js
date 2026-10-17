@@ -1,5 +1,5 @@
 import Alpine from 'alpinejs';
-import { shipmentForm } from './components/shipments';
+import { shipmentForm, shippingVoyage } from './components/shipments';
 import { productSelection } from './components/product-selection';
 import { appShell, dateRangeFilter, stockNotifications, toast } from './components/ui';
 import { revenueChart } from './components/revenue-chart';
@@ -14,6 +14,7 @@ Alpine.data('appShell', appShell);
 Alpine.data('dateRangeFilter', dateRangeFilter);
 Alpine.data('stockNotifications', stockNotifications);
 Alpine.data('shipmentForm', shipmentForm);
+Alpine.data('shippingVoyage', shippingVoyage);
 Alpine.data('toast', toast);
 Alpine.data('revenueChart', revenueChart);
 Alpine.data('appDialog', appDialog);
