@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Shipment extends Model
 {
@@ -82,6 +83,11 @@ class Shipment extends Model
     public function shippingService(): BelongsTo
     {
         return $this->belongsTo(ShippingService::class);
+    }
+
+    public function distributorInvoices(): HasMany
+    {
+        return $this->hasMany(DistributorInvoice::class);
     }
 
     public function receiver(): BelongsTo

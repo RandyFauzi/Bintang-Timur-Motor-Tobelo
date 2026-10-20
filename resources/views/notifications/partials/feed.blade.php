@@ -10,9 +10,9 @@
                                 <p>{{ $notification->category === 'out_of_stock' ? 'Stok produk sudah habis.' : 'Stok produk mencapai batas minimum.' }} Sisa <strong>{{ (int) $notification->quantity }}</strong> unit · Stok minimum {{ (int) $notification->minimum }} unit.</p>
                                 <small>SKU: {{ $notification->reference }} · Perbarui stok setelah barang tersedia.</small>
                             @elseif($notification->source === 'invoice')
-                                <p>Sisa tagihan <strong>Rp {{ number_format($notification->quantity/100,2,',','.') }}</strong> � {{ $notification->context }}</p>
-                                <small>{{ $notification->reference }} � Jatuh tempo {{ \Carbon\CarbonImmutable::parse($notification->due_on)->format('d/m/Y') }} (WIT)</small>
-                                <p class="notification-item__hint">{{ $notification->category === 'invoice_overdue' ? 'Pembayaran melewati jatuh tempo. Periksa dan catat pembayaran ke distributor.' : 'Tagihan jatuh tempo dalam 7 hari atau kurang. Siapkan pembayaran distributor.' }}</p>
+                                <p>Sisa tagihan <strong>Rp {{ number_format($notification->quantity/100,2,',','.') }}</strong> &middot; {{ $notification->context }}</p>
+                                <small>{{ $notification->reference }} &middot; Jatuh tempo {{ \Carbon\CarbonImmutable::parse($notification->due_on)->format('d/m/Y') }} (WIT)</small>
+                                <p class="notification-item__hint">{{ $notification->category === 'invoice_overdue' ? 'Pembayaran melewati jatuh tempo. Periksa dan catat pembayaran ke distributor.' : (\Carbon\CarbonImmutable::parse($notification->due_on)->toDateString() === \App\Models\DistributorInvoice::today()->toDateString() ? 'Hari H: tagihan jatuh tempo hari ini. Segera lakukan pembayaran.' : ((int) $notification->priority === 1 ? 'Pengingat H-3: jatuh tempo dalam 3 hari atau kurang. Segera siapkan pembayaran.' : 'Pengingat H-7: jatuh tempo dalam 7 hari atau kurang. Siapkan pembayaran distributor.')) }}</p>
                             @else
                                 <p>{{ $notification->context }} · {{ $notification->origin }} → {{ $notification->destination }}</p>
                                 <small>Resi {{ $notification->reference }} · Estimasi tiba {{ \Carbon\CarbonImmutable::parse($notification->due_on)->locale('id')->translatedFormat('j M Y') }} (WIT)</small>

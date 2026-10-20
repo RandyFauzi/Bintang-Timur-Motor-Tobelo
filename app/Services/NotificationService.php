@@ -52,7 +52,7 @@ class NotificationService
 
         $today = DistributorInvoice::today()->toDateString();
         $invoices = DistributorInvoice::needsReminder()->join('purchase_orders', 'purchase_orders.id', '=', 'distributor_invoices.purchase_order_id')
-            ->selectRaw("distributor_invoices.id AS source_id, purchase_orders.distributor_name AS title, distributor_invoices.reference, 'invoice' AS source, CASE WHEN due_on < ? THEN 'invoice_overdue' ELSE 'invoice_due' END AS category, CASE WHEN due_on < ? THEN 0 ELSE 2 END AS priority, (total_cents - paid_cents) AS quantity, NULL AS minimum, due_on, purchase_orders.reference AS context, '' AS origin, '' AS destination", [$today, $today])->toBase();
+            ->selectRaw("distributor_invoices.id AS source_id, purchase_orders.distributor_name AS title, distributor_invoices.reference, 'invoice' AS source, CASE WHEN DATE(due_on) < ? THEN 'invoice_overdue' ELSE 'invoice_due' END AS category, CASE WHEN DATE(due_on) < ? THEN 0 WHEN DATE(due_on) <= ? THEN 1 ELSE 2 END AS priority, (total_cents - paid_cents) AS quantity, NULL AS minimum, due_on, purchase_orders.reference AS context, '' AS origin, '' AS destination", [$today, $today, DistributorInvoice::today()->addDays(3)->toDateString()])->toBase();
         $stock->unionAll($invoices);
 
         return $stock;

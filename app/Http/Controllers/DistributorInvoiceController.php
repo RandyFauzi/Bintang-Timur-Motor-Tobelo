@@ -6,6 +6,7 @@ use App\Http\Requests\DistributorInvoiceRequest;
 use App\Http\Requests\DistributorPaymentRequest;
 use App\Models\Distributor;
 use App\Models\DistributorInvoice;
+use App\Models\Shipment;
 use App\Services\DistributorInvoiceService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -36,6 +37,9 @@ class DistributorInvoiceController extends Controller
         if (($filters['status'] ?? null) === 'partial') {
             $base->outstanding()->where('paid_cents', '>', 0);
         }
+        if (($filters['status'] ?? null) === 'overdue') {
+            $base->outstanding()->whereDate('due_on', '<', DistributorInvoice::today()->toDateString());
+        }
         if (($filters['timing'] ?? null) === 'overdue') {
             $base->outstanding()->whereDate('due_on', '<', DistributorInvoice::today()->toDateString());
         }
@@ -43,23 +47,17 @@ class DistributorInvoiceController extends Controller
             $base->needsReminder()->whereDate('due_on', '>=', DistributorInvoice::today()->toDateString());
         }
 
-        return view('distributor-invoices.index', ['invoices' => $base->with('purchaseOrder')->orderByRaw('paid_cents >= total_cents')->orderBy('due_on')->orderBy('id')->paginate(15)->withQueryString(), 'distributors' => Distributor::orderBy('name')->get(), 'summary' => $summary]);
+        return view('distributor-invoices.index', ['invoices' => $base->with(['purchaseOrder', 'shipment'])->orderByRaw('paid_cents >= total_cents')->orderBy('due_on')->orderBy('id')->paginate(15)->withQueryString(), 'distributors' => Distributor::orderBy('name')->get(), 'summary' => $summary]);
     }
 
     public function show(DistributorInvoice $distributorInvoice): View
     {
-        return view('distributor-invoices.show', ['invoice' => $distributorInvoice->load(['purchaseOrder.items', 'payments.creator']), 'requestId' => (string) Str::uuid()]);
+        return view('distributor-invoices.show', ['invoice' => $distributorInvoice->load(['purchaseOrder.items', 'payments.creator', 'shipment.receiver']), 'requestId' => (string) Str::uuid(), 'shipments' => Shipment::orderByDesc('id')->get(['id', 'reference', 'cargo_name', 'delivered_at'])]);
     }
 
     public function update(DistributorInvoiceRequest $request, DistributorInvoice $distributorInvoice, DistributorInvoiceService $billing): RedirectResponse
     {
-        DB::transaction(function () use ($request, $distributorInvoice, $billing): void {
-            $invoice = DistributorInvoice::lockForUpdate()->findOrFail($distributorInvoice->id);
-            $billing->assertVersion($invoice, $request->integer('version'));
-            $invoice->fill($request->safe()->only(['due_on', 'supplier_reference', 'notes']));
-            $invoice->version++;
-            $invoice->save();
-        });
+        $billing->updateDetails($distributorInvoice, $request->validated());
 
         return redirect()->route('distributor-invoices.show', $distributorInvoice)->with('success', 'Informasi tagihan diperbarui.');
     }

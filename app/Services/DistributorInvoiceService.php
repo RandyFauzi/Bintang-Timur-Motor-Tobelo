@@ -65,6 +65,30 @@ class DistributorInvoiceService
         });
     }
 
+    /** @param array{version:int, due_on:string, invoiced_on?:?string, shipment_id?:?int, supplier_reference?:?string, notes?:?string, discrepancy_notes?:?string, claim_amount?:?string} $data */
+    public function updateDetails(DistributorInvoice $invoice, array $data): void
+    {
+        DB::transaction(function () use ($invoice, $data): void {
+            $invoice = DistributorInvoice::lockForUpdate()->findOrFail($invoice->id);
+            $this->assertVersion($invoice, (int) $data['version']);
+            $invoice->fill(collect($data)->only(['due_on', 'invoiced_on', 'shipment_id', 'supplier_reference', 'notes', 'discrepancy_notes'])->all());
+            if (array_key_exists('claim_amount', $data)) {
+                $invoice->claim_amount_cents = self::cents($data['claim_amount'] ?? '0');
+            }
+            if ($invoice->invoiced_on && $invoice->due_on->toDateString() < $invoice->invoiced_on->toDateString()) {
+                throw ValidationException::withMessages(['due_on' => 'Jatuh tempo tidak boleh sebelum tanggal faktur.']);
+            }
+            if ($invoice->claim_amount_cents > $invoice->total_cents) {
+                throw ValidationException::withMessages(['claim_amount' => 'Nilai klaim tidak boleh melebihi total faktur.']);
+            }
+            if ($invoice->claim_amount_cents > 0 && trim($invoice->discrepancy_notes ?? '') === '') {
+                throw ValidationException::withMessages(['discrepancy_notes' => 'Isi keterangan retur atau selisih untuk nilai klaim ini.']);
+            }
+            $invoice->version++;
+            $invoice->save();
+        });
+    }
+
     public function assertVersion(DistributorInvoice $invoice, int $version): void
     {
         if ($invoice->version !== $version) {

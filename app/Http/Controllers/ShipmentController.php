@@ -31,6 +31,7 @@ class ShipmentController extends Controller
         }
         $shipments = $query->orderByRaw('delivered_at IS NOT NULL')->orderBy('estimated_arrival_on')->orderBy('id')->paginate(6)->withQueryString();
         $selected = $request->validated('shipment') ? Shipment::with('receiver')->findOrFail($request->integer('shipment')) : $shipments->first();
+        $selected?->load(['receiver', 'distributorInvoices.purchaseOrder']);
         $editId = $request->validated('edit') ?? old('_shipment_id');
         $editing = filter_var($editId, FILTER_VALIDATE_INT) ? Shipment::findOrFail($editId) : null;
         $serviceId = $request->validated('service_edit') ?? old('_service_id');

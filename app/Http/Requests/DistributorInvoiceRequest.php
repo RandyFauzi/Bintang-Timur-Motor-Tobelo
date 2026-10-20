@@ -16,7 +16,17 @@ class DistributorInvoiceRequest extends FormRequest
     public function rules(): array
     {
         if ($this->isMethod('PATCH')) {
-            return ['version' => ['required', 'integer', 'min:1'], 'due_on' => ['required', 'date_format:Y-m-d', 'after_or_equal:'.$this->route('distributorInvoice')->purchaseOrder->ordered_on->toDateString()], 'supplier_reference' => ['nullable', 'string', 'max:255'], 'notes' => ['nullable', 'string', 'max:2000']];
+            return [
+                'version' => ['required', 'integer', 'min:1'],
+                'due_on' => ['required', 'date_format:Y-m-d', 'after_or_equal:'.$this->route('distributorInvoice')->purchaseOrder->ordered_on->toDateString()],
+                'invoiced_on' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:due_on'],
+                'shipment_id' => ['nullable', 'integer', Rule::exists('shipments', 'id')],
+                'supplier_reference' => ['nullable', 'string', 'max:255'],
+                'notes' => ['nullable', 'string', 'max:2000'],
+                'discrepancy_notes' => ['nullable', 'string', 'max:4000'],
+                'claim_amount' => ['nullable', 'numeric', 'min:0', 'max:90000000000000', 'regex:/^\d+(\.\d{1,2})?$/'],
+                'received_at' => ['prohibited'], 'received_on' => ['prohibited'],
+            ];
         }
 
         return ['search' => ['nullable', 'string', 'max:255'], 'distributor_id' => ['nullable', 'integer'], 'status' => ['nullable', Rule::in(array_keys(DistributorInvoice::STATUSES))], 'timing' => ['nullable', Rule::in(['near', 'overdue'])]];

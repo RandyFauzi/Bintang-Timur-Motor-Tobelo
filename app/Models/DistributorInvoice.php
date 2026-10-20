@@ -13,15 +13,15 @@ class DistributorInvoice extends Model
 {
     use HasFactory;
 
-    public const STATUSES = ['unpaid' => 'Belum Dibayar', 'partial' => 'Dibayar Sebagian', 'paid' => 'Lunas'];
+    public const STATUSES = ['unpaid' => 'Belum Dibayar', 'partial' => 'Dibayar Sebagian', 'paid' => 'Lunas', 'overdue' => 'Terlambat'];
 
     public const REMINDER_DAYS = 7;
 
-    protected $fillable = ['purchase_order_id', 'reference', 'due_on', 'total_cents', 'supplier_reference', 'notes'];
+    protected $fillable = ['purchase_order_id', 'reference', 'due_on', 'total_cents', 'supplier_reference', 'notes', 'invoiced_on', 'shipment_id', 'discrepancy_notes', 'claim_amount_cents'];
 
     protected function casts(): array
     {
-        return ['due_on' => 'immutable_date', 'total_cents' => 'integer', 'paid_cents' => 'integer', 'version' => 'integer'];
+        return ['invoiced_on' => 'immutable_date', 'claim_amount_cents' => 'integer', 'shipment_id' => 'integer', 'due_on' => 'immutable_date', 'total_cents' => 'integer', 'paid_cents' => 'integer', 'version' => 'integer'];
     }
 
     public static function today(): CarbonImmutable
@@ -32,6 +32,38 @@ class DistributorInvoice extends Model
     public function purchaseOrder(): BelongsTo
     {
         return $this->belongsTo(PurchaseOrder::class);
+    }
+
+    public function shipment(): BelongsTo
+    {
+        return $this->belongsTo(Shipment::class);
+    }
+
+    public function receivedAt(): ?CarbonImmutable
+    {
+        return $this->shipment?->delivered_at?->timezone(config('shipping.timezone'));
+    }
+
+    public function billingStatus(): string
+    {
+        return $this->remainingCents() > 0 && $this->due_on->toDateString() < self::today()->toDateString() ? 'overdue' : $this->status();
+    }
+
+    public function reminderStage(): ?string
+    {
+        if ($this->remainingCents() === 0) {
+            return null;
+        }
+        $due = $this->due_on->toDateString();
+        $today = self::today();
+
+        return match (true) {
+            $due < $today->toDateString() => 'overdue',
+            $due === $today->toDateString() => 'today',
+            $due <= $today->addDays(3)->toDateString() => 'three_days',
+            $due <= $today->addDays(self::REMINDER_DAYS)->toDateString() => 'seven_days',
+            default => null,
+        };
     }
 
     public function payments(): HasMany
