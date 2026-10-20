@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-D-ZMfje7.css",
+    "file": "assets/app-2-fATn7g.css",
     "name": "app",
     "names": [
       "app.css"
@@ -227,8 +227,16 @@
     "file": "assets/workshop-C4ox6GMq.svg",
     "src": "resources/images/icons/workshop.svg"
   },
+  "resources/images/maps/cargo-vessel.svg": {
+    "file": "assets/cargo-vessel-7UExUI_K.svg",
+    "src": "resources/images/maps/cargo-vessel.svg"
+  },
+  "resources/images/maps/indonesia-coast.svg": {
+    "file": "assets/indonesia-coast-CKE2P3nB.svg",
+    "src": "resources/images/maps/indonesia-coast.svg"
+  },
   "resources/js/app.js": {
-    "file": "assets/app-Dek8FjlX.js",
+    "file": "assets/app-CPpIp4Kc.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true

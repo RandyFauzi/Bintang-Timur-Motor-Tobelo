@@ -1,3 +1,4 @@
+import geography from './voyage-geography.json' with { type: 'json' };
 export function shipmentForm(durations, serviceId = '', departedOn = '') {
     return {
         durations, serviceId: String(serviceId), departedOn,
@@ -13,65 +14,69 @@ export function shipmentForm(durations, serviceId = '', departedOn = '') {
 }
 
 
-const illustratedPorts = [
-    { names: ['surabaya', 'tanjung perak'], x: 463, y: 362 },
-    { names: ['jakarta', 'tanjung priok'], x: 283, y: 338 },
-    { names: ['semarang', 'tanjung emas'], x: 379, y: 349 },
-    { names: ['makassar', 'soekarno hatta'], x: 591, y: 291 },
-    { names: ['manado'], x: 647, y: 174 },
-    { names: ['bitung'], x: 666, y: 180 },
-    { names: ['ternate'], x: 720, y: 224 },
-    { names: ['tobelo', 'gamsungi'], x: 754, y: 188 },
-    { names: ['ambon'], x: 714, y: 325 },
-    { names: ['sorong'], x: 841, y: 246 },
-    { names: ['jayapura'], x: 973, y: 275 },
-    { names: ['balikpapan'], x: 520, y: 270 },
-    { names: ['pontianak'], x: 407, y: 220 },
-    { names: ['medan', 'belawan'], x: 123, y: 135 },
-    { names: ['padang'], x: 168, y: 239 },
-    { names: ['denpasar', 'benoa', 'bali'], x: 510, y: 383 },
-];
+const project = ([longitude, latitude]) => ({x: (longitude - geography.bounds[0]) * geography.scale, y: (geography.bounds[3] - latitude) * geography.scale});
+
+function findPort(name) {
+    const normalized = String(name ?? '').toLocaleLowerCase('id-ID').replace(/[^a-z0-9]+/g, ' ').trim();
+    return geography.ports.find(port => port.names.some(alias => (' ' + normalized + ' ').includes(' ' + alias + ' '))) ?? null;
+}
 
 export function shippingVoyage(origin, destination, progress = 0) {
-    const find = (name, fallback) => illustratedPorts.find((port) => port.names.some((alias) => String(name).toLocaleLowerCase('id-ID').includes(alias))) ?? fallback;
+    const originPort = findPort(origin);
+    const destinationPort = findPort(destination);
+    let coordinates = [];
+    if (originPort && destinationPort) {
+        const key = originPort.id + '|' + destinationPort.id;
+        const reverseKey = destinationPort.id + '|' + originPort.id;
+        coordinates = geography.routes[key] ?? [...(geography.routes[reverseKey] ?? [])].reverse();
+        if (originPort.id === destinationPort.id) coordinates = [[originPort.longitude, originPort.latitude]];
+    }
+    const seaPoints = coordinates.map(project);
+    const points = seaPoints.length && originPort.id !== destinationPort.id
+        ? [project([originPort.longitude, originPort.latitude]), ...seaPoints, project([destinationPort.longitude, destinationPort.latitude])]
+        : seaPoints;
+    const lengths = points.slice(1).map((point, i) => Math.hypot(point.x - points[i].x, point.y - points[i].y));
+    const totalLength = lengths.reduce((sum, length) => sum + length, 0);
+    const minX = points.length ? Math.min(...points.map(point => point.x)) - 60 : 0;
+    const minY = points.length ? Math.min(...points.map(point => point.y)) - 60 : 0;
+    const height = points.length ? Math.max(210, Math.max(...points.map(point => point.y)) - minY + 60) : 528;
+    const width = points.length ? Math.max(420, height * 1.85, Math.max(...points.map(point => point.x)) - minX + 60) : 1176;
+    const centerX = points.length ? (Math.min(...points.map(point => point.x)) + Math.max(...points.map(point => point.x))) / 2 : 588;
     return {
-        origin, destination, progress,
-        start: find(origin, { x: 310, y: 340 }),
-        end: find(destination, { x: 754, y: 188 }),
+        origin, destination, progress, originPort, destinationPort, points,
+        known: points.length > 0,
+        start: points[0] ?? {x:0,y:0}, end: points.at(-1) ?? {x:0,y:0},
+        viewBox: `${centerX - width / 2} ${minY} ${width} ${height}`,
+        markerScale: width / 1000,
+        labels: [
+            {name:'SUMATRA', at:project([101,-.2])}, {name:'JAWA',at:project([110,-7.5])},
+            {name:'KALIMANTAN',at:project([114.1,.2])}, {name:'SULAWESI',at:project([121.0,-1.8])},
+            {name:'HALMAHERA',at:project([128.8,1.1])}, {name:'PAPUA',at:project([136,-4])},
+            {name:'LAUT MALUKU',at:project([125.6,1.0]),sea:true}, {name:'LAUT BANDA',at:project([128,-5.4]),sea:true},
+            {name:'LAUT JAWA',at:project([111,-5.3]),sea:true}, {name:'LAUT SULAWESI',at:project([121.5,3]),sea:true},
+        ],
         get fraction() { return Math.max(0, Math.min(100, Number(this.progress) || 0)) / 100; },
-        get controls() {
-            const distance = Math.max(70, Math.abs(this.end.x - this.start.x) * 0.38);
-            const direction = this.end.x >= this.start.x ? 1 : -1;
-            return [{ x: this.start.x + distance * direction, y: this.start.y + 70 }, { x: this.end.x - distance * direction, y: this.end.y + 95 }];
+        get path() { return points.map((point,i) => `${i ? 'L' : 'M'} ${point.x} ${point.y}`).join(' '); },
+        get position() {
+            let remaining = totalLength * this.fraction;
+            for (let i=0;i<lengths.length;i++) {
+                if (remaining <= lengths[i] || i === lengths.length-1) {
+                    const t = lengths[i] ? Math.min(1,remaining/lengths[i]) : 0;
+                    return {index:i, point:{x:points[i].x+(points[i+1].x-points[i].x)*t,y:points[i].y+(points[i+1].y-points[i].y)*t}};
+                }
+                remaining -= lengths[i];
+            }
+            return {index:0,point:this.start};
         },
-        get path() {
-            const [first, second] = this.controls;
-            return `M ${this.start.x} ${this.start.y} C ${first.x} ${first.y}, ${second.x} ${second.y}, ${this.end.x} ${this.end.y}`;
-        },
-        get boat() {
-            const t = this.fraction;
-            const u = 1 - t;
-            const [first, second] = this.controls;
-            return {
-                x: u ** 3 * this.start.x + 3 * u ** 2 * t * first.x + 3 * u * t ** 2 * second.x + t ** 3 * this.end.x,
-                y: u ** 3 * this.start.y + 3 * u ** 2 * t * first.y + 3 * u * t ** 2 * second.y + t ** 3 * this.end.y,
-            };
+        get boat() { return this.fraction === 1 ? this.end : this.position.point; },
+        get heading() {
+            const i=this.position.index;
+            return points.length > 1 ? Math.atan2(points[i+1].y-points[i].y,points[i+1].x-points[i].x)*180/Math.PI : 0;
         },
         get completedPath() {
-            const t = this.fraction;
-            const lerp = (a, b) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
-            const [first, second] = this.controls;
-            const a = lerp(this.start, first);
-            const b = lerp(first, second);
-            const d = lerp(a, b);
-            return `M ${this.start.x} ${this.start.y} C ${a.x} ${a.y}, ${d.x} ${d.y}, ${this.boat.x} ${this.boat.y}`;
-        },
-        get viewBox() {
-            const left = Math.max(0, Math.min(this.start.x, this.end.x) - 110);
-            const top = Math.max(0, Math.min(this.start.y, this.end.y) - 95);
-            const width = Math.max(300, Math.max(this.start.x, this.end.x) - left + 110);
-            const height = Math.max(230, Math.max(this.start.y, this.end.y) - top + 115);
-            return `${left} ${top} ${width} ${height}`;
+            if (!points.length) return '';
+            const visited=points.slice(0,this.position.index+1);
+            return visited.map((point,i)=>`${i ? 'L' : 'M'} ${point.x} ${point.y}`).join(' ')+` L ${this.boat.x} ${this.boat.y}`;
         },
     };
 }

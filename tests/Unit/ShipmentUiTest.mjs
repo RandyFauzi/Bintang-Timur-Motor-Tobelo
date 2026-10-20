@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { shipmentForm, shippingVoyage } from '../../resources/js/components/shipments.js';
@@ -76,13 +77,70 @@ test('illustrated voyage recognizes port aliases and moves the boat with estimat
     assert.notEqual(shippingVoyage('Jakarta', 'Tobelo').start.x, state.start.x);
 });
 
-test('unknown ports and invalid progress retain a bounded illustrative route', () => {
+test('unknown ports never invent a route and invalid progress remains bounded', () => {
     const state = shippingVoyage('Kota Lain', 'Pelabuhan Tujuan', -20);
     assert.equal(state.fraction, 0);
+    assert.equal(state.known, false);
+    assert.equal(state.path, '');
     state.progress = 150;
     assert.equal(state.fraction, 1);
     state.progress = 'invalid';
     assert.equal(state.fraction, 0);
     assert.ok(state.viewBox.split(' ').every((value) => Number.isFinite(Number(value))));
     assert.ok(!state.path.includes('NaN'));
+});
+
+
+test('port markers follow geographic coordinates and reject partial-name matches', () => {
+    const state = shippingVoyage('Makassar', 'Tobelo', 100);
+    assert.equal(state.known, true);
+    assert.ok(Math.abs(state.originPort.longitude - 119.4) < 0.01);
+    assert.ok(Math.abs(state.destinationPort.longitude - 128.0172) < 0.0001);
+    assert.ok(state.end.y < state.start.y);
+    assert.deepEqual(state.boat, state.end);
+    assert.equal(shippingVoyage('Balikpapan', 'Tobelo').originPort.id, 'balikpapan');
+    assert.equal(shippingVoyage('Notobelo', 'Makassar').known, false);
+});
+
+test('reverse voyages use the same sea corridor and same-port voyages remain stationary', () => {
+    const forward = shippingVoyage('Makassar', 'Tobelo', 0);
+    const reverse = shippingVoyage('Tobelo', 'Makassar', 100);
+    assert.deepEqual(reverse.points, [...forward.points].reverse());
+    const same = shippingVoyage('Tobelo', 'Tobelo', 75);
+    assert.deepEqual(same.boat, same.start);
+    assert.equal(same.heading, 0);
+});
+
+
+test('all bundled sea corridors stay off the Natural Earth land polygons', () => {
+    const geography = JSON.parse(readFileSync(new URL('../../resources/js/components/voyage-geography.json', import.meta.url), 'utf8'));
+    const coast = readFileSync(new URL('../../resources/images/maps/indonesia-coast.svg', import.meta.url), 'utf8');
+    const polygons = [...coast.matchAll(/<path d="([^"]+)"/g)].map(match => {
+        const numbers = match[1].split(/[MLZ,\s]+/).filter(Boolean).map(Number);
+        const points = [];
+        for (let i=0;i<numbers.length;i+=2) points.push([numbers[i],numbers[i+1]]);
+        return {points,minX:Math.min(...points.map(p=>p[0])),maxX:Math.max(...points.map(p=>p[0])),minY:Math.min(...points.map(p=>p[1])),maxY:Math.max(...points.map(p=>p[1]))};
+    });
+    const onLand = ([longitude,latitude]) => {
+        const x=(longitude-geography.bounds[0])*geography.scale, y=(geography.bounds[3]-latitude)*geography.scale;
+        let inside=false;
+        for (const ring of polygons) {
+            if (x<ring.minX||x>ring.maxX||y<ring.minY||y>ring.maxY) continue;
+            for (let i=0,j=ring.points.length-1;i<ring.points.length;j=i++) {
+                const a=ring.points[i], b=ring.points[j];
+                if ((a[1]>y)!==(b[1]>y) && x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0]) inside=!inside;
+            }
+        }
+        return inside;
+    };
+    assert.equal(Object.keys(geography.routes).length, 120);
+    for (const [key,route] of Object.entries(geography.routes)) {
+        for (let i=1;i<route.length;i++) {
+            const a=route[i-1],b=route[i],steps=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/.02));
+            for (let j=0;j<=steps;j++) {
+                const p=[a[0]+(b[0]-a[0])*j/steps,a[1]+(b[1]-a[1])*j/steps];
+                assert.equal(onLand(p),false, `${key} crosses land near ${p}`);
+            }
+        }
+    }
 });
