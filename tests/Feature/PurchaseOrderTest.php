@@ -3,9 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\Distributor;
+use App\Models\DistributorInvoice;
+use App\Models\DistributorPayment;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
+use App\Models\Shipment;
 use App\Models\User;
 use App\Services\DistributorInvoiceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -17,6 +20,77 @@ use Tests\TestCase;
 class PurchaseOrderTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_deleting_unprocessed_order_removes_its_items_and_unpaid_invoice_only(): void
+    {
+        $item = PurchaseOrderItem::factory()->create();
+        $invoice = DistributorInvoice::factory()->create(['purchase_order_id' => $item->purchase_order_id]);
+        $other = PurchaseOrder::factory()->create();
+
+        $this->actingAs(User::factory()->create())->delete(route('purchase-orders.destroy', $item->purchase_order_id), ['version' => 1])
+            ->assertRedirect(route('purchase-orders.index'))->assertSessionHasNoErrors();
+
+        $this->assertDatabaseMissing('purchase_orders', ['id' => $item->purchase_order_id]);
+        $this->assertDatabaseMissing('purchase_order_items', ['id' => $item->id]);
+        $this->assertDatabaseMissing('distributor_invoices', ['id' => $invoice->id]);
+        $this->assertModelExists($other);
+        $this->assertDatabaseCount('stock_movements', 0);
+    }
+
+    #[TestWith(['checked'])]
+    #[TestWith(['payment'])]
+    #[TestWith(['paid_balance'])]
+    #[TestWith(['shipment'])]
+    public function test_processed_orders_cannot_be_deleted(string $state): void
+    {
+        $item = PurchaseOrderItem::factory()->create(['actual_quantity' => $state === 'checked' ? 0 : null]);
+        $invoice = DistributorInvoice::factory()->create([
+            'purchase_order_id' => $item->purchase_order_id,
+            'paid_cents' => $state === 'paid_balance' ? 100 : 0,
+            'shipment_id' => $state === 'shipment' ? Shipment::factory()->create()->id : null,
+        ]);
+        if ($state === 'payment') {
+            DistributorPayment::factory()->create(['distributor_invoice_id' => $invoice->id]);
+        }
+
+        $this->actingAs(User::factory()->create())->deleteJson(route('purchase-orders.destroy', $item->purchase_order_id), ['version' => 1])
+            ->assertUnprocessable()->assertJsonValidationErrors('purchase_order')
+            ->assertJsonPath('errors.purchase_order.0', 'Pengadaan yang sudah diperiksa, dibayar, atau terhubung ke pengiriman tidak dapat dihapus.');
+
+        $this->assertModelExists($item);
+        $this->assertModelExists($invoice);
+        $this->assertDatabaseHas('purchase_orders', ['id' => $item->purchase_order_id]);
+    }
+
+    public function test_stale_delete_does_not_remove_updated_order(): void
+    {
+        $order = PurchaseOrder::factory()->create(['version' => 2]);
+
+        $this->actingAs(User::factory()->create())->deleteJson(route('purchase-orders.destroy', $order), ['version' => 1])
+            ->assertUnprocessable()->assertJsonValidationErrors('version');
+
+        $this->assertModelExists($order);
+    }
+
+    public function test_guests_cannot_delete_orders(): void
+    {
+        $order = PurchaseOrder::factory()->create();
+
+        $this->delete(route('purchase-orders.destroy', $order), ['version' => 1])->assertRedirect(route('login'));
+
+        $this->assertModelExists($order);
+    }
+
+    public function test_delete_requires_a_version_and_unknown_orders_return_not_found(): void
+    {
+        $order = PurchaseOrder::factory()->create();
+        $this->actingAs(User::factory()->create());
+
+        $this->deleteJson(route('purchase-orders.destroy', $order))->assertUnprocessable()->assertJsonValidationErrors('version');
+        $this->deleteJson(route('purchase-orders.destroy', 999999), ['version' => 1])->assertNotFound();
+
+        $this->assertModelExists($order);
+    }
 
     #[TestWith(['pending', 'Belum diperiksa'])]
     #[TestWith(['checking', 'Sedang diperiksa'])]

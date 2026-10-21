@@ -48,7 +48,7 @@ Route::middleware('auth')->group(function () {
 
     Route::post('purchase-orders/distributors', [PurchaseOrderController::class, 'distributor'])->name('purchase-orders.distributors.store');
     Route::patch('purchase-orders/{purchaseOrder}/receipt', [PurchaseOrderController::class, 'receive'])->name('purchase-orders.receive');
-    Route::resource('purchase-orders', PurchaseOrderController::class)->only(['index', 'create', 'store', 'show'])->parameters(['purchase-orders' => 'purchaseOrder']);
+    Route::resource('purchase-orders', PurchaseOrderController::class)->only(['index', 'create', 'store', 'show', 'destroy'])->parameters(['purchase-orders' => 'purchaseOrder']);
 
     // Products
     Route::get('products/import/template', [ProductImportController::class, 'template'])->name('products.import.template');

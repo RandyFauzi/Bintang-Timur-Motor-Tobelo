@@ -153,4 +153,25 @@ class PurchaseOrderController extends Controller
 
         return redirect()->route('purchase-orders.create', ['distributor_id' => $distributor->id])->with('success', 'Distributor ditambahkan. Silakan buat PO.');
     }
+
+    public function destroy(Request $request, PurchaseOrder $purchaseOrder): RedirectResponse
+    {
+        $data = $request->validate(['version' => ['required', 'integer', 'min:1']]);
+
+        DB::transaction(function () use ($purchaseOrder, $data): void {
+            $order = PurchaseOrder::lockForUpdate()->findOrFail($purchaseOrder->id);
+            if ($order->version !== (int) $data['version']) {
+                throw ValidationException::withMessages(['version' => 'Pengadaan telah berubah. Muat ulang halaman sebelum menghapus.']);
+            }
+            $invoice = $order->invoice()->lockForUpdate()->first();
+            if ($order->items()->whereNotNull('actual_quantity')->exists()
+                || ($invoice && ($invoice->payments()->exists() || $invoice->paid_cents > 0 || $invoice->shipment_id !== null))) {
+                throw ValidationException::withMessages(['purchase_order' => 'Pengadaan yang sudah diperiksa, dibayar, atau terhubung ke pengiriman tidak dapat dihapus.']);
+            }
+            $invoice?->delete();
+            $order->delete();
+        });
+
+        return redirect()->route('purchase-orders.index')->with('success', 'Pengadaan berhasil dihapus.');
+    }
 }
