@@ -1,0 +1,60 @@
+@layer components {
+    .note-summary { background: var(--color-surface); }
+    .note-workspace { display: grid; min-width: 0; gap: 24px; border: 1px solid var(--color-border-strong); border-radius: 12px; background: var(--color-surface); padding: 24px; }
+    .note-tabs { display: flex; gap: 4px; border-bottom: 1px solid #f0f1ed; }
+    .note-tabs > button { display: inline-flex; min-width: 160px; min-height: 48px; align-items: center; justify-content: center; gap: 12px; border-radius: 12px 12px 0 0; padding: 16px 22px; color: #7f8182; font-size: 14px; }
+    .note-tabs > button.is-active { border-bottom: 1px solid #383d38; background: #f0f1ed; color: var(--color-text); font-weight: 600; }
+    .note-action-count { display: inline-grid; min-width: 18px; height: 18px; place-items: center; border-radius: 12px; background: #c83d3d; padding: 2px 5px; color: white; font-size: 12px; font-weight: 400; }
+    .note-filters { display: flex; flex-wrap: wrap; gap: 16px; }
+    .note-filters .filter-select-label { background: white; }
+    .note-filters .filter-select { max-width: 260px; }
+    .note-search { width: 100%; }
+    .note-cards { display: grid; gap: 24px; }
+    .note-card { min-width: 0; border: 1px solid var(--color-border-strong); border-radius: 12px; background: white; padding: 24px; box-shadow: 0 3px 10px rgb(0 0 0 / 10%); }
+    .note-card__heading { display: flex; align-items: flex-start; gap: 16px; }
+    .note-card__heading > div { flex: 1; min-width: 0; padding-top: 4px; }
+    .note-card__heading h2 { overflow-wrap: anywhere; font-size: 16px; font-weight: 500; }
+    .note-card__heading p { margin-top: 6px; color: var(--color-muted); font-size: 14px; }
+    .note-badge { display: inline-flex; flex-shrink: 0; align-items: center; border: 1px solid; border-radius: 64px; padding: 8px 12px; font-size: 14px; line-height: 1.2; }
+    .note-badge--pending { border-color: #cf922e; background: #fff8eb; color: #80530c; }
+    .note-badge--issued { border-color: #347ccb; background: #eff6ff; color: #1e457d; }
+    .note-badge--shipping { border-color: #8c68c8; background: #f5f0ff; color: #5e3b9b; }
+    .note-card__content { display: grid; min-width: 0; gap: 24px; margin-top: 24px; }
+    .note-fields { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; padding-block: 16px; }
+    .note-fields .form-field { gap: 12px; }
+    .note-fields .form-input { min-height: 42px; }
+    .note-fields input:disabled { background: #f0f1ed; color: var(--color-muted); opacity: 1; }
+    .note-fields select:disabled { background-color: white; color: var(--color-text); opacity: 1; }
+    .note-table-scroll { min-width: 0; overflow-x: auto; }
+    .note-table { width: 100%; border-collapse: collapse; border: 1px solid #f0f1ed; text-align: left; font-size: 14px; }
+    .note-table th { height: 52px; background: #f8f9fa; padding: 16px; color: #596579; font-size: 12px; font-weight: 400; white-space: nowrap; }
+    .note-table th:first-child { width: 46%; }
+    .note-table th:not(:first-child) { width: 27%; }
+    .note-table td { border-top: 1px solid #f0f1ed; padding: 32px 16px; vertical-align: middle; }
+    .note-table .note-quantity { width: 120px; min-height: 42px; }
+    .note-difference { display: block; margin-top: 4px; color: #c83d3d; font-size: 14px; }
+    .note-card__actions { display: flex; flex-wrap: wrap; gap: 15px; padding-inline: 16px; }
+    .note-card__actions > .ui-button { flex: 1; min-height: 45px; }
+    .note-card__links { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 20px; color: var(--color-muted); font-size: 12px; }
+    .note-notice { border: 1px solid var(--color-border); border-radius: 8px; background: #f2f8eb; padding: 12px; color: var(--color-success); font-size: 14px; }
+    .note-errors { display: grid; gap: 6px; border: 1px solid #f1c8c8; border-radius: 8px; background: #fff5f5; padding: 12px; color: var(--color-danger); font-size: 14px; }
+    .note-shortage-table th:first-child { width: 48px; }
+    .note-shortage-table th:nth-child(2) { width: 65%; }
+    .note-shortage-table input[type=checkbox] { width: 18px; height: 18px; border-color: var(--color-border-strong); border-radius: 4px; accent-color: var(--color-inverse); }
+    .note-replan-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--color-border); padding: 24px 16px 0; color: var(--color-muted); font-size: 14px; }
+    .note-replan-footer strong { margin-left: 8px; color: var(--color-text); }
+    .note-finalize-dialog { width: min(595px,calc(100% - 32px)); }
+    .note-finalize-dialog .note-card__actions { padding: 0; }
+    @media(max-width: 767px) {
+        .note-workspace, .note-card { padding: 16px; }
+        .note-tabs > button { min-width: 0; flex: 1; padding-inline: 8px; }
+        .note-card__heading { flex-wrap: wrap; gap: 12px; }
+        .note-card__heading > div { min-width: 120px; }
+        .note-badge { margin-left: auto; font-size: 12px; }
+        .note-fields { grid-template-columns: minmax(0,1fr); }
+        .note-table { min-width: 500px; }
+        .note-card__actions { padding: 0; gap: 8px; }
+        .note-card__actions > .ui-button { flex-basis: 100%; }
+        .note-replan-footer > .ui-button { width: 100%; }
+    }
+}

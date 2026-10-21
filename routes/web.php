@@ -13,6 +13,7 @@ use App\Http\Controllers\ProductImportController;
 use App\Http\Controllers\ProductReturnController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\PurchaseOrderNoteController;
 use App\Http\Controllers\PurchasePlanController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReportLookupController;
@@ -53,6 +54,8 @@ Route::middleware('auth')->group(function () {
     Route::get('purchase-plans/template', [PurchasePlanController::class, 'template'])->name('purchase-plans.template');
     Route::post('purchase-plans/import', [PurchasePlanController::class, 'import'])->middleware('throttle:10,1')->name('purchase-plans.import');
     Route::resource('purchase-plans', PurchasePlanController::class)->only(['store', 'edit', 'update', 'show'])->parameters(['purchase-plans' => 'purchasePlan']);
+    Route::patch('purchase-plans/{purchasePlan}/orders/{purchaseOrder}/note', [PurchaseOrderNoteController::class, 'update'])->name('purchase-plans.orders.note');
+    Route::post('purchase-plans/{purchasePlan}/orders/{purchaseOrder}/finalize', [PurchaseOrderNoteController::class, 'finalize'])->name('purchase-plans.orders.finalize');
     Route::patch('purchase-orders/{purchaseOrder}/receipt', [PurchaseOrderController::class, 'receive'])->name('purchase-orders.receive');
     Route::resource('purchase-orders', PurchaseOrderController::class)->only(['index', 'store', 'show', 'destroy'])->parameters(['purchase-orders' => 'purchaseOrder']);
 

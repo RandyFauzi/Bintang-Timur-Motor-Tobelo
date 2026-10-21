@@ -7,8 +7,11 @@ use App\Http\Requests\PurchasePlanRequest;
 use App\Models\Distributor;
 use App\Models\Product;
 use App\Models\PurchasePlan;
+use App\Models\Shipment;
+use App\Models\ShippingService;
 use App\Services\ExcelExportService;
 use App\Services\ProductImportService;
+use App\Services\PurchaseOrderNoteService;
 use App\Services\PurchasePlanService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -20,9 +23,25 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PurchasePlanController extends Controller
 {
-    public function create(): View
+    public function create(Request $request, PurchaseOrderNoteService $notes): View
     {
-        return $this->editor();
+        $data = $request->validate(['replan' => ['nullable', 'integer', 'min:1'], 'source_items' => ['required_with:replan', 'array', 'min:1', 'max:100'], 'source_items.*' => ['integer', 'min:0', 'max:99', 'distinct']]);
+        $response = $this->editor();
+        if (! empty($data['replan'])) {
+            $source = PurchasePlan::with(['orders.items', 'orders.invoice.shipment', 'orders.invoice.payments'])->findOrFail($data['replan']);
+            $shortages = collect($notes->shortages($source))->keyBy('source_index');
+            $items = [];
+            foreach ($data['source_items'] as $index) {
+                abort_unless($source->status === 'finalized' && $shortages->has($index), 422, 'Produk tidak lagi memiliki kekurangan pada nota. Muat ulang rencana asal.');
+                $items[] = array_replace($source->items[$index], ['quantity' => $shortages[$index]['quantity'], 'allocations' => []]);
+            }
+            $initial = $response->getData()['initial'];
+            $initial['name'] = Str::limit('Pengadaan Lanjutan - '.$source->name, 255, '');
+            $initial['items'] = $items;
+            $response->with('initial', $initial);
+        }
+
+        return $response;
     }
 
     public function edit(PurchasePlan $purchasePlan): View
@@ -59,9 +78,11 @@ class PurchasePlanController extends Controller
         return response()->json(['redirect' => $plan->status === 'draft' ? route('purchase-plans.edit', $plan) : route('purchase-plans.show', $plan)]);
     }
 
-    public function show(PurchasePlan $purchasePlan): View
+    public function show(PurchasePlan $purchasePlan, PurchaseOrderNoteService $notes): View
     {
-        return view('purchase-orders.plan-show', ['plan' => $purchasePlan->load('orders.items')]);
+        $purchasePlan->load(['orders.items', 'orders.invoice.shipment', 'orders.invoice.payments']);
+
+        return view('purchase-orders.plan-show', ['plan' => $purchasePlan, 'orders' => $notes->snapshots($purchasePlan), 'shippingServices' => ShippingService::where('is_active', true)->orderBy('name')->get(['id', 'name', 'duration_days']), 'shippingToday' => Shipment::today()->toDateString()]);
     }
 
     public function products(Request $request): JsonResponse

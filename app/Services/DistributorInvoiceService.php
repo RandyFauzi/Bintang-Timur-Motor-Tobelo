@@ -71,6 +71,13 @@ class DistributorInvoiceService
         DB::transaction(function () use ($invoice, $data): void {
             $invoice = DistributorInvoice::lockForUpdate()->findOrFail($invoice->id);
             $this->assertVersion($invoice, (int) $data['version']);
+            if ($invoice->purchaseOrder->note_issued) {
+                foreach (['supplier_reference' => $invoice->supplier_reference, 'invoiced_on' => $invoice->invoiced_on?->toDateString(), 'shipment_id' => $invoice->shipment_id] as $field => $current) {
+                    if (array_key_exists($field, $data) && (string) ($data[$field] ?? '') !== (string) ($current ?? '')) {
+                        throw ValidationException::withMessages([$field => 'Nota pengadaan dikelola dari rencana pengadaan. Nomor nota, tanggal, dan cargo tidak dapat diubah dari tagihan.']);
+                    }
+                }
+            }
             $invoice->fill(collect($data)->only(['due_on', 'invoiced_on', 'shipment_id', 'supplier_reference', 'notes', 'discrepancy_notes'])->all());
             if (array_key_exists('claim_amount', $data)) {
                 $invoice->claim_amount_cents = self::cents($data['claim_amount'] ?? '0');

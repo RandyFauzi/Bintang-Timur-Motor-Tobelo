@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-daRt6NSJ.css",
+    "file": "assets/app-DByPdrmx.css",
     "name": "app",
     "names": [
       "app.css"
@@ -135,9 +135,21 @@
     "file": "assets/more-DwklI93G.svg",
     "src": "resources/images/icons/more.svg"
   },
+  "resources/images/icons/note-distributor.svg": {
+    "file": "assets/note-distributor-DNEw9u4q.svg",
+    "src": "resources/images/icons/note-distributor.svg"
+  },
+  "resources/images/icons/note-product.svg": {
+    "file": "assets/note-product-DCVgEs_B.svg",
+    "src": "resources/images/icons/note-product.svg"
+  },
   "resources/images/icons/note-summary.svg": {
     "file": "assets/note-summary-DLqugfy_.svg",
     "src": "resources/images/icons/note-summary.svg"
+  },
+  "resources/images/icons/note-units.svg": {
+    "file": "assets/note-units-IJdirf-r.svg",
+    "src": "resources/images/icons/note-units.svg"
   },
   "resources/images/icons/note.svg": {
     "file": "assets/note-BEYZyhj9.svg",
@@ -240,7 +252,7 @@
     "src": "resources/images/maps/indonesia-coast.svg"
   },
   "resources/js/app.js": {
-    "file": "assets/app-BdSrrc2l.js",
+    "file": "assets/app-Crjt7Z6E.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true

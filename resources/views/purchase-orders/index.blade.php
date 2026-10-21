@@ -36,6 +36,7 @@
                     <tbody>
                         @forelse($orders as $order)
                             @php($statusLabel = $order->statusLabel())
+                            @php($manageUrl = $order->purchase_plan_id ? route('purchase-plans.show', $order->purchase_plan_id) : route('purchase-orders.show', $order))
                             <tr class="border-b hover:bg-gray-50">
                                 <td class="whitespace-nowrap p-4"><a class="font-medium underline underline-offset-4" href="{{ route('purchase-orders.show', $order) }}">{{ $order->reference }}</a><p class="mt-1 text-xs text-muted">{{ $order->ordered_on->translatedFormat('d M Y') }}</p></td>
                                 <td class="min-w-[180px] break-words p-4">@if($order->purchase_plan_id)<a class="underline underline-offset-4" href="{{ route('purchase-plans.show', $order->purchase_plan_id) }}">{{ $order->notes }}</a><p class="mt-1 text-xs text-muted">{{ $order->distributor_name }}</p>@else Pengadaan ke {{ $order->distributor_name }} @endif</td>
@@ -43,11 +44,11 @@
                                 <td class="whitespace-nowrap p-4">{{ number_format($order->items->sum('quantity'), 0, ',', '.') }} <span class="text-muted">unit</span><p class="mt-1 text-xs text-muted">Rp {{ number_format($order->total(), 2, ',', '.') }}</p></td>
                                 <td class="p-4"><span @class(['inline-flex whitespace-nowrap rounded-full border px-3 py-2 text-xs', 'border-green-500 bg-green-50 text-green-800' => $statusLabel === 'Sesuai', 'border-blue-400 bg-blue-50 text-blue-800' => $statusLabel === 'Sedang diperiksa', 'border-amber-500 bg-amber-50 text-amber-800' => $statusLabel === 'Ada selisih', 'border-gray-300 bg-gray-50 text-gray-700' => $statusLabel === 'Belum diperiksa'])>{{ $statusLabel }}</span></td>
                                 <td class="p-4"><div class="flex items-center gap-1">
-                                    <a class="ui-button ui-button--secondary" href="{{ route('purchase-orders.show', $order) }}" aria-label="Kelola pengadaan {{ $order->reference }}">Kelola<x-ui.icon name="arrow-right" :size="16" /></a>
+                                    <a class="ui-button ui-button--secondary" href="{{ $manageUrl }}" aria-label="Kelola pengadaan {{ $order->reference }}">Kelola<x-ui.icon name="arrow-right" :size="16" /></a>
                                     <x-dropdown :portal="true">
                                         <x-slot:trigger><button type="button" class="procurement-more" aria-label="Aksi pengadaan {{ $order->reference }}" :aria-expanded="open"><x-ui.icon name="more-dark" :size="18" /></button></x-slot:trigger>
                                         <x-slot:content>
-                                            <x-dropdown-link :href="route('purchase-orders.show', $order)">Detail</x-dropdown-link>
+                                            <x-dropdown-link :href="$manageUrl">Detail</x-dropdown-link>
                                             <button type="button" class="flex min-h-11 w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-700 hover:bg-gray-100 focus:bg-gray-100" @click="$dispatch('delete-purchase-order', @js(['url' => route('purchase-orders.destroy', $order), 'reference' => $order->reference, 'version' => $order->version]))"><x-ui.icon name="trash" :size="16" />Hapus</button>
                                         </x-slot:content>
                                     </x-dropdown>

@@ -13,7 +13,7 @@ class PurchaseOrderItem extends Model
 
     protected function casts(): array
     {
-        return ['quantity' => 'integer', 'actual_quantity' => 'integer', 'unit_price' => 'decimal:2'];
+        return ['quantity' => 'integer', 'actual_quantity' => 'integer', 'invoice_quantity' => 'integer', 'unit_price' => 'decimal:2'];
     }
 
     public function discrepancy(): string
