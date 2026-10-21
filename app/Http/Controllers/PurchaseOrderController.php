@@ -22,7 +22,14 @@ class PurchaseOrderController extends Controller
 {
     public function index(Request $request): View
     {
-        $filters = $request->validate(['search' => ['nullable', 'string', 'max:255'], 'distributor_id' => ['nullable', 'integer']]);
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:255'],
+            'distributor_id' => ['nullable', 'integer'],
+            'status' => ['nullable', 'in:pending,checking,discrepancy,matched'],
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'until' => ['nullable', 'date_format:Y-m-d', ...($request->filled('from') ? ['after_or_equal:from'] : [])],
+            'per_page' => ['nullable', 'integer', 'in:5,6,10,12,15,25,50'],
+        ]);
         $query = PurchaseOrder::with('items')->latest('id');
         if (! empty($filters['search'])) {
             $query->where(fn (Builder $q): Builder => $q->where('reference', 'like', '%'.$filters['search'].'%')->orWhere('distributor_name', 'like', '%'.$filters['search'].'%'));
@@ -30,8 +37,29 @@ class PurchaseOrderController extends Controller
         if (! empty($filters['distributor_id'])) {
             $query->where('distributor_id', $filters['distributor_id']);
         }
+        if (! empty($filters['from'])) {
+            $query->whereDate('ordered_on', '>=', $filters['from']);
+        }
+        if (! empty($filters['until'])) {
+            $query->whereDate('ordered_on', '<=', $filters['until']);
+        }
+        $status = $filters['status'] ?? null;
+        if ($status === 'pending') {
+            $query->whereDoesntHave('items', fn (Builder $items): Builder => $items->whereNotNull('actual_quantity'));
+        } elseif ($status === 'checking') {
+            $query->whereHas('items', fn (Builder $items): Builder => $items->whereNull('actual_quantity'))
+                ->whereHas('items', fn (Builder $items): Builder => $items->whereNotNull('actual_quantity'));
+        } elseif (in_array($status, ['discrepancy', 'matched'], true)) {
+            $query->whereHas('items')->whereDoesntHave('items', fn (Builder $items): Builder => $items->whereNull('actual_quantity'));
+            $difference = fn (Builder $items): Builder => $items->whereColumn('actual_quantity', '!=', 'quantity');
+            if ($status === 'discrepancy') {
+                $query->whereHas('items', $difference);
+            } else {
+                $query->whereDoesntHave('items', $difference);
+            }
+        }
 
-        return view('purchase-orders.index', ['orders' => $query->paginate(15)->withQueryString(), 'distributors' => Distributor::where('is_active', true)->orderBy('name')->get()]);
+        return view('purchase-orders.index', ['orders' => $query->paginate($filters['per_page'] ?? 10)->withQueryString(), 'distributors' => Distributor::where('is_active', true)->orderBy('name')->get()]);
     }
 
     public function create(Request $request): View

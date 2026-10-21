@@ -8,7 +8,7 @@
         ]],
         ['label' => 'Manajemen Produk', 'items' => [
             ['label' => 'Stok & Produk', 'icon' => 'box', 'route' => 'products.index', 'active' => 'products.*'],
-            ['label' => 'PO / Order Barang', 'icon' => 'cart', 'route' => 'purchase-orders.index', 'active' => 'purchase-orders.*'],
+            ['label' => 'Pengadaan', 'icon' => 'cart', 'route' => 'purchase-orders.index', 'active' => 'purchase-orders.*'],
             ['label' => 'Distributor', 'icon' => 'buildings', 'route' => 'distributors.index', 'active' => 'distributors.*'],
             ['label' => 'Pelacak Pengiriman', 'icon' => 'ship', 'route' => 'shipments.index', 'active' => 'shipments.*'],
             ['label' => 'Retur Produk', 'icon' => 'return', 'route' => 'returns.index', 'active' => 'returns.*'],

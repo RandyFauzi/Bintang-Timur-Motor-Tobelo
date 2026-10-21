@@ -18,6 +18,63 @@ class PurchaseOrderTest extends TestCase
 {
     use RefreshDatabase;
 
+    #[TestWith(['pending', 'Belum diperiksa'])]
+    #[TestWith(['checking', 'Sedang diperiksa'])]
+    #[TestWith(['discrepancy', 'Ada selisih'])]
+    #[TestWith(['matched', 'Sesuai'])]
+    public function test_list_filters_match_receipt_status(string $status, string $label): void
+    {
+        $orders = [];
+        foreach (['pending' => [null, null], 'checking' => [10, null], 'discrepancy' => [10, 0], 'matched' => [10, 10]] as $key => $actuals) {
+            $orders[$key] = PurchaseOrder::factory()->create();
+            foreach ($actuals as $actual) {
+                PurchaseOrderItem::factory()->create(['purchase_order_id' => $orders[$key]->id, 'quantity' => 10, 'actual_quantity' => $actual]);
+            }
+        }
+
+        $response = $this->actingAs(User::factory()->create())->get(route('purchase-orders.index', ['status' => $status]));
+
+        $response->assertOk()->assertSee($orders[$status]->reference)->assertSee($label);
+        foreach ($orders as $key => $order) {
+            if ($key !== $status) {
+                $response->assertDontSee($order->reference);
+            }
+        }
+    }
+
+    public function test_list_combines_search_distributor_and_inclusive_date_range(): void
+    {
+        $distributor = Distributor::factory()->create();
+        $matching = PurchaseOrder::factory()->create(['reference' => 'PO-FILTER-MATCH', 'distributor_id' => $distributor->id, 'ordered_on' => '2026-10-01']);
+        PurchaseOrder::factory()->create(['reference' => 'PO-FILTER-EARLY', 'distributor_id' => $distributor->id, 'ordered_on' => '2026-09-30']);
+        PurchaseOrder::factory()->create(['reference' => 'PO-FILTER-OTHER', 'ordered_on' => '2026-10-01']);
+
+        $response = $this->actingAs(User::factory()->create())->get(route('purchase-orders.index', ['search' => 'PO-FILTER', 'distributor_id' => $distributor->id, 'from' => '2026-10-01', 'until' => '2026-10-01']));
+
+        $response->assertOk()->assertSee($matching->reference)->assertDontSee('PO-FILTER-EARLY')->assertDontSee('PO-FILTER-OTHER');
+    }
+
+    public function test_list_accepts_end_date_alone_and_preserves_filters_in_pagination(): void
+    {
+        PurchaseOrder::factory()->count(6)->create(['ordered_on' => '2026-10-01']);
+        $later = PurchaseOrder::factory()->create(['ordered_on' => '2026-10-03']);
+
+        $response = $this->actingAs(User::factory()->create())->get(route('purchase-orders.index', ['until' => '2026-10-01', 'per_page' => 5]));
+
+        $response->assertOk()->assertDontSee($later->reference)->assertViewHas('orders', fn ($orders): bool => $orders->total() === 6 && $orders->count() === 5 && str_contains($orders->nextPageUrl(), 'until=2026-10-01'));
+    }
+
+    #[TestWith([['status' => 'invalid'], 'status'])]
+    #[TestWith([['per_page' => 100000], 'per_page'])]
+    #[TestWith([['from' => 'invalid'], 'from'])]
+    #[TestWith([['until' => 'invalid'], 'until'])]
+    #[TestWith([['from' => '2026-10-02', 'until' => '2026-10-01'], 'until'])]
+    public function test_list_rejects_invalid_filters(array $filters, string $field): void
+    {
+        $this->actingAs(User::factory()->create())->getJson(route('purchase-orders.index', $filters))
+            ->assertUnprocessable()->assertJsonValidationErrors($field);
+    }
+
     public function test_guests_cannot_access_orders_or_receipts(): void
     {
         $order = PurchaseOrder::factory()->create();
