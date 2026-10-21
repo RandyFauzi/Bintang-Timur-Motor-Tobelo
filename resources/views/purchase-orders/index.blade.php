@@ -18,21 +18,20 @@
             </form>
             <div class="overflow-x-auto rounded-b-xl" role="region" aria-label="Tabel pengadaan barang" tabindex="0">
                 <table class="w-full text-left text-sm">
-                    <thead class="bg-gray-50 text-xs uppercase text-muted"><tr>@foreach(['Pengadaan / Tanggal', 'Distributor', 'Produk', 'Total Unit', 'Total Pesanan', 'Status', 'Aksi'] as $heading)<th scope="col" class="whitespace-nowrap px-4 py-5 font-medium">{{ $heading }}</th>@endforeach</tr></thead>
+                    <thead class="bg-gray-50 text-xs uppercase text-muted"><tr>@foreach(['Pengadaan/Tanggal', 'Nama Pengadaan', 'Produk', 'Total Unit', 'Status', 'Aksi'] as $heading)<th scope="col" class="whitespace-nowrap px-4 py-5 font-medium">{{ $heading }}</th>@endforeach</tr></thead>
                     <tbody>
                         @forelse($orders as $order)
                             @php($statusLabel = $order->statusLabel())
                             <tr class="border-b hover:bg-gray-50">
                                 <td class="whitespace-nowrap p-4"><a class="font-medium underline underline-offset-4" href="{{ route('purchase-orders.show', $order) }}">{{ $order->reference }}</a><p class="mt-1 text-xs text-muted">{{ $order->ordered_on->translatedFormat('d M Y') }}</p></td>
-                                <td class="min-w-[180px] break-words p-4">{{ $order->distributor_name }}</td>
+                                <td class="min-w-[180px] break-words p-4">Pengadaan ke {{ $order->distributor_name }}</td>
                                 <td class="whitespace-nowrap p-4">{{ number_format($order->items->count(), 0, ',', '.') }} <span class="text-muted">produk</span></td>
-                                <td class="whitespace-nowrap p-4">{{ number_format($order->items->sum('quantity'), 0, ',', '.') }} <span class="text-muted">unit</span></td>
-                                <td class="whitespace-nowrap p-4">Rp {{ number_format($order->total(), 2, ',', '.') }}</td>
+                                <td class="whitespace-nowrap p-4">{{ number_format($order->items->sum('quantity'), 0, ',', '.') }} <span class="text-muted">unit</span><p class="mt-1 text-xs text-muted">Rp {{ number_format($order->total(), 2, ',', '.') }}</p></td>
                                 <td class="p-4"><span @class(['inline-flex whitespace-nowrap rounded-full border px-3 py-2 text-xs', 'border-green-500 bg-green-50 text-green-800' => $statusLabel === 'Sesuai', 'border-blue-400 bg-blue-50 text-blue-800' => $statusLabel === 'Sedang diperiksa', 'border-amber-500 bg-amber-50 text-amber-800' => $statusLabel === 'Ada selisih', 'border-gray-300 bg-gray-50 text-gray-700' => $statusLabel === 'Belum diperiksa'])>{{ $statusLabel }}</span></td>
                                 <td class="p-4"><a class="ui-button ui-button--secondary" href="{{ route('purchase-orders.show', $order) }}" aria-label="Kelola pengadaan {{ $order->reference }}">Kelola<x-ui.icon name="arrow-right" :size="16" /></a></td>
                             </tr>
                         @empty
-                            <tr><td colspan="7"><x-ui.empty-state title="Pengadaan tidak ditemukan" description="Buat pengadaan pertama atau ubah pencarian dan filter." /></td></tr>
+                            <tr><td colspan="6"><x-ui.empty-state title="Pengadaan tidak ditemukan" description="Buat pengadaan pertama atau ubah pencarian dan filter." /></td></tr>
                         @endforelse
                     </tbody>
                 </table>
