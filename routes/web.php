@@ -13,6 +13,7 @@ use App\Http\Controllers\ProductImportController;
 use App\Http\Controllers\ProductReturnController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\PurchasePlanController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReportLookupController;
 use App\Http\Controllers\ShipmentController;
@@ -47,8 +48,13 @@ Route::middleware('auth')->group(function () {
     Route::post('distributor-invoices/{distributorInvoice}/payments', [DistributorInvoiceController::class, 'pay'])->name('distributor-invoices.pay');
 
     Route::post('purchase-orders/distributors', [PurchaseOrderController::class, 'distributor'])->name('purchase-orders.distributors.store');
+    Route::get('purchase-orders/create', [PurchasePlanController::class, 'create'])->name('purchase-orders.create');
+    Route::get('purchase-plans/products', [PurchasePlanController::class, 'products'])->name('purchase-plans.products');
+    Route::get('purchase-plans/template', [PurchasePlanController::class, 'template'])->name('purchase-plans.template');
+    Route::post('purchase-plans/import', [PurchasePlanController::class, 'import'])->middleware('throttle:10,1')->name('purchase-plans.import');
+    Route::resource('purchase-plans', PurchasePlanController::class)->only(['store', 'edit', 'update', 'show'])->parameters(['purchase-plans' => 'purchasePlan']);
     Route::patch('purchase-orders/{purchaseOrder}/receipt', [PurchaseOrderController::class, 'receive'])->name('purchase-orders.receive');
-    Route::resource('purchase-orders', PurchaseOrderController::class)->only(['index', 'create', 'store', 'show', 'destroy'])->parameters(['purchase-orders' => 'purchaseOrder']);
+    Route::resource('purchase-orders', PurchaseOrderController::class)->only(['index', 'store', 'show', 'destroy'])->parameters(['purchase-orders' => 'purchaseOrder']);
 
     // Products
     Route::get('products/import/template', [ProductImportController::class, 'template'])->name('products.import.template');

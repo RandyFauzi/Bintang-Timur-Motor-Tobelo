@@ -23,6 +23,12 @@ class ProductImportService
 
     public function __construct(private CatalogueService $catalogue) {}
 
+    /** @return array<int, array<string, ?string>> */
+    public function readForPlanning(UploadedFile $file): array
+    {
+        return $this->read($file, ['quantity' => 'Kebutuhan']);
+    }
+
     /** @param array<string, ?string> $mapping */
     public function import(UploadedFile $file, int $userId, array $mapping = []): int
     {

@@ -1,4 +1,5 @@
 @import './components/catalogue.css';
+@import './components/purchase-plans.css';
 @import './components/product-returns.css';
 @import './components/pos.css';
 @import './components/transactions.css';

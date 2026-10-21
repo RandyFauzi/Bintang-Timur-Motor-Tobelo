@@ -53,3 +53,84 @@ test('invoice reminder badge and sidebar clear resolved bills during refresh', a
         assert.equal(events.at(-1).detail.count,0);
     } finally {Object.assign(globalThis,saved);}
 });
+
+import { purchasePlanForm } from '../../resources/js/components/purchase-orders.js';
+
+const planState = () => purchasePlanForm({request_id:'11111111-2222-4333-8444-555555555555',version:0,name:'Pengadaan Oktober',planned_on:'2026-10-21',items:[]}, [{id:1,name:'WMS'},{id:2,name:'WIN'}], {});
+
+test('plan stages require a selected product and exact positive distributor allocations', () => {
+    const state = planState();
+    state.next();
+    assert.equal(state.step, 1);
+    state.add();
+    state.select(state.rows[0], {product_id:7,product_name:'Oli',quantity:0,current_stock:40,unit_price:12000});
+    state.rows[0].quantity = 30;
+    state.next();
+    assert.equal(state.step, 2);
+    state.rows[0].allocations = [{distributor_id:1,quantity:15}];
+    state.next();
+    assert.equal(state.step, 2);
+    assert.equal(state.allocationNote(state.rows[0]), 'Belum dialokasikan 15 unit');
+    state.rows[0].allocations.push({distributor_id:2,quantity:15});
+    state.next();
+    assert.equal(state.step, 3);
+    assert.equal(state.supplierCount, 2);
+    assert.equal(state.units, 30);
+    assert.equal(state.allocationNote(state.rows[0]), 'Teralokasi semua');
+    state.rows[0].allocations[1].distributor_id = 1;
+    assert.notEqual(state.validateAllocations(), '');
+    state.rows[0].allocations[1] = {distributor_id:2,quantity:16};
+    assert.equal(state.allocationNote(state.rows[0]), 'Kelebihan alokasi 1 unit');
+    assert.notEqual(state.validateAllocations(), '');
+});
+
+test('catalogue attributes are copied into plan rows and UI-only fields never enter saved payload', () => {
+    const state = planState();
+    const product = {product_id:7,product_name:'Oli Katalog',color:'Gold',brand:'Yamaha',quantity:0,current_stock:40,unit_price:'12000.00'};
+    state.add();
+    state.select(state.rows[0], product);
+    state.rows[0].product_name = 'Nama Rencana';
+    state.rows[0].quantity = '23';
+    const payload = state.payload('draft');
+    assert.equal(product.product_name,'Oli Katalog');
+    assert.equal(payload.items[0].product_name,'Nama Rencana');
+    assert.equal(payload.items[0].quantity,23);
+    assert.equal(Object.hasOwn(payload.items[0],'key'), false);
+    assert.equal(Object.hasOwn(payload.items[0],'results'), false);
+    assert.equal(state.displayReference,'PGD-20261021-111111112222');
+});
+
+test('manual product modal keeps attributes and quantity in the plan without a catalogue identifier', () => {
+    const state = planState();
+    const events = [];
+    state.$dispatch = (name,detail) => events.push({name,detail});
+    state.add();
+    state.rows[0].quantity = 23;
+    state.openManual(0);
+    Object.assign(state.manual,{product_name:'Spakbor Mio M3',color:'Gold',product_kind:'variation',brand:'Yamaha',part_type:'Body Halus'});
+    state.applyManual();
+    assert.equal(state.rows[0].quantity,23);
+    assert.equal(state.rows[0].product_name,'Spakbor Mio M3');
+    assert.equal(state.rows[0].product_id,null);
+    assert.equal(state.rows[0].pickerOpen,false);
+    assert.equal(events.at(-1).name,'close-plan-manual');
+});
+
+test('stale catalogue search results cannot replace a newer query', async () => {
+    const saved = {window:globalThis.window,fetch:globalThis.fetch};
+    try {
+        globalThis.window = {location:{origin:'https://example.test'}};
+        const requests = [];
+        globalThis.fetch = () => new Promise(resolve => requests.push(resolve));
+        const state = planState(); state.urls.products = '/purchase-plans/products'; state.add();
+        const row = state.rows[0];
+        row.product_name='O'; const first=state.search(row);
+        row.product_name='Oli'; const second=state.search(row);
+        requests[1]({ok:true,json:async()=>[{product_id:2,product_name:'Oli'}]});
+        await second;
+        requests[0]({ok:true,json:async()=>[{product_id:1,product_name:'Older'}]});
+        await first;
+        assert.equal(row.results[0].product_id,2);
+        assert.equal(row.searching,false);
+    } finally { Object.assign(globalThis,saved); }
+});

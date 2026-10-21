@@ -8,6 +8,7 @@ use App\Http\Requests\PurchaseOrderRequest;
 use App\Models\Distributor;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
+use App\Models\PurchasePlan;
 use App\Services\DistributorInvoiceService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -59,7 +60,7 @@ class PurchaseOrderController extends Controller
             }
         }
 
-        return view('purchase-orders.index', ['orders' => $query->paginate($filters['per_page'] ?? 10)->withQueryString(), 'distributors' => Distributor::where('is_active', true)->orderBy('name')->get()]);
+        return view('purchase-orders.index', ['orders' => $query->paginate($filters['per_page'] ?? 10)->withQueryString(), 'distributors' => Distributor::where('is_active', true)->orderBy('name')->get(), 'drafts' => PurchasePlan::where('status', 'draft')->latest('id')->paginate(5, ['*'], 'draft_page')->withQueryString()]);
     }
 
     public function create(Request $request): View

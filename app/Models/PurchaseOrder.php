@@ -11,7 +11,7 @@ class PurchaseOrder extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['request_id', 'reference', 'distributor_id', 'distributor_name', 'ordered_on', 'expected_on', 'notes'];
+    protected $fillable = ['request_id', 'reference', 'distributor_id', 'distributor_name', 'ordered_on', 'expected_on', 'notes', 'purchase_plan_id'];
 
     protected function casts(): array
     {

@@ -1,6 +1,13 @@
 <x-app-layout>
     <div class="catalogue-page procurement-page grid gap-5" x-data="{ deletion: { url: '', reference: '', version: 0 } }" @delete-purchase-order.window="deletion = $event.detail; $dispatch('open-dialog', { id: 'delete-purchase-order' })">
         <header class="catalogue-heading !mb-0"><div><h1>Pengadaan Barang</h1><p class="mt-2 text-sm text-muted">Buat perencanaan dan proses pengadaan barang.</p></div></header>
+        @if($drafts->total() > 0)
+            <section class="catalogue-surface p-5" aria-label="Draft rencana pengadaan">
+                <h2 class="font-medium">Draft Rencana Pengadaan</h2>
+                <ul class="mt-3 divide-y">@foreach($drafts as $draft)<li class="flex flex-wrap items-center justify-between gap-3 py-3"><div><p class="text-sm font-medium">{{ $draft->name }}</p><p class="mt-1 text-xs text-muted">{{ $draft->reference }} · {{ $draft->planned_on->translatedFormat('d M Y') }}</p></div><a class="ui-button ui-button--secondary" href="{{ route('purchase-plans.edit', $draft) }}">Lanjutkan Draft</a></li>@endforeach</ul>
+                @if($drafts->hasPages())<div class="mt-3">{{ $drafts->links() }}</div>@endif
+            </section>
+        @endif
         <section class="catalogue-surface min-w-0" aria-label="Daftar pengadaan">
             <form method="GET" action="{{ route('purchase-orders.index') }}">
                 <div class="catalogue-toolbar flex-wrap">
@@ -31,7 +38,7 @@
                             @php($statusLabel = $order->statusLabel())
                             <tr class="border-b hover:bg-gray-50">
                                 <td class="whitespace-nowrap p-4"><a class="font-medium underline underline-offset-4" href="{{ route('purchase-orders.show', $order) }}">{{ $order->reference }}</a><p class="mt-1 text-xs text-muted">{{ $order->ordered_on->translatedFormat('d M Y') }}</p></td>
-                                <td class="min-w-[180px] break-words p-4">Pengadaan ke {{ $order->distributor_name }}</td>
+                                <td class="min-w-[180px] break-words p-4">@if($order->purchase_plan_id)<a class="underline underline-offset-4" href="{{ route('purchase-plans.show', $order->purchase_plan_id) }}">{{ $order->notes }}</a><p class="mt-1 text-xs text-muted">{{ $order->distributor_name }}</p>@else Pengadaan ke {{ $order->distributor_name }} @endif</td>
                                 <td class="whitespace-nowrap p-4">{{ number_format($order->items->count(), 0, ',', '.') }} <span class="text-muted">produk</span></td>
                                 <td class="whitespace-nowrap p-4">{{ number_format($order->items->sum('quantity'), 0, ',', '.') }} <span class="text-muted">unit</span><p class="mt-1 text-xs text-muted">Rp {{ number_format($order->total(), 2, ',', '.') }}</p></td>
                                 <td class="p-4"><span @class(['inline-flex whitespace-nowrap rounded-full border px-3 py-2 text-xs', 'border-green-500 bg-green-50 text-green-800' => $statusLabel === 'Sesuai', 'border-blue-400 bg-blue-50 text-blue-800' => $statusLabel === 'Sedang diperiksa', 'border-amber-500 bg-amber-50 text-amber-800' => $statusLabel === 'Ada selisih', 'border-gray-300 bg-gray-50 text-gray-700' => $statusLabel === 'Belum diperiksa'])>{{ $statusLabel }}</span></td>

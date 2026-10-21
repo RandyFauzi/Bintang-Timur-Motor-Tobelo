@@ -1,4 +1,4 @@
-import { purchaseOrderForm, purchaseOrderReceipt } from './components/purchase-orders';
+import { purchaseOrderForm, purchaseOrderReceipt, purchasePlanForm } from './components/purchase-orders';
 import Alpine from 'alpinejs';
 import { notificationCenter } from './components/notifications';
 import { shipmentForm, shippingVoyage } from './components/shipments';
@@ -31,5 +31,6 @@ Alpine.data('transactionEditor', transactionEditor);
 
 Alpine.data('purchaseOrderForm', purchaseOrderForm);
 Alpine.data('purchaseOrderReceipt', purchaseOrderReceipt);
+Alpine.data('purchasePlanForm', purchasePlanForm);
 window.Alpine = Alpine;
 Alpine.start();
