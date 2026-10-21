@@ -20,7 +20,7 @@
     .note-badge--issued { border-color: #347ccb; background: #eff6ff; color: #1e457d; }
     .note-badge--shipping { border-color: #8c68c8; background: #f5f0ff; color: #5e3b9b; }
     .note-card__content { display: grid; min-width: 0; gap: 24px; margin-top: 24px; }
-    .note-fields { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; padding-block: 16px; }
+    .note-fields { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 16px; padding-block: 16px; }
     .note-fields .form-field { gap: 12px; }
     .note-fields .form-input { min-height: 42px; }
     .note-fields input:disabled { background: #f0f1ed; color: var(--color-muted); opacity: 1; }

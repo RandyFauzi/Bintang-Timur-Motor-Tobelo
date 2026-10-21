@@ -34,6 +34,7 @@ class PurchaseOrderNoteRequest extends FormRequest
             'note_issued' => ['required', 'boolean'],
             'supplier_note_number' => ['nullable', 'required_if:note_issued,true', 'string', 'max:255'],
             'supplier_note_on' => ['nullable', 'required_if:note_issued,true', 'date_format:Y-m-d', 'after_or_equal:'.$order->ordered_on->toDateString()],
+            'supplier_note_total' => ['nullable', 'required_if:note_issued,true', 'numeric', 'min:0', 'max:90000000000000', 'regex:/^\d+(\.\d{1,2})?$/'],
             'items' => ['required', 'array', 'size:'.$order->items()->count()],
             'items.*' => ['required', 'array:id,invoice_quantity'],
             'items.*.id' => ['required', 'integer', 'distinct', Rule::exists('purchase_order_items', 'id')->where('purchase_order_id', $order->id)],

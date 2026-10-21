@@ -15,7 +15,7 @@ class PurchaseOrder extends Model
 
     protected function casts(): array
     {
-        return ['ordered_on' => 'date', 'expected_on' => 'date', 'version' => 'integer', 'note_issued' => 'boolean', 'supplier_note_on' => 'date', 'shipment_finalized_at' => 'datetime'];
+        return ['ordered_on' => 'date', 'expected_on' => 'date', 'version' => 'integer', 'note_issued' => 'boolean', 'supplier_note_on' => 'date', 'supplier_note_total_cents' => 'integer', 'shipment_finalized_at' => 'datetime'];
     }
 
     public function items(): HasMany

@@ -1,5 +1,5 @@
 const clone = value => JSON.parse(JSON.stringify(value));
-const notePayload = order => ({version: order.version, note_issued: Boolean(order.note_issued), supplier_note_number: order.note_issued ? order.supplier_note_number.trim() : null, supplier_note_on: order.note_issued ? order.supplier_note_on : null, items: order.items.map(item => ({id: item.id, invoice_quantity: order.note_issued && item.invoice_quantity !== '' && item.invoice_quantity !== null ? Number(item.invoice_quantity) : null}))});
+const notePayload = order => ({version: order.version, note_issued: Boolean(order.note_issued), supplier_note_number: order.note_issued ? order.supplier_note_number.trim() : null, supplier_note_on: order.note_issued ? order.supplier_note_on : null, supplier_note_total: order.note_issued ? String(order.supplier_note_total ?? '').trim() : null, items: order.items.map(item => ({id: item.id, invoice_quantity: order.note_issued && item.invoice_quantity !== '' && item.invoice_quantity !== null ? Number(item.invoice_quantity) : null}))});
 const decorate = raw => ({...clone(raw), saved: clone(raw), editing: !raw.note_issued && raw.can_edit, collapsed: false, saving: false, errors: []});
 
 export function purchaseOrderNotes(initial, services, config) {
@@ -37,7 +37,7 @@ export function purchaseOrderNotes(initial, services, config) {
         dirty(order) { return JSON.stringify(notePayload(order)) !== JSON.stringify(notePayload(order.saved)); },
         edit(order) { if (order.can_edit && !order.finalized) { order.editing = true; order.errors = []; } },
         cancel(order) { const collapsed = order.collapsed; Object.assign(order, decorate(order.saved), {collapsed}); },
-        toggleIssued(order) { if (!order.note_issued) { order.supplier_note_number = ''; order.supplier_note_on = ''; order.items.forEach(item => item.invoice_quantity = null); } },
+        toggleIssued(order) { if (!order.note_issued) { order.supplier_note_number = ''; order.supplier_note_on = ''; order.supplier_note_total = ''; order.items.forEach(item => item.invoice_quantity = null); } },
         difference(item) {
             if (item.invoice_quantity === null || item.invoice_quantity === '') return '';
             const difference = item.quantity - Number(item.invoice_quantity);
@@ -46,6 +46,8 @@ export function purchaseOrderNotes(initial, services, config) {
         validate(order) {
             if (!order.note_issued) return [];
             const errors = [];
+            const amount = String(order.supplier_note_total ?? '').trim();
+            if (!/^\d+(\.\d{1,2})?$/.test(amount) || Number(amount) > 90000000000000) errors.push('Isi total tagihan nota yang valid (maksimal 2 angka desimal).');
             if (!order.supplier_note_number.trim() || !order.supplier_note_on) errors.push('Isi nomor dan tanggal nota.');
             if (order.items.some(item => item.invoice_quantity === null || item.invoice_quantity === '' || !Number.isInteger(Number(item.invoice_quantity)) || Number(item.invoice_quantity) < 0 || Number(item.invoice_quantity) > 1000000)) errors.push('Isi jumlah pada nota untuk setiap produk (0 jika kosong).');
             return errors;

@@ -224,6 +224,69 @@ class PurchaseOrderNoteTest extends TestCase
         $this->assertTrue($order->fresh()->note_issued);
     }
 
+    public function test_entered_total_is_authoritative_for_zero_price_products_and_survives_shipping_finalization(): void
+    {
+        [$plan, $order, $item] = $this->order();
+        $item->update(['unit_price' => 0]);
+        $payload = $this->notePayload($order, 5);
+        $payload['supplier_note_total'] = '62500.75';
+        $this->actingAs(User::factory()->create());
+
+        $this->patchJson($this->noteUrl($plan, $order), $payload)->assertOk()->assertJsonPath('order.supplier_note_total', '62500.75');
+
+        $this->assertSame(6250075, $order->fresh()->supplier_note_total_cents);
+        $invoice = DistributorInvoice::sole();
+        $this->assertSame(6250075, $invoice->total_cents);
+        $this->get(route('distributor-invoices.show', $invoice))->assertOk()->assertSee('62.500,75')->assertSee('Total tagihan mengikuti nominal nota yang divalidasi.');
+        $payload['version'] = $order->fresh()->version;
+        $payload['items'][0]['invoice_quantity'] = 8;
+        $this->patchJson($this->noteUrl($plan, $order), $payload)->assertOk();
+        $this->assertSame(6250075, $invoice->fresh()->total_cents);
+        $carrier = ShippingService::factory()->create();
+        $this->postJson($this->finalizeUrl($plan, $order), $this->shippingPayload($order->fresh(), $carrier))->assertOk();
+        $this->assertSame(6250075, $invoice->fresh()->total_cents);
+        $this->assertDatabaseCount('distributor_invoices', 1);
+        $this->assertDatabaseCount('shipments', 1);
+    }
+
+    #[TestWith([null])]
+    #[TestWith([''])]
+    #[TestWith(['-1'])]
+    #[TestWith(['1.001'])]
+    #[TestWith(['1e4'])]
+    #[TestWith(['90000000000001'])]
+    public function test_issued_note_rejects_missing_or_invalid_total_without_creating_debt(?string $amount): void
+    {
+        [$plan, $order, $item] = $this->order();
+        $payload = $this->notePayload($order);
+        $payload['supplier_note_total'] = $amount;
+
+        $this->actingAs(User::factory()->create())->patchJson($this->noteUrl($plan, $order), $payload)
+            ->assertUnprocessable()->assertJsonValidationErrors('supplier_note_total');
+
+        $this->assertDatabaseCount('distributor_invoices', 0);
+        $this->assertNull($item->fresh()->invoice_quantity);
+        $this->assertFalse($order->fresh()->note_issued);
+    }
+
+    public function test_explicit_zero_total_is_valid_and_reverting_note_clears_the_entered_amount(): void
+    {
+        [$plan, $order] = $this->order();
+        $payload = $this->notePayload($order);
+        $payload['supplier_note_total'] = '0.00';
+        $this->actingAs(User::factory()->create());
+
+        $this->patchJson($this->noteUrl($plan, $order), $payload)->assertOk()->assertJsonPath('order.supplier_note_total', '0.00');
+
+        $this->assertSame(0, DistributorInvoice::sole()->total_cents);
+        $payload['note_issued'] = false;
+        $payload['supplier_note_total'] = null;
+        $payload['version'] = $order->fresh()->version;
+        $this->patchJson($this->noteUrl($plan, $order), $payload)->assertOk()->assertJsonPath('order.supplier_note_total', '');
+        $this->assertNull($order->fresh()->supplier_note_total_cents);
+        $this->assertDatabaseCount('distributor_invoices', 0);
+    }
+
     /** @return array{PurchasePlan, PurchaseOrder, PurchaseOrderItem} */
     private function order(?PurchasePlan $plan = null, string $supplierName = 'WMS'): array
     {
@@ -242,7 +305,7 @@ class PurchaseOrderNoteTest extends TestCase
     /** @return array<string, mixed> */
     private function notePayload(PurchaseOrder $order, int $quantity = 5): array
     {
-        return ['version' => $order->version, 'note_issued' => true, 'supplier_note_number' => 'INV-'.$order->distributor_name.'-01', 'supplier_note_on' => '2026-10-21', 'items' => $order->items->map(fn (PurchaseOrderItem $item): array => ['id' => $item->id, 'invoice_quantity' => $quantity])->all()];
+        return ['version' => $order->version, 'note_issued' => true, 'supplier_note_number' => 'INV-'.$order->distributor_name.'-01', 'supplier_note_on' => '2026-10-21', 'supplier_note_total' => (string) ($quantity * 12000), 'items' => $order->items->map(fn (PurchaseOrderItem $item): array => ['id' => $item->id, 'invoice_quantity' => $quantity])->all()];
     }
 
     /** @return array<string, mixed> */

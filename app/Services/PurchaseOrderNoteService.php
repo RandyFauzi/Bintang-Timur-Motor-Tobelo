@@ -35,6 +35,7 @@ class PurchaseOrderNoteService
             $order->note_issued = $issued;
             $order->supplier_note_number = $issued ? $data['supplier_note_number'] : null;
             $order->supplier_note_on = $issued ? $data['supplier_note_on'] : null;
+            $order->supplier_note_total_cents = $issued ? DistributorInvoiceService::cents($data['supplier_note_total']) : null;
             $order->version++;
             $order->save();
             if (! $issued) {
@@ -117,6 +118,9 @@ class PurchaseOrderNoteService
 
     private function invoiceTotal(PurchaseOrder $order): int
     {
+        if ($order->supplier_note_total_cents !== null) {
+            return $order->supplier_note_total_cents;
+        }
         $total = 0;
         foreach ($order->items()->get() as $item) {
             $subtotal = DistributorInvoiceService::cents($item->unit_price) * ($item->invoice_quantity ?? 0);
@@ -143,12 +147,14 @@ class PurchaseOrderNoteService
         return $plan->orders->map(function (PurchaseOrder $order) use ($plan, $sources, $cities): array {
             $invoice = $order->invoice;
             $shipment = $invoice?->shipment;
+            $totalCents = $order->supplier_note_total_cents ?? $invoice?->total_cents;
 
             return [
                 'id' => $order->id, 'reference' => $order->reference, 'distributor_id' => $order->distributor_id,
                 'distributor_name' => $order->distributor_name, 'origin_port' => $cities[$order->distributor_id] ?? '',
                 'version' => $order->version, 'note_issued' => $order->note_issued,
                 'supplier_note_number' => $order->supplier_note_number ?? '', 'supplier_note_on' => $order->supplier_note_on?->toDateString() ?? '',
+                'supplier_note_total' => $order->note_issued && $totalCents !== null ? intdiv($totalCents, 100).'.'.str_pad((string) ($totalCents % 100), 2, '0', STR_PAD_LEFT) : '',
                 'finalized' => $order->shipment_finalized_at !== null,
                 'can_edit' => $order->shipment_finalized_at === null && (! $invoice || ($invoice->paid_cents === 0 && $invoice->shipment_id === null && $invoice->claim_amount_cents === 0 && $invoice->payments->isEmpty())),
                 'shipment_url' => $shipment ? route('shipments.index', ['shipment' => $shipment->id]) : null,

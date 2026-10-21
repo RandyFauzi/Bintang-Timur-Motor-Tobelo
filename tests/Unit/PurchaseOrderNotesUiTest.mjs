@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {purchaseOrderNotes} from '../../resources/js/components/purchase-order-notes.js';
 
-const order = (id = 1, quantity = 5) => ({id,reference:'PO-'+id,distributor_id:id,distributor_name:id === 1 ? 'WMS' : 'WIN',origin_port:'Surabaya',version:2,note_issued:true,supplier_note_number:'INV-'+id,supplier_note_on:'2026-10-21',finalized:false,can_edit:true,shipment_url:null,shipment_status:null,invoice_url:'/bills/'+id,save_url:'/orders/'+id+'/note',finalize_url:'/orders/'+id+'/finalize',items:[{id:id*10,product_name:'Yamalube 02 Oil',color:'Gold',source_index:0,quantity:15,invoice_quantity:quantity}]});
+const order = (id = 1, quantity = 5) => ({id,reference:'PO-'+id,distributor_id:id,distributor_name:id === 1 ? 'WMS' : 'WIN',origin_port:'Surabaya',version:2,note_issued:true,supplier_note_number:'INV-'+id,supplier_note_on:'2026-10-21',supplier_note_total:'60000.00',finalized:false,can_edit:true,shipment_url:null,shipment_status:null,invoice_url:'/bills/'+id,save_url:'/orders/'+id+'/note',finalize_url:'/orders/'+id+'/finalize',items:[{id:id*10,product_name:'Yamalube 02 Oil',color:'Gold',source_index:0,quantity:15,invoice_quantity:quantity}]});
 const state = (orders=[order()]) => purchaseOrderNotes(orders, [{id:1,name:'Cargo Reguler',duration_days:14}], {today:'2026-10-21',planId:4,replanUrl:'/purchase-orders/create'});
 
 test('shortages aggregate suppliers and offset excess instead of ordering the same requirement twice', () => {
@@ -122,4 +122,27 @@ test('reorder URL sends only selected source identities and server calculates mi
         assert.deepEqual(url.searchParams.getAll('source_items[]'),['0']);
         assert.equal(url.searchParams.has('quantity'),false);
     } finally {globalThis.window=saved;}
+});
+
+test('entered note total is required, validated independently, saved exactly and restored on cancel', async () => {
+    const model=state(); const row=model.orders[0];
+    model.edit(row);
+    for (const value of ['', '-1', '1.001', '1e4', '90000000000001']) {
+        row.supplier_note_total=value;
+        assert.equal(model.validate(row).length,1);
+    }
+    row.supplier_note_total='0.00';
+    assert.deepEqual(model.validate(row),[]);
+    row.supplier_note_total='62500.75';
+    let sent;
+    model.request=async(url,method,payload)=>{sent=payload; return {order:{...order(),version:3,supplier_note_total:'62500.75'},message:'Tersimpan'};};
+    await model.save(row);
+    assert.equal(sent.supplier_note_total,'62500.75');
+    assert.equal(row.saved.supplier_note_total,'62500.75');
+    model.edit(row); row.supplier_note_total='90000';
+    assert.equal(model.dirty(row),true);
+    model.cancel(row);
+    assert.equal(row.supplier_note_total,'62500.75');
+    row.note_issued=false; model.toggleIssued(row);
+    assert.equal(row.supplier_note_total,'');
 });
