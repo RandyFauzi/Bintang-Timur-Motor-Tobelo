@@ -63,19 +63,25 @@ class PurchasePlanController extends Controller
 
     public function store(PurchasePlanRequest $request, PurchasePlanService $service): JsonResponse
     {
-        return $this->saved($service->save($request->validated()));
+        return $this->saved($service->save($request->validated()), $request->boolean('autosave'));
     }
 
     public function update(PurchasePlanRequest $request, PurchasePlan $purchasePlan, PurchasePlanService $service): JsonResponse
     {
-        return $this->saved($service->save($request->validated(), $purchasePlan));
+        return $this->saved($service->save($request->validated(), $purchasePlan), $request->boolean('autosave'));
     }
 
-    private function saved(PurchasePlan $plan): JsonResponse
+    private function saved(PurchasePlan $plan, bool $autosave = false): JsonResponse
     {
-        session()->flash('success', $plan->status === 'draft' ? 'Draft rencana berhasil disimpan.' : 'Rencana difinalisasi. PO dibuat sesuai alokasi distributor.');
+        if (! $autosave) {
+            session()->flash('success', $plan->status === 'draft' ? 'Draft rencana berhasil disimpan.' : 'Rencana difinalisasi. PO dibuat sesuai alokasi distributor.');
+        }
 
-        return response()->json(['redirect' => $plan->status === 'draft' ? route('purchase-plans.edit', $plan) : route('purchase-plans.show', $plan)]);
+        return response()->json([
+            'redirect' => $plan->status === 'draft' ? route('purchase-plans.edit', $plan) : route('purchase-plans.show', $plan),
+            'version' => $plan->version, 'reference' => $plan->reference,
+            'save_url' => route('purchase-plans.update', $plan), 'edit_url' => route('purchase-plans.edit', $plan),
+        ]);
     }
 
     public function show(PurchasePlan $purchasePlan, PurchaseOrderNoteService $notes): View

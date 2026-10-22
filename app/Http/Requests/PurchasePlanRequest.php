@@ -19,6 +19,7 @@ class PurchasePlanRequest extends FormRequest
             'request_id' => ['required', 'uuid'],
             'version' => ['required', 'integer', 'min:0'],
             'intent' => ['required', 'in:draft,finalize'],
+            'autosave' => ['sometimes', 'boolean'],
             'name' => ['required', 'string', 'max:255'],
             'planned_on' => ['required', 'date_format:Y-m-d'],
             'items' => ['present', 'array', 'list', 'max:100'],

@@ -158,3 +158,159 @@ test('stale catalogue search results cannot replace a newer query', async () => 
         assert.equal(row.searching,false);
     } finally { Object.assign(globalThis,saved); }
 });
+
+async function withDraftBrowser(run) {
+    const saved = {window:globalThis.window, document:globalThis.document, fetch:globalThis.fetch};
+    const state = planState();
+    const navigation = [], histories = [], events = [];
+    const watchers = new Map();
+    globalThis.window = {
+        location:{origin:'https://example.test', assign:url => navigation.push(url)},
+        history:{state:null, replaceState:(_state, _unused, url) => histories.push(url)},
+        addEventListener() {}, removeEventListener() {},
+    };
+    globalThis.document = {querySelector:() => ({content:'csrf'}), addEventListener() {}, removeEventListener() {}};
+    state.urls.save = '/plans';
+    state.$watch = (property, callback) => watchers.set(property, callback);
+    state.$dispatch = (name, detail) => events.push({name, detail});
+    state.init();
+    const response = version => ({ok:true, json:async () => ({version, reference:'PGD-SAVED', save_url:'/plans/7', edit_url:'/plans/7/edit', redirect:'/plans/7'})});
+    try { await run({state, navigation, histories, events, response, watchers}); }
+    finally {state.destroy(); Object.assign(globalThis, saved);}
+}
+
+test('product and allocation changes debounce into one autosave and clean UI changes send nothing', async () => {
+    const savedTimers = {setTimeout:globalThis.setTimeout, clearTimeout:globalThis.clearTimeout};
+    const timers = new Map();
+    let timerId = 0;
+    globalThis.setTimeout = (callback, delay) => {assert.equal(delay, 1500); timers.set(++timerId, callback); return timerId;};
+    globalThis.clearTimeout = id => timers.delete(id);
+    try {
+        await withDraftBrowser(async ({state, watchers, response}) => {
+            let calls = 0;
+            globalThis.fetch = async () => {calls++; return response(1);};
+            state.rows = [{product_id:null, product_name:'Oli', quantity:10, allocations:[]}];
+            watchers.get('rows')();
+            state.rows[0].allocations.push({distributor_id:1, quantity:4});
+            watchers.get('rows')();
+            state.rows[0].allocations[0].quantity = 7;
+            watchers.get('rows')();
+            assert.equal(calls, 0);
+            assert.equal(timers.size, 1);
+            const callback = [...timers.values()][0];
+            await callback();
+            assert.equal(calls, 1);
+            assert.equal(state.dirty, false);
+            state.rows[0].results = [{product_name:'Hasil pencarian'}];
+            watchers.get('rows')();
+            assert.equal(timers.size, 0);
+            assert.equal(calls, 1);
+        });
+    } finally {Object.assign(globalThis, savedTimers);}
+});
+
+test('autosave creates an unnamed draft in place and subsequent allocations update its current version', async () => {
+    await withDraftBrowser(async ({state, navigation, histories, response}) => {
+        const requests = [];
+        globalThis.fetch = async (url, options) => {requests.push({url, ...options, body:JSON.parse(options.body)}); return response(requests.length);};
+        state.name = '';
+        state.add();
+        state.select(state.rows[0], {product_name:'Busi'});
+        state.rows[0].quantity = 10;
+        state.step = 2;
+        state.openAllocationKey = state.rows[0].key;
+        assert.equal(await state.save('draft', true), true);
+        assert.equal(requests[0].method, 'POST');
+        assert.equal(requests[0].body.name, 'Draft Pengadaan 2026-10-21');
+        assert.equal(requests[0].body.autosave, true);
+        assert.equal(state.step, 2);
+        assert.equal(state.openAllocationKey, state.rows[0].key);
+        assert.equal(state.dirty, false);
+        assert.deepEqual(navigation, []);
+        assert.deepEqual(histories, ['/plans/7/edit']);
+        state.rows[0].allocations = [{distributor_id:1, quantity:4}];
+        assert.equal(await state.save('draft', true), true);
+        assert.equal(requests[1].url, '/plans/7');
+        assert.equal(requests[1].method, 'PATCH');
+        assert.equal(requests[1].body.version, 1);
+        assert.equal(requests[1].body.items[0].allocations[0].quantity, 4);
+        assert.equal(state.version, 2);
+        assert.equal(state.dirty, false);
+    });
+});
+
+test('edits during autosave remain unsaved and overlapping saves cannot send stale versions', async () => {
+    await withDraftBrowser(async ({state, response}) => {
+        let finish;
+        let calls = 0;
+        globalThis.fetch = () => {calls++; return new Promise(resolve => {finish = resolve;});};
+        state.add();
+        state.rows[0].quantity = 3;
+        const pending = state.save('draft', true);
+        state.rows[0].quantity = 9;
+        assert.equal(await state.save('draft'), false);
+        assert.equal(calls, 1);
+        finish(response(1));
+        await pending;
+        assert.equal(state.version, 1);
+        assert.equal(state.rows[0].quantity, 9);
+        assert.equal(state.dirty, true);
+        globalThis.fetch = async (_url, options) => {
+            assert.equal(JSON.parse(options.body).version, 1);
+            assert.equal(JSON.parse(options.body).items[0].quantity, 9);
+            return response(2);
+        };
+        await state.save('draft', true);
+        assert.equal(state.dirty, false);
+    });
+});
+
+test('failed saving blocks exit and warns on refresh until a retry saves the draft', async () => {
+    await withDraftBrowser(async ({state, navigation, events, response}) => {
+        state.add();
+        state.rows[0].product_name = 'Produk belum selesai';
+        let prevented = 0;
+        const unload = {preventDefault:() => prevented++};
+        state.warnBeforeUnload(unload);
+        assert.equal(prevented, 1);
+        assert.equal(unload.returnValue, '');
+        state.guardLink({button:0, target:{closest:() => ({href:'/purchase-orders', target:'', hasAttribute:() => false, getAttribute:() => '/purchase-orders'})}, preventDefault:() => prevented++, stopImmediatePropagation() {}});
+        assert.equal(events.at(-1).detail.id, 'plan-unsaved');
+        globalThis.fetch = async () => {throw new Error('offline');};
+        await state.saveAndLeave();
+        assert.deepEqual(navigation, []);
+        assert.equal(state.dirty, true);
+        assert.equal(state.version, 0);
+        assert.match(state.draftStatus, /belum tersimpan/);
+        globalThis.fetch = async () => response(1);
+        await state.saveAndLeave();
+        assert.deepEqual(navigation, ['/purchase-orders']);
+        assert.equal(state.dirty, false);
+        state.warnBeforeUnload(unload);
+        assert.equal(prevented, 2);
+    });
+});
+
+test('version conflicts retain local changes and finalization uses the last saved version', async () => {
+    await withDraftBrowser(async ({state, navigation, response}) => {
+        state.add(); state.select(state.rows[0], {product_name:'Oli'});
+        state.rows[0].quantity = 10;
+        state.rows[0].allocations = [{distributor_id:1, quantity:10}];
+        globalThis.fetch = async () => ({ok:false, json:async () => ({errors:{version:['Rencana telah berubah. Muat ulang halaman sebelum menyimpan.']}})});
+        assert.equal(await state.save('draft', true), false);
+        assert.equal(state.dirty, true);
+        assert.match(state.draftStatus, /Rencana telah berubah/);
+        assert.equal(state.version, 0);
+        globalThis.fetch = async () => response(1);
+        await state.save('draft', true);
+        globalThis.fetch = async (_url, options) => {
+            const body = JSON.parse(options.body);
+            assert.equal(body.version, 1);
+            assert.equal(body.intent, 'finalize');
+            return response(2);
+        };
+        assert.equal(await state.save('finalize'), true);
+        assert.deepEqual(navigation, ['/plans/7']);
+        assert.equal(state.leaving, true);
+    });
+});

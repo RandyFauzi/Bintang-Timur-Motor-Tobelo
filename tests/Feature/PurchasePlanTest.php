@@ -78,6 +78,37 @@ class PurchasePlanTest extends TestCase
         $this->get(route('purchase-plans.edit', $plan))->assertConflict();
     }
 
+    public function test_autosave_returns_draft_identity_and_retries_do_not_duplicate_or_overwrite_changes(): void
+    {
+        $payload = $this->payload();
+        $payload['intent'] = 'draft';
+        $payload['autosave'] = true;
+        $payload['items'][0]['allocations'] = [['distributor_id' => null, 'quantity' => 0]];
+        $this->actingAs(User::factory()->create());
+
+        $this->postJson(route('purchase-plans.store'), $payload)->assertOk()->assertJsonPath('version', 1)->assertSessionMissing('success');
+        $plan = PurchasePlan::sole();
+        $this->postJson(route('purchase-plans.store'), $payload)->assertOk()
+            ->assertJsonPath('version', 1)->assertJsonPath('reference', $plan->reference)
+            ->assertJsonPath('save_url', route('purchase-plans.update', $plan))
+            ->assertJsonPath('edit_url', route('purchase-plans.edit', $plan));
+        $this->assertDatabaseCount('purchase_plans', 1);
+        $this->assertDatabaseCount('purchase_orders', 0);
+
+        $payload['items'][0]['quantity'] = 50;
+        $this->postJson(route('purchase-plans.store'), $payload)->assertUnprocessable()->assertJsonValidationErrors('version');
+        $this->assertSame(30, $plan->refresh()->items[0]['quantity']);
+        $payload['version'] = 1;
+        $this->patchJson(route('purchase-plans.update', $plan), $payload)->assertOk()->assertJsonPath('version', 2);
+        $this->assertSame(50, $plan->refresh()->items[0]['quantity']);
+        $this->get(route('purchase-plans.edit', $plan))->assertViewHas('initial', fn (array $initial): bool => $initial['items'][0]['quantity'] === 50 && $initial['items'][0]['allocations'][0]['distributor_id'] === null);
+        $payload['intent'] = 'finalize';
+        $payload['version'] = 2;
+        $this->patchJson(route('purchase-plans.update', $plan), $payload)->assertUnprocessable()->assertJsonValidationErrors('items.0.allocations');
+        $this->assertSame('draft', $plan->refresh()->status);
+        $this->assertDatabaseCount('purchase_orders', 0);
+    }
+
     public function test_draft_updates_require_current_version_and_can_be_finalized(): void
     {
         $payload = $this->payload();

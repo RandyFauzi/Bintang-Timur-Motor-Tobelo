@@ -29,6 +29,10 @@ class PurchasePlanService
                     throw ValidationException::withMessages(['plan' => 'Rencana yang sudah difinalisasi tidak dapat diubah.']);
                 }
                 if ($plan->version !== (int) $data['version']) {
+                    if ($data['intent'] === 'draft' && $plan->version === (int) $data['version'] + 1
+                        && $plan->name === $data['name'] && $plan->planned_on->toDateString() === $data['planned_on'] && $plan->items == $data['items']) {
+                        return $plan;
+                    }
                     throw ValidationException::withMessages(['version' => 'Rencana telah berubah. Muat ulang halaman sebelum menyimpan.']);
                 }
             } elseif ((int) $data['version'] !== 0) {

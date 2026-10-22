@@ -6,6 +6,8 @@
     .plan-back { display: inline-flex; width: fit-content; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 14px; text-decoration: underline; text-underline-offset: 4px; }
     .plan-heading h1 { font-size: 24px; font-weight: 600; line-height: 1.2; }
     .plan-heading p, .plan-panel header p { color: var(--color-muted); font-size: 14px; line-height: 1.4; }
+    .plan-heading .plan-save-status { min-height: 20px; color: var(--color-success); }
+    .plan-heading .plan-save-status.text-danger { color: var(--color-danger); }
     .plan-steps { display: flex; align-items: center; padding-block: 24px; }
     .plan-step { display: inline-flex; flex-shrink: 0; align-items: center; gap: 9px; min-height: 48px; border: 1px solid #d8d9d9; border-radius: 12px; background: var(--color-page); padding: 12px; color: #494b4c; font-size: 12px; }
     .plan-step > span { display: grid; width: 24px; height: 24px; place-items: center; border-radius: 50%; background: #d8d9d9; }

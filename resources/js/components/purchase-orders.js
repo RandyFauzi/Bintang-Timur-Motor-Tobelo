@@ -27,12 +27,72 @@ export function purchaseOrderReceipt(items) {
 export function purchasePlanForm(initial, distributors, urls) {
     const blank = () => ({product_id: null, product_name: '', color: '', product_kind: 'daily', brand: '', part_type: '', current_stock: 0, quantity: 0, sku: '', unit: 'pcs', unit_price: 0, allocations: []});
     let sequence = 0;
+    let autosaveTimer;
     const decorate = item => ({...blank(), ...item, product_name: item.product_name || '', color: item.color || '', brand: item.brand || '', part_type: item.part_type || '', sku: item.sku || '', allocations: item.allocations || [], key: sequence++, searching: false, results: [], pickerOpen: !item.product_name, focusedResult: -1, searchVersion: 0});
     return {
         requestId: initial.request_id, version: initial.version, name: initial.name, plannedOn: initial.planned_on,
         reference: initial.reference || '', rows: (initial.items || []).map(decorate),
         get displayReference() { return this.reference || 'PGD-' + this.plannedOn.replaceAll('-', '') + '-' + this.requestId.replaceAll('-', '').slice(0, 12).toUpperCase(); },
         distributors, urls, step: 1, openAllocationKey: null, errors: [], saving: false, importing: false, editIndex: null, manual: blank(),
+        savedFingerprint: '', autosaveMessage: '', pendingLeaveUrl: '', leaving: false,
+        init() {
+            this.savedFingerprint = this.fingerprint();
+            if (!this.version && this.rows.length) this.savedFingerprint = '';
+            this.$watch('rows', () => this.scheduleAutosave());
+            this.$watch('name', () => this.scheduleAutosave());
+            this.$watch('plannedOn', () => this.scheduleAutosave());
+            this.unloadListener = event => this.warnBeforeUnload(event);
+            this.linkListener = event => this.guardLink(event);
+            this.onlineListener = () => this.scheduleAutosave();
+            window.addEventListener('beforeunload', this.unloadListener);
+            window.addEventListener('online', this.onlineListener);
+            document.addEventListener('click', this.linkListener, true);
+            if (this.dirty) this.scheduleAutosave();
+        },
+        destroy() {
+            clearTimeout(autosaveTimer);
+            window.removeEventListener('beforeunload', this.unloadListener);
+            window.removeEventListener('online', this.onlineListener);
+            document.removeEventListener('click', this.linkListener, true);
+        },
+        fingerprint() {
+            const {request_id, version, intent, ...content} = this.payload('draft');
+            return JSON.stringify(content);
+        },
+        get dirty() { return this.fingerprint() !== this.savedFingerprint; },
+        get draftStatus() {
+            if (this.saving) return 'Menyimpan…';
+            if (this.autosaveMessage) return this.autosaveMessage;
+            return this.dirty ? 'Ada perubahan belum tersimpan' : this.version ? 'Semua perubahan tersimpan sebagai draft' : 'Draft tersimpan otomatis saat Anda mulai mengisi';
+        },
+        scheduleAutosave() {
+            clearTimeout(autosaveTimer);
+            if (!this.dirty || this.leaving) return;
+            this.autosaveMessage = '';
+            autosaveTimer = setTimeout(() => this.save('draft', true), 1500);
+        },
+        warnBeforeUnload(event) {
+            if (this.leaving || (!this.dirty && !this.saving && !this.importing)) return;
+            event.preventDefault();
+            event.returnValue = '';
+        },
+        guardLink(event) {
+            if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || this.leaving) return;
+            const link = event.target.closest?.('a[href]');
+            if (!link || link.hasAttribute('download') || (link.target && link.target !== '_self') || link.getAttribute('href').startsWith('#')) return;
+            if (!this.dirty && !this.saving && !this.importing) return;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            this.pendingLeaveUrl = link.href;
+            this.$dispatch('open-dialog', {id:'plan-unsaved'});
+        },
+        async saveAndLeave() {
+            if (this.saving || this.importing) return;
+            if (this.dirty && !await this.save('draft')) return;
+            if (this.dirty) return;
+            this.leaving = true;
+            window.location.assign(this.pendingLeaveUrl);
+        },
         kinds: {daily: 'Harian', non_daily: 'Non-Harian', variation: 'Variasi'},
         add() {
             if (this.rows.length >= 100) { this.errors = ['Maksimal 100 produk per rencana.']; return; }
@@ -118,23 +178,50 @@ export function purchasePlanForm(initial, distributors, urls) {
         },
         goTo(step) { if (step < this.step) { this.step = step; this.errors = []; } },
         payload(intent) {
-            return {request_id: this.requestId, version: this.version, name: this.name.trim(), planned_on: this.plannedOn, intent,
+            return {request_id: this.requestId, version: this.version, name: this.name.trim() || (intent === 'draft' ? 'Draft Pengadaan ' + this.plannedOn : ''), planned_on: this.plannedOn, intent,
                 items: this.rows.map(row => ({product_id: row.product_id, product_name: row.product_name, color: row.color, product_kind: row.product_kind, brand: row.brand, part_type: row.part_type, current_stock: Number(row.current_stock || 0), quantity: Number(row.quantity || 0), sku: row.sku, unit: row.unit || 'pcs', unit_price: row.unit_price || 0,
                     allocations: row.allocations.map(allocation => ({distributor_id: allocation.distributor_id ? Number(allocation.distributor_id) : null, quantity: Number(allocation.quantity || 0)}))}))};
         },
-        async save(intent) {
-            if (this.saving) return;
-            const error = !this.name.trim() || !this.plannedOn ? 'Isi nama dan tanggal rencana terlebih dahulu.' : intent === 'finalize' ? this.validateProducts() || this.validateAllocations() : '';
-            this.errors = error ? [error] : [];
-            if (error) return;
+        async save(intent, automatic = false) {
+            if (this.saving || this.importing || (automatic && !this.dirty)) return false;
+            clearTimeout(autosaveTimer);
+            const error = !this.plannedOn ? 'Isi tanggal rencana sebelum menyimpan draft.' : intent === 'finalize' ? this.validateProducts() || this.validateAllocations() : '';
+            if (!automatic) this.errors = error ? [error] : [];
+            if (error) { this.autosaveMessage = error; return false; }
+            const payload = this.payload(intent);
+            const fingerprint = this.fingerprint();
             this.saving = true;
+            this.autosaveMessage = '';
+            let success = false;
             try {
-                const response = await fetch(this.urls.save, {method: this.version ? 'PATCH' : 'POST', headers: {'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify(this.payload(intent))});
+                const response = await fetch(this.urls.save, {method: this.version ? 'PATCH' : 'POST', headers: {'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content}, body: JSON.stringify({...payload, autosave: automatic})});
                 const data = await response.json();
-                if (!response.ok) { this.errors = Object.values(data.errors || {request: [data.message || 'Rencana tidak dapat disimpan.']}).flat(); return; }
-                window.location.assign(data.redirect);
-            } catch { this.errors = ['Koneksi terputus. Data isian tetap tersedia; coba simpan kembali.']; }
-            finally { this.saving = false; }
+                if (!response.ok) {
+                    const messages = Object.values(data.errors || {request: [data.message || 'Rencana tidak dapat disimpan.']}).flat();
+                    this.autosaveMessage = 'Draft belum tersimpan. ' + messages.join(' ');
+                    if (!automatic) this.errors = messages;
+                    return false;
+                }
+                this.version = data.version;
+                this.reference = data.reference;
+                this.urls.save = data.save_url;
+                this.savedFingerprint = fingerprint;
+                success = true;
+                if (intent === 'finalize') {
+                    this.leaving = true;
+                    window.location.assign(data.redirect);
+                } else {
+                    window.history.replaceState(window.history.state, '', data.edit_url);
+                }
+                return true;
+            } catch {
+                this.autosaveMessage = 'Draft belum tersimpan. Periksa koneksi, lalu klik Simpan Draft untuk mencoba lagi.';
+                if (!automatic) this.errors = [this.autosaveMessage];
+                return false;
+            } finally {
+                this.saving = false;
+                if (success && this.dirty && !this.leaving) this.scheduleAutosave();
+            }
         },
         async importFile(file) {
             if (!file || this.importing) return;

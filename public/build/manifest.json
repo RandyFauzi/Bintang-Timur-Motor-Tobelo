@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-wW9fIgVC.css",
+    "file": "assets/app-C8CwNULN.css",
     "name": "app",
     "names": [
       "app.css"
@@ -252,7 +252,7 @@
     "src": "resources/images/maps/indonesia-coast.svg"
   },
   "resources/js/app.js": {
-    "file": "assets/app-B9KeKXkq.js",
+    "file": "assets/app-DiosVw9a.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true

@@ -4,6 +4,7 @@
             <a class="plan-back" href="{{ route('purchase-orders.index') }}"><span aria-hidden="true">←</span> Kembali ke daftar Pre Order</a>
             <h1>{{ $plan ? 'Edit Rencana Pengadaan' : 'Buat Rencana Pengadaan' }}</h1>
             <p>Simpan sebagai draft kapan saja, lalu finalisasi saat seluruh kebutuhan sudah dialokasikan.</p>
+            <p class="plan-save-status" :class="{'text-danger': autosaveMessage}" role="status" aria-live="polite" x-text="draftStatus"></p>
         </header>
         <nav class="plan-steps" aria-label="Tahap pembuatan rencana">
             @foreach(['Kebutuhan Produk', 'Alokasi Distributor', 'Review & Finalisasi'] as $index => $label)
@@ -79,7 +80,14 @@
             </form>
         </x-ui.dialog>
         <x-ui.dialog name="plan-import" title="Import Kebutuhan Produk" description="Gunakan template Excel .xlsx untuk menambahkan produk ke rencana. Katalog dan stok tidak akan diubah.">
-            <div class="dialog-form"><a class="ui-button ui-button--secondary" href="{{ route('purchase-plans.template') }}">Unduh Template .xlsx</a><label class="form-field"><span class="form-field__label">File Excel (maksimal 5 MB)</span><input class="form-input" type="file" accept=".xlsx" :disabled="importing" @change="await importFile($event.target.files[0]); $event.target.value = ''; $el.closest('dialog').close()"></label><p x-show="importing" class="text-sm text-muted" role="status">Mengimpor produk…</p><p class="text-xs text-muted">Maksimal 100 produk per rencana. Isi kolom Kebutuhan dengan jumlah unit.</p></div>
+            <div class="dialog-form"><a class="ui-button ui-button--secondary" href="{{ route('purchase-plans.template') }}" download>Unduh Template .xlsx</a><label class="form-field"><span class="form-field__label">File Excel (maksimal 5 MB)</span><input class="form-input" type="file" accept=".xlsx" :disabled="importing" @change="await importFile($event.target.files[0]); $event.target.value = ''; $el.closest('dialog').close()"></label><p x-show="importing" class="text-sm text-muted" role="status">Mengimpor produk…</p><p class="text-xs text-muted">Maksimal 100 produk per rencana. Isi kolom Kebutuhan dengan jumlah unit.</p></div>
+        </x-ui.dialog>
+        <x-ui.dialog name="plan-unsaved" title="Perubahan belum tersimpan" description="Simpan draft sebelum keluar agar pilihan produk dan alokasi distributor dapat dilanjutkan nanti.">
+            <div class="dialog-form">
+                <p class="text-sm" role="status" aria-live="polite" x-text="draftStatus"></p>
+                <p class="text-xs text-muted">Jika nama rencana belum diisi, draft menggunakan nama sementara. Draft tersedia di daftar pengadaan.</p>
+                <footer class="dialog-actions flex-wrap"><button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Tetap Mengedit</button><button type="button" class="ui-button" :disabled="saving || importing" @click="saveAndLeave()" x-text="saving ? 'Menyimpan…' : 'Simpan Draft & Keluar'">Simpan Draft & Keluar</button></footer>
+            </div>
         </x-ui.dialog>
     </div>
 </x-app-layout>
