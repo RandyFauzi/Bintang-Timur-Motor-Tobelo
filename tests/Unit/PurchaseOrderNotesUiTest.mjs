@@ -92,7 +92,7 @@ test('finalization creates cargo using the selected catalogue service and keeps 
     model.openFinalize(model.orders[0]);
     assert.equal(model.shipment.origin_port,'Surabaya');
     assert.equal(model.shipment.shipping_service_id,'');
-    model.shipment.shipping_service_id='1';
+    model.cargoSelection=['1'];
     model.request=async()=>{throw {errors:['Cargo tidak aktif.']};};
     await model.finalize();
     assert.equal(model.orders[0].finalized,false);
@@ -107,6 +107,23 @@ test('finalization creates cargo using the selected catalogue service and keeps 
     assert.equal(model.orders[0].shipment_url,'/shipments?shipment=9');
     assert.equal(model.badge(model.orders[0]),'Dalam Pengiriman');
     assert.equal(events.at(-1),'close-plan-shipment');
+});
+
+test('cargo picker resets for each distributor and only accepts a service from the catalogue', () => {
+    const model=state([order(1,5),order(2,2)]); model.$dispatch=()=>{};
+    model.openFinalize(model.orders[0]);
+    assert.deepEqual(model.cargoSelection,[]);
+    model.cargoSelection=['1'];
+    assert.equal(model.shipment.shipping_service_id,'1');
+    assert.deepEqual(model.cargoSelection,['1']);
+    model.openFinalize(model.orders[1]);
+    assert.deepEqual(model.cargoSelection,[]);
+    assert.equal(model.shipment.shipping_service_id,'');
+    model.cargoSelection=['unknown'];
+    assert.equal(model.shipment.shipping_service_id,'');
+    model.cargoSelection=['1'];
+    model.cargoSelection=[];
+    assert.equal(model.shipment.shipping_service_id,'');
 });
 
 test('shipping preview uses saved invoice quantities for only the selected distributor and excludes empty items', () => {

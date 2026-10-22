@@ -29,6 +29,11 @@ export function purchaseOrderNotes(initial, services, config) {
         },
         get selectedShortages() { return this.shortages.filter(item => this.selected.map(Number).includes(item.source_index)); },
         get selectedOrder() { return this.orders.find(order => order.id === this.selectedOrderId); },
+        get cargoSelection() { return this.shipment.shipping_service_id ? [String(this.shipment.shipping_service_id)] : []; },
+        set cargoSelection(values) {
+            const id = values[0] ?? '';
+            this.shipment.shipping_service_id = this.services.some(service => String(service.id) === String(id)) ? String(id) : '';
+        },
         get shipmentItems() { return (this.selectedOrder?.saved.items || []).filter(item => Number(item.invoice_quantity) > 0); },
         get shipmentUnits() { return this.shipmentItems.reduce((sum, item) => sum + Number(item.invoice_quantity), 0); },
         money(value) { return new Intl.NumberFormat('id-ID', {style:'currency', currency:'IDR', maximumFractionDigits:2}).format(Number(value || 0)); },
