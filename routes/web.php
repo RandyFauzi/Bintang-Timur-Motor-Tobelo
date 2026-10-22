@@ -54,7 +54,7 @@ Route::middleware('auth')->group(function () {
     Route::get('purchase-plans/products', [PurchasePlanController::class, 'products'])->name('purchase-plans.products');
     Route::get('purchase-plans/template', [PurchasePlanController::class, 'template'])->name('purchase-plans.template');
     Route::post('purchase-plans/import', [PurchasePlanController::class, 'import'])->middleware('throttle:10,1')->name('purchase-plans.import');
-    Route::resource('purchase-plans', PurchasePlanController::class)->only(['store', 'edit', 'update', 'show'])->parameters(['purchase-plans' => 'purchasePlan']);
+    Route::resource('purchase-plans', PurchasePlanController::class)->only(['store', 'edit', 'update', 'show', 'destroy'])->parameters(['purchase-plans' => 'purchasePlan']);
     Route::patch('purchase-plans/{purchasePlan}/orders/{purchaseOrder}/note', [PurchaseOrderNoteController::class, 'update'])->name('purchase-plans.orders.note');
     Route::post('purchase-plans/{purchasePlan}/orders/{purchaseOrder}/finalize', [PurchaseOrderNoteController::class, 'finalize'])->name('purchase-plans.orders.finalize');
     Route::patch('purchase-orders/{purchaseOrder}/receipt', [PurchaseOrderController::class, 'receive'])->name('purchase-orders.receive');

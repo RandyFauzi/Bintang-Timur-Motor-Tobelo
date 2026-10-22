@@ -31,6 +31,57 @@ class PurchasePlanTest extends TestCase
         $this->post(route('purchase-plans.store'))->assertRedirect(route('login'));
         $this->patch(route('purchase-plans.update', $plan))->assertRedirect(route('login'));
         $this->post(route('purchase-plans.import'))->assertRedirect(route('login'));
+        $this->delete(route('purchase-plans.destroy', $plan), ['version' => $plan->version])->assertRedirect(route('login'));
+        $this->assertModelExists($plan);
+    }
+
+    public function test_draft_can_be_deleted_without_removing_other_plans_or_catalogue_data(): void
+    {
+        $product = Product::factory()->create();
+        $distributor = Distributor::factory()->create();
+        $plan = PurchasePlan::factory()->create(['version' => 2, 'items' => [['product_id' => $product->id, 'quantity' => 10, 'allocations' => [['distributor_id' => $distributor->id, 'quantity' => 10]]]]]);
+        $otherPlan = PurchasePlan::factory()->create();
+        $this->actingAs(User::factory()->create());
+        $this->get(route('purchase-orders.index'))->assertSee(route('purchase-plans.destroy', $plan), false)->assertSee('Hapus draft '.$plan->name);
+
+        $this->delete(route('purchase-plans.destroy', $plan), ['version' => 2])
+            ->assertRedirect(route('purchase-orders.index'))->assertSessionHas('success');
+
+        $this->assertModelMissing($plan);
+        $this->assertModelExists($otherPlan);
+        $this->assertModelExists($product);
+        $this->assertModelExists($distributor);
+        $this->assertDatabaseCount('purchase_orders', 0);
+    }
+
+    #[TestWith([null])]
+    #[TestWith([1])]
+    public function test_deleting_draft_requires_current_version(?int $version): void
+    {
+        $plan = PurchasePlan::factory()->create(['version' => 2]);
+
+        $this->actingAs(User::factory()->create())
+            ->deleteJson(route('purchase-plans.destroy', $plan), ['version' => $version])
+            ->assertUnprocessable()->assertJsonValidationErrors('version');
+
+        $this->assertModelExists($plan);
+    }
+
+    #[TestWith(['finalized', false])]
+    #[TestWith(['draft', true])]
+    public function test_draft_deletion_rejects_finalized_plans_or_plans_with_orders(string $status, bool $hasOrder): void
+    {
+        $plan = PurchasePlan::factory()->create(['status' => $status, 'version' => 1]);
+        $order = $hasOrder ? PurchaseOrder::factory()->create(['purchase_plan_id' => $plan->id]) : null;
+
+        $this->actingAs(User::factory()->create())
+            ->deleteJson(route('purchase-plans.destroy', $plan), ['version' => 1])
+            ->assertUnprocessable()->assertJsonValidationErrors('draft');
+
+        $this->assertModelExists($plan);
+        if ($order) {
+            $this->assertModelExists($order);
+        }
     }
 
     public function test_empty_draft_can_be_saved_reopened_and_found_in_list(): void

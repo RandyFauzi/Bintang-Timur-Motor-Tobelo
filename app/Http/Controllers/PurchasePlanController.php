@@ -15,9 +15,12 @@ use App\Services\PurchaseOrderNoteService;
 use App\Services\PurchasePlanService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -69,6 +72,25 @@ class PurchasePlanController extends Controller
     public function update(PurchasePlanRequest $request, PurchasePlan $purchasePlan, PurchasePlanService $service): JsonResponse
     {
         return $this->saved($service->save($request->validated(), $purchasePlan), $request->boolean('autosave'));
+    }
+
+    public function destroy(Request $request, PurchasePlan $purchasePlan): RedirectResponse
+    {
+        $data = $request->validate(['version' => ['required', 'integer', 'min:1']]);
+
+        DB::transaction(function () use ($purchasePlan, $data): void {
+            $plan = PurchasePlan::lockForUpdate()->findOrFail($purchasePlan->id);
+            if ($plan->status !== 'draft' || $plan->orders()->exists()) {
+                throw ValidationException::withMessages(['draft' => 'Hanya draft yang belum difinalisasi yang dapat dihapus.']);
+            }
+            if ($plan->version !== (int) $data['version']) {
+                throw ValidationException::withMessages(['version' => 'Draft telah berubah. Muat ulang halaman sebelum menghapus.']);
+            }
+
+            $plan->delete();
+        });
+
+        return redirect()->route('purchase-orders.index')->with('success', 'Draft rencana pengadaan berhasil dihapus.');
     }
 
     private function saved(PurchasePlan $plan, bool $autosave = false): JsonResponse

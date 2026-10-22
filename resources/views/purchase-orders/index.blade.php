@@ -5,7 +5,22 @@
         @if($drafts->total() > 0 && !request()->boolean('archived'))
             <section class="catalogue-surface p-5" aria-label="Draft rencana pengadaan">
                 <h2 class="font-medium">Draft Rencana Pengadaan</h2>
-                <ul class="mt-3 divide-y">@foreach($drafts as $draft)<li class="flex flex-wrap items-center justify-between gap-3 py-3"><div><p class="text-sm font-medium">{{ $draft->name }}</p><p class="mt-1 text-xs text-muted">{{ $draft->reference }} · {{ $draft->planned_on->translatedFormat('d M Y') }}</p></div><a class="ui-button ui-button--secondary" href="{{ route('purchase-plans.edit', $draft) }}">Lanjutkan Draft</a></li>@endforeach</ul>
+                <ul class="mt-3 divide-y">
+                    @foreach($drafts as $draft)
+                        <li class="flex flex-wrap items-center justify-between gap-3 py-3">
+                            <div><p class="text-sm font-medium">{{ $draft->name }}</p><p class="mt-1 text-xs text-muted">{{ $draft->reference }} · {{ $draft->planned_on->translatedFormat('d M Y') }}</p></div>
+                            <div class="procurement-draft-actions flex items-center gap-2">
+                                <a class="ui-button ui-button--secondary" href="{{ route('purchase-plans.edit', $draft) }}">Lanjutkan Draft</a>
+                                <form method="POST" action="{{ route('purchase-plans.destroy', $draft) }}" x-data="{ deleting: false }" @submit="if (!window.confirm('Hapus draft ini? Rencana yang dihapus tidak dapat dikembalikan.')) { $event.preventDefault(); } else { deleting = true; }">
+                                    @csrf
+                                    @method('DELETE')
+                                    <input type="hidden" name="version" value="{{ $draft->version }}">
+                                    <button type="submit" class="ui-button ui-button--secondary text-red-700" :disabled="deleting" aria-label="Hapus draft {{ $draft->name }}">Hapus</button>
+                                </form>
+                            </div>
+                        </li>
+                    @endforeach
+                </ul>
                 @if($drafts->hasPages())<div class="mt-3">{{ $drafts->links() }}</div>@endif
             </section>
         @endif
