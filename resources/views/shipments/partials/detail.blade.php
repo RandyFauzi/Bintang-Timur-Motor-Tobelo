@@ -14,10 +14,25 @@
     </ol>
     <div x-cloak x-show="state.status === 'delayed'" class="shipping-warning">Estimasi tiba sudah terlewati. Hubungi jasa pengiriman dan konfirmasi jika cargo sudah diterima.</div>
     <div class="shipping-detail-grid">
-        <section><h3>Informasi Cargo</h3><dl><dt>Nama Kapal</dt><dd>{{ $selected->vessel_name ?: 'Belum diisi' }}</dd><dt>Jumlah Kemasan</dt><dd>{{ $selected->package_count }} koli</dd><dt>Durasi Estimasi</dt><dd>{{ $selected->duration_days }} hari</dd><dt>Catatan</dt><dd class="whitespace-pre-line">{{ $selected->notes ?: 'Tidak ada catatan' }}</dd></dl></section>
+        <section><h3>Informasi Cargo</h3><dl><dt>Nama Kapal</dt><dd>{{ $selected->vessel_name ?: 'Belum diisi' }}</dd>@if($selected->distributorInvoices->isEmpty())<dt>Jumlah Kemasan</dt><dd>{{ $selected->package_count }} koli</dd>@else<dt>Distributor</dt><dd>{{ $selected->distributorInvoices->pluck('purchaseOrder.distributor_name')->unique()->join(', ') }}</dd>@endif<dt>Durasi Estimasi</dt><dd>{{ $selected->duration_days }} hari</dd><dt>Catatan</dt><dd class="whitespace-pre-line">{{ $selected->notes ?: 'Tidak ada catatan' }}</dd></dl></section>
         <section><h3>Alamat Tujuan</h3><p>{{ $selected->destination_address ?: $selected->destination_port }}</p><p class="mt-3 text-xs text-muted">Perhitungan tanggal mengikuti WIT (UTC+9), waktu setempat Tobelo.</p>@if($selected->delivered_at)<p class="mt-4 text-sm">Dikonfirmasi oleh <strong>{{ $selected->receiver?->name ?? 'Pengguna yang sudah dihapus' }}</strong>.</p>@endif</section>
     </div>
-    <section class="mt-5 rounded-xl border p-4"><h3 class="font-medium">Faktur Distributor dalam Kargo Ini</h3><p class="mt-2 text-xs text-muted">Approval Sudah Sampai otomatis menjadi tanggal masuk untuk seluruh faktur yang terhubung.</p><div class="mt-3 grid gap-3">@forelse($selected->distributorInvoices as $cargoInvoice)<a class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-gray-50 p-3 text-sm" href="{{ route('distributor-invoices.show',$cargoInvoice) }}"><span>{{ $cargoInvoice->reference }} - {{ $cargoInvoice->purchaseOrder->distributor_name }}</span><span>Sisa Rp {{ number_format($cargoInvoice->remainingCents()/100,2,',','.') }}</span></a>@empty<p class="text-sm text-muted">Belum ada faktur terhubung. Pilih kargo ini dari menu Edit Faktur & Tempo pada detail tagihan.</p>@endforelse</div></section>
+    <section class="mt-5 rounded-xl border p-4"><h3 class="font-medium">Pesanan per Distributor</h3><p class="mt-2 text-xs text-muted">Jumlah barang mengikuti nota yang divalidasi. Konfirmasi Sudah Sampai menjadi tanggal masuk pada tagihan.</p>
+        <div class="mt-3 grid gap-4">
+            @forelse($selected->distributorInvoices as $cargoInvoice)
+                <article class="min-w-0 rounded-xl border bg-gray-50 p-4">
+                    <header class="flex flex-wrap items-start justify-between gap-3"><div class="min-w-0"><h4 class="break-words font-medium">{{ $cargoInvoice->purchaseOrder->distributor_name }}</h4><p class="mt-1 break-words text-xs text-muted">PO {{ $cargoInvoice->purchaseOrder->reference }} · Nota {{ $cargoInvoice->supplier_reference ?: '-' }}</p></div><a class="text-sm underline" href="{{ route('distributor-invoices.show', $cargoInvoice) }}">Lihat Tagihan</a></header>
+                    <p class="mt-2 break-words text-xs text-muted">Tagihan {{ $cargoInvoice->reference }}</p>
+                    <ul class="mt-3 divide-y">
+                        @foreach($cargoInvoice->purchaseOrder->items as $cargoItem)
+                            @if(($cargoItem->invoice_quantity ?? $cargoItem->quantity) > 0)<li class="flex items-start justify-between gap-4 py-3 text-sm"><span class="min-w-0 break-words">{{ $cargoItem->product_name }}</span><strong class="shrink-0 font-medium">{{ $cargoItem->invoice_quantity ?? $cargoItem->quantity }} {{ $cargoItem->unit }}</strong></li>@endif
+                        @endforeach
+                    </ul>
+                    <div class="mt-3 flex flex-wrap justify-between gap-2 border-t pt-3 text-sm"><span>Total Nota: Rp {{ number_format($cargoInvoice->total_cents/100,2,',','.') }}</span><span>Sisa: Rp {{ number_format($cargoInvoice->remainingCents()/100,2,',','.') }}</span></div>
+                </article>
+            @empty<p class="text-sm text-muted">Belum ada faktur terhubung. Pilih kargo ini dari menu Edit Faktur & Tempo pada detail tagihan.</p>@endforelse
+        </div>
+    </section>
     @if(!$selected->delivered_at)
         <footer class="shipping-detail__actions"><a href="{{ route('shipments.index', ['shipment'=>$selected->id,'edit'=>$selected->id]) }}" class="ui-button ui-button--secondary">Edit Pengiriman</a><button type="button" class="ui-button" :disabled="state.status === 'scheduled' || state.status === 'delivered'" @click="$dispatch('open-dialog',{id:'shipment-arrive'})">Konfirmasi Sudah Sampai</button></footer>
     @endif

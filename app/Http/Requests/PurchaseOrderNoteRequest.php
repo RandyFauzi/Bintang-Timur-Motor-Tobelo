@@ -26,7 +26,7 @@ class PurchaseOrderNoteRequest extends FormRequest
                 'shipping_service_id' => ['required', 'integer', Rule::exists('shipping_services', 'id')->where('is_active', true)],
                 'origin_port' => ['required', 'string', 'max:255'],
                 'departed_on' => ['required', 'date_format:Y-m-d', 'after_or_equal:2000-01-01', 'before_or_equal:2100-12-31'],
-                'package_count' => ['required', 'integer', 'min:1', 'max:1000000'],
+                'package_count' => ['sometimes', 'integer', 'min:1', 'max:1000000'],
             ];
         }
 

@@ -8,6 +8,7 @@ use App\Models\DistributorPayment;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\PurchasePlan;
+use App\Models\Shipment;
 use App\Models\ShippingService;
 use App\Models\User;
 use App\Services\ShipmentService;
@@ -149,6 +150,36 @@ class PurchaseOrderNoteTest extends TestCase
         $this->get(route('shipments.index', ['shipment' => $firstInvoice->shipment_id]))->assertOk()->assertSee($firstInvoice->reference);
         app(ShipmentService::class)->arrive($firstInvoice->shipment, $user, 1);
         $this->assertNotNull($firstInvoice->fresh()->receivedAt());
+        $this->assertDatabaseCount('stock_movements', 0);
+    }
+
+    public function test_fifteen_distributors_get_fifteen_cargos_without_requiring_package_counts(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $carrier = ShippingService::factory()->create();
+        $plan = null;
+        $shipmentIds = [];
+        for ($index = 1; $index <= 15; $index++) {
+            [$plan, $order] = $this->order($plan, 'Distributor '.$index);
+            $this->patchJson($this->noteUrl($plan, $order), $this->notePayload($order, $index))->assertOk();
+            $payload = $this->shippingPayload($order->fresh(), $carrier);
+            unset($payload['package_count']);
+
+            $this->postJson($this->finalizeUrl($plan, $order), $payload)->assertOk()->assertJsonPath('order.distributor_name', 'Distributor '.$index);
+            $this->postJson($this->finalizeUrl($plan, $order), $payload)->assertOk();
+            $shipmentIds[] = $order->fresh()->invoice->shipment_id;
+        }
+
+        $this->assertCount(15, array_unique($shipmentIds));
+        $this->assertDatabaseCount('shipments', 15);
+        $this->assertDatabaseCount('distributor_invoices', 15);
+        $shipment = Shipment::findOrFail($shipmentIds[0]);
+        $response = $this->get(route('shipments.index', ['shipment' => $shipment->id]))
+            ->assertOk()->assertSee('Pesanan per Distributor')->assertSee('Distributor 1')->assertSee('Yamalube 02 Oil');
+        $selected = $response->viewData('selected');
+        $this->assertCount(1, $selected->distributorInvoices);
+        $this->assertSame('Distributor 1', $selected->distributorInvoices->sole()->purchaseOrder->distributor_name);
+        $this->assertSame(1, $selected->distributorInvoices->sole()->purchaseOrder->items->sole()->invoice_quantity);
         $this->assertDatabaseCount('stock_movements', 0);
     }
 

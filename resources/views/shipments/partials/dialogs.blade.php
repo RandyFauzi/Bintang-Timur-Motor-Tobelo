@@ -12,7 +12,12 @@
             <x-ui.field name="origin_port" label="Pelabuhan / Kota Asal" :value="$editing?->origin_port" required maxlength="255" placeholder="Contoh: Surabaya" />
             <x-ui.field name="destination_port" label="Pelabuhan / Kota Tujuan" :value="$editing?->destination_port ?? config('shipping.destination_port')" required maxlength="255" />
             <x-ui.field name="departed_on" label="Tanggal Berangkat" type="date" x-model="departedOn" :value="$editing?->departed_on->toDateString() ?? \App\Models\Shipment::today()->toDateString()" required />
-            <x-ui.field name="package_count" label="Jumlah Koli" type="number" min="1" max="1000000" :value="$editing?->package_count ?? 1" required />
+            @if($editing && $editing->distributorInvoices->isNotEmpty())
+                <input type="hidden" name="package_count" value="{{ $editing->package_count }}">
+                <div class="form-field"><span class="form-field__label">Distributor</span><p class="break-words text-sm">{{ $editing->distributorInvoices->pluck('purchaseOrder.distributor_name')->unique()->join(', ') }}</p></div>
+            @else
+                <x-ui.field name="package_count" label="Jumlah Koli" type="number" min="1" max="1000000" :value="$editing?->package_count ?? 1" required />
+            @endif
         </div>
         <p class="shipping-estimate" aria-live="polite">Estimasi tiba: <strong x-text="estimatedArrival"></strong></p>
         <x-ui.field name="destination_address" label="Alamat Tujuan"><textarea id="destination_address" name="destination_address" class="form-input" rows="3" maxlength="1000">{{ old('destination_address',$editing?->destination_address ?? config('shipping.destination_address')) }}</textarea></x-ui.field>

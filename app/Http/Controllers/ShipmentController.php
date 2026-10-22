@@ -18,7 +18,7 @@ class ShipmentController extends Controller
 {
     public function index(ShipmentRequest $request, ShipmentService $tracking): View
     {
-        $query = Shipment::query();
+        $query = Shipment::with('distributorInvoices.purchaseOrder');
         if ($search = $request->validated('search')) {
             $query->where(function (Builder $query) use ($search): void {
                 foreach (['reference', 'cargo_name', 'service_name', 'vessel_name', 'origin_port', 'destination_port'] as $field) {
@@ -31,9 +31,10 @@ class ShipmentController extends Controller
         }
         $shipments = $query->orderByRaw('delivered_at IS NOT NULL')->orderBy('estimated_arrival_on')->orderBy('id')->paginate(6)->withQueryString();
         $selected = $request->validated('shipment') ? Shipment::with('receiver')->findOrFail($request->integer('shipment')) : $shipments->first();
-        $selected?->load(['receiver', 'distributorInvoices.purchaseOrder']);
+        $selected?->load(['receiver', 'distributorInvoices.purchaseOrder.items']);
         $editId = $request->validated('edit') ?? old('_shipment_id');
         $editing = filter_var($editId, FILTER_VALIDATE_INT) ? Shipment::findOrFail($editId) : null;
+        $editing?->load('distributorInvoices.purchaseOrder');
         $serviceId = $request->validated('service_edit') ?? old('_service_id');
         $editingService = filter_var($serviceId, FILTER_VALIDATE_INT) ? ShippingService::findOrFail($serviceId) : null;
 

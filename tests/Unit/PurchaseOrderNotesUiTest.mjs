@@ -103,10 +103,26 @@ test('finalization creates cargo using the selected catalogue service and keeps 
     await model.finalize();
     assert.equal(sent.payload.shipping_service_id,'1');
     assert.equal(sent.payload.version,2);
-    assert.equal(sent.payload.package_count,1);
+    assert.equal(Object.hasOwn(sent.payload,'package_count'),false);
     assert.equal(model.orders[0].shipment_url,'/shipments?shipment=9');
     assert.equal(model.badge(model.orders[0]),'Dalam Pengiriman');
     assert.equal(events.at(-1),'close-plan-shipment');
+});
+
+test('shipping preview uses saved invoice quantities for only the selected distributor and excludes empty items', () => {
+    const model=state([order(1,5),order(2,2)]); model.$dispatch=()=>{};
+    const first=model.orders[0], second=model.orders[1];
+    first.saved.items.push({id:99,product_name:'Barang kosong',quantity:10,invoice_quantity:0});
+    first.items[0].invoice_quantity=900;
+    model.openFinalize(first);
+    assert.equal(model.selectedOrder.distributor_name,'WMS');
+    assert.equal(model.shipmentItems.length,1);
+    assert.equal(model.shipmentUnits,5);
+    assert.equal(model.shipmentItems[0].invoice_quantity,5);
+    model.openFinalize(second);
+    assert.equal(model.selectedOrder.distributor_name,'WIN');
+    assert.equal(model.shipmentUnits,2);
+    assert.equal(model.shipmentItems[0].id,20);
 });
 
 test('reorder URL sends only selected source identities and server calculates missing quantities', () => {

@@ -24,7 +24,7 @@
                             <div class="flex flex-wrap items-center justify-between gap-2"><span class="shipping-reference">{{ $item->reference }}</span><span class="shipping-status" :class="'shipping-status--' + state.status" x-text="state.label">{{ $itemState['label'] }}</span></div>
                             <h3 class="mt-3 break-words font-medium">{{ $item->cargo_name }}</h3><p class="mt-1 text-xs text-muted">{{ $item->service_name }}</p>
                             <div class="shipping-mini-route"><span>{{ $item->origin_port }}</span><span aria-hidden="true">→</span><span>{{ $item->destination_port }}</span></div>
-                            <div class="flex justify-between gap-2 text-xs text-muted"><span>{{ $item->package_count }} koli</span><span>Estimasi {{ $item->estimated_arrival_on->locale('id')->translatedFormat('j M Y') }}</span></div>
+                            <div class="flex flex-wrap justify-between gap-2 text-xs text-muted"><span>{{ $item->distributorInvoices->isNotEmpty() ? $item->distributorInvoices->pluck('purchaseOrder.distributor_name')->unique()->join(', ') : $item->package_count.' koli' }}</span><span>Estimasi {{ $item->estimated_arrival_on->locale('id')->translatedFormat('j M Y') }}</span></div>
                         </a>
                     @empty
                         <x-ui.empty-state title="Belum ada pengiriman" description="Tambahkan cargo baru atau ubah pencarian." />

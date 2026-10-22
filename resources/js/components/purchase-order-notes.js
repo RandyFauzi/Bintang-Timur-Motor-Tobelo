@@ -5,7 +5,7 @@ const decorate = raw => ({...clone(raw), saved: clone(raw), editing: !raw.note_i
 export function purchaseOrderNotes(initial, services, config) {
     return {
         orders: initial.map(decorate), services, config, tab: 'distributors', search: '', distributorId: '', noteStatus: '', selected: [],
-        selectedOrderId: null, finalizing: false, finalizeErrors: [], notice: '', shipment: {shipping_service_id: '', origin_port: '', departed_on: config.today, package_count: 1},
+        selectedOrderId: null, finalizing: false, finalizeErrors: [], notice: '', shipment: {shipping_service_id: '', origin_port: '', departed_on: config.today},
         get filteredOrders() {
             const term = this.search.trim().toLocaleLowerCase('id');
             return this.orders.filter(order => (!this.distributorId || String(order.distributor_id) === String(this.distributorId)) && (!this.noteStatus || (this.noteStatus === 'unissued' && !order.saved.note_issued) || (this.noteStatus === 'issued' && order.saved.note_issued && !order.finalized) || (this.noteStatus === 'shipping' && order.finalized)) && (!term || [order.distributor_name, order.supplier_note_number, order.reference, ...order.items.map(item => item.product_name + ' ' + item.color)].join(' ').toLocaleLowerCase('id').includes(term)));
@@ -29,6 +29,9 @@ export function purchaseOrderNotes(initial, services, config) {
         },
         get selectedShortages() { return this.shortages.filter(item => this.selected.map(Number).includes(item.source_index)); },
         get selectedOrder() { return this.orders.find(order => order.id === this.selectedOrderId); },
+        get shipmentItems() { return (this.selectedOrder?.saved.items || []).filter(item => Number(item.invoice_quantity) > 0); },
+        get shipmentUnits() { return this.shipmentItems.reduce((sum, item) => sum + Number(item.invoice_quantity), 0); },
+        money(value) { return new Intl.NumberFormat('id-ID', {style:'currency', currency:'IDR', maximumFractionDigits:2}).format(Number(value || 0)); },
         units(order) { return order.items.reduce((sum, item) => sum + item.quantity, 0); },
         badge(order) {
             if (order.finalized) return order.shipment_status === 'delivered' ? 'Sudah Sampai' : order.shipment_status === 'scheduled' ? 'Menunggu Keberangkatan' : 'Dalam Pengiriman';
@@ -76,7 +79,7 @@ export function purchaseOrderNotes(initial, services, config) {
         openFinalize(order) {
             if (!this.canFinalize(order)) return;
             this.selectedOrderId = order.id;
-            this.shipment = {shipping_service_id: '', origin_port: order.origin_port || '', departed_on: order.saved.supplier_note_on > this.config.today ? order.saved.supplier_note_on : this.config.today, package_count: 1};
+            this.shipment = {shipping_service_id: '', origin_port: order.origin_port || '', departed_on: order.saved.supplier_note_on > this.config.today ? order.saved.supplier_note_on : this.config.today};
             this.finalizeErrors = [];
             this.$dispatch('open-dialog', {id: 'finalize-plan-shipment'});
         },
@@ -84,7 +87,7 @@ export function purchaseOrderNotes(initial, services, config) {
             const order = this.selectedOrder;
             if (!order || this.finalizing || !this.canFinalize(order)) return;
             this.finalizeErrors = [];
-            if (!this.shipment.shipping_service_id || !this.shipment.origin_port.trim() || !this.shipment.departed_on || !Number.isInteger(Number(this.shipment.package_count)) || Number(this.shipment.package_count) < 1) { this.finalizeErrors = ['Pilih jasa cargo, isi kota asal, tanggal berangkat, dan jumlah koli.']; return; }
+            if (!this.shipment.shipping_service_id || !this.shipment.origin_port.trim() || !this.shipment.departed_on) { this.finalizeErrors = ['Pilih jasa cargo, isi kota asal dan tanggal berangkat.']; return; }
             this.finalizing = true;
             try {
                 const data = await this.request(order.finalize_url, 'POST', {...this.shipment, origin_port: this.shipment.origin_port.trim(), version: order.version});

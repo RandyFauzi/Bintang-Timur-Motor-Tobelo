@@ -67,7 +67,7 @@ class PurchaseOrderNoteService
             $invoice = $order->invoice()->lockForUpdate()->first();
             if ($order->shipment_finalized_at) {
                 $shipment = $invoice?->shipment;
-                if ($shipment && $shipment->shipping_service_id === (int) $data['shipping_service_id'] && $shipment->origin_port === $data['origin_port'] && $shipment->departed_on->toDateString() === $data['departed_on'] && $shipment->package_count === (int) $data['package_count']) {
+                if ($shipment && $shipment->shipping_service_id === (int) $data['shipping_service_id'] && $shipment->origin_port === $data['origin_port'] && $shipment->departed_on->toDateString() === $data['departed_on'] && (! array_key_exists('package_count', $data) || $shipment->package_count === (int) $data['package_count'])) {
                     return;
                 }
                 throw ValidationException::withMessages(['note' => 'Pengiriman sudah difinalisasi. Muat ulang halaman.']);
@@ -90,7 +90,7 @@ class PurchaseOrderNoteService
                 'shipping_service_id' => $data['shipping_service_id'],
                 'cargo_name' => Str::limit('Pengadaan '.$order->distributor_name, 255, ''),
                 'origin_port' => $data['origin_port'], 'destination_port' => config('shipping.destination_port'),
-                'destination_address' => config('shipping.destination_address'), 'package_count' => $data['package_count'],
+                'destination_address' => config('shipping.destination_address'), 'package_count' => $data['package_count'] ?? 1,
                 'departed_on' => $data['departed_on'], 'notes' => 'PO '.$order->reference.' | Nota '.$order->supplier_note_number,
             ], $user);
             $invoice->shipment_id = $shipment->id;
@@ -167,7 +167,7 @@ class PurchaseOrderNoteService
                         $index = null;
                     }
 
-                    return ['id' => $item->id, 'product_name' => $item->product_name, 'color' => $index !== null ? ($source['color'] ?? '') : '', 'source_index' => $index, 'quantity' => $item->quantity, 'invoice_quantity' => $item->invoice_quantity];
+                    return ['id' => $item->id, 'product_name' => $item->product_name, 'color' => $index !== null ? ($source['color'] ?? '') : '', 'unit' => $item->unit, 'source_index' => $index, 'quantity' => $item->quantity, 'invoice_quantity' => $item->invoice_quantity];
                 })->all(),
             ];
         })->all();
