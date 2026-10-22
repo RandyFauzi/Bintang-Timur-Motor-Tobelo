@@ -1,5 +1,5 @@
 <x-app-layout>
-    <div class="catalogue-page procurement-page grid gap-5" x-data="{ deletion: { url: '', reference: '', version: 0 } }" @delete-purchase-order.window="deletion = $event.detail; $dispatch('open-dialog', { id: 'delete-purchase-order' })">
+    <div class="catalogue-page procurement-page grid gap-5" x-data="{ deletion: { url: '', reference: '', version: 0 }, draftDeletion: { url: '', name: '', version: 0 } }" @delete-purchase-order.window="deletion = $event.detail; $dispatch('open-dialog', { id: 'delete-purchase-order' })">
         <header class="catalogue-heading !mb-0"><div><h1>Pengadaan Barang</h1><p class="mt-2 text-sm text-muted">Buat perencanaan dan proses pengadaan barang.</p></div></header>
         <nav class="flex flex-wrap gap-2" aria-label="Daftar pengadaan"><a class="ui-button ui-button--secondary" href="{{ route('purchase-orders.index', request()->except(['archived', 'page'])) }}" @if(!request()->boolean('archived')) aria-current="page" @endif>Aktif</a><a class="ui-button ui-button--secondary" href="{{ route('purchase-orders.index', array_replace(request()->except('page'), ['archived' => 1])) }}" @if(request()->boolean('archived')) aria-current="page" @endif>Arsip</a></nav>
         @if($drafts->total() > 0 && !request()->boolean('archived'))
@@ -11,12 +11,7 @@
                             <div><p class="text-sm font-medium">{{ $draft->name }}</p><p class="mt-1 text-xs text-muted">{{ $draft->reference }} · {{ $draft->planned_on->translatedFormat('d M Y') }}</p></div>
                             <div class="procurement-draft-actions flex items-center gap-2">
                                 <a class="ui-button ui-button--secondary" href="{{ route('purchase-plans.edit', $draft) }}">Lanjutkan Draft</a>
-                                <form method="POST" action="{{ route('purchase-plans.destroy', $draft) }}" x-data="{ deleting: false }" @submit="if (!window.confirm('Hapus draft ini? Rencana yang dihapus tidak dapat dikembalikan.')) { $event.preventDefault(); } else { deleting = true; }">
-                                    @csrf
-                                    @method('DELETE')
-                                    <input type="hidden" name="version" value="{{ $draft->version }}">
-                                    <button type="submit" class="ui-button ui-button--secondary text-red-700" :disabled="deleting" aria-label="Hapus draft {{ $draft->name }}">Hapus</button>
-                                </form>
+                                <button type="button" class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-700 transition-colors hover:border-red-300 hover:bg-red-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600" aria-label="Hapus draft {{ $draft->name }}" title="Hapus draft" aria-haspopup="dialog" aria-controls="delete-purchase-draft" data-url="{{ route('purchase-plans.destroy', $draft) }}" data-name="{{ $draft->name }}" data-version="{{ $draft->version }}" @click="draftDeletion = { url: $el.dataset.url, name: $el.dataset.name, version: Number($el.dataset.version) }; $dispatch('open-dialog', { id: 'delete-purchase-draft' })"><x-ui.icon name="trash" :size="18" /></button>
                             </div>
                         </li>
                     @endforeach
@@ -88,6 +83,14 @@
             </div>
             <x-ui.pagination :paginator="$orders" />
         </section>
+        <x-ui.dialog name="delete-purchase-draft" title="Hapus Draft Rencana Pengadaan?" description="Draft yang dihapus tidak dapat dikembalikan.">
+            <form method="POST" :action="draftDeletion.url" class="dialog-form" @submit="submitting = true">
+                @csrf @method('DELETE')
+                <input type="hidden" name="version" :value="draftDeletion.version">
+                <p class="text-sm">Hapus draft <strong class="break-words" x-text="draftDeletion.name"></strong>?</p>
+                <footer class="dialog-actions"><button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button><button type="submit" class="ui-button" :disabled="submitting || !draftDeletion.url" x-text="submitting ? 'Menghapus…' : 'Ya, Hapus Draft'">Ya, Hapus Draft</button></footer>
+            </form>
+        </x-ui.dialog>
         <x-ui.dialog name="delete-purchase-order" title="Hapus Pengadaan dari Daftar Aktif?" description="Sistem memeriksa seluruh rencana dan transaksi terkait sebelum menentukan penghapusan atau pengarsipan.">
             <form method="POST" :action="deletion.url" class="dialog-form" @submit="submitting = true">
                 @csrf @method('DELETE')
