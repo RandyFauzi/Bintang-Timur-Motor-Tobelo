@@ -9,7 +9,7 @@
     .note-filters .filter-select-label { background: white; }
     .note-filters .filter-select { max-width: 260px; }
     .note-search { width: 100%; }
-    .note-cards { display: grid; gap: 24px; }
+    .note-cards { display: grid; min-width: 0; grid-template-columns: minmax(0,1fr); gap: 24px; }
     .note-card { min-width: 0; border: 1px solid var(--color-border-strong); border-radius: 12px; background: white; padding: 24px; box-shadow: 0 3px 10px rgb(0 0 0 / 10%); }
     .note-card__heading { display: flex; align-items: flex-start; gap: 16px; }
     .note-card__heading > div { flex: 1; min-width: 0; padding-top: 4px; }
@@ -45,6 +45,9 @@
     .note-replan-footer strong { margin-left: 8px; color: var(--color-text); }
     .note-finalize-dialog { width: min(595px,calc(100% - 32px)); }
     .note-finalize-dialog .note-card__actions { padding: 0; }
+    @media(max-width: 1199px) {
+        .note-fields { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    }
     @media(max-width: 767px) {
         .note-workspace, .note-card { padding: 16px; }
         .note-tabs > button { min-width: 0; flex: 1; padding-inline: 8px; }
@@ -56,5 +59,10 @@
         .note-card__actions { padding: 0; gap: 8px; }
         .note-card__actions > .ui-button { flex-basis: 100%; }
         .note-replan-footer > .ui-button { width: 100%; }
+        .note-filters > .filter-select-label { width: 100%; min-width: 0; }
+        .note-filters .filter-select { width: 100%; max-width: none; min-width: 0; min-height: 44px; font-size: 16px; }
+        .note-card__links { justify-content: flex-start; overflow-wrap: anywhere; }
+        .note-tabs > button { flex-wrap: wrap; gap: 6px; }
+        .note-fields .form-input { min-height: 44px; }
     }
 }

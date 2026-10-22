@@ -1,5 +1,6 @@
 <x-app-layout>
-<div class="catalogue-page grid gap-5">
+<div class="catalogue-page procurement-detail-page grid gap-5">
+    @if($invoice->purchaseOrder->purchase_plan_id)<a class="plan-back" href="{{ route('purchase-plans.show', $invoice->purchaseOrder->purchase_plan_id) }}">← Kelola rencana & nota distributor</a>@endif
     <header class="catalogue-heading !mb-0 !block"><a class="text-sm text-muted underline" href="{{ route('distributor-invoices.index') }}">Kembali ke tagihan distributor</a><div class="mt-3 flex flex-wrap items-center justify-between gap-3"><div><h1>{{ $invoice->reference }}</h1><p class="mt-2 text-sm text-muted">{{ $invoice->purchaseOrder->distributor_name }} · PO {{ $invoice->purchaseOrder->ordered_on->format('d/m/Y') }}</p></div><x-ui.invoice-status :status="$invoice->billingStatus()" /></div></header>
     <div class="grid gap-4 sm:grid-cols-3">
         @foreach(['total_cents'=>'Total Tagihan','paid_cents'=>'Sudah Dibayarkan','remaining'=>'Sisa Tagihan'] as $key=>$label)<section class="catalogue-surface p-5"><p class="text-sm text-muted">{{ $label }}</p><p class="mt-3 text-xl font-semibold">Rp {{ number_format(($key === 'remaining' ? $invoice->remainingCents() : $invoice->$key)/100,2,',','.') }}</p></section>@endforeach

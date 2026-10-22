@@ -27,18 +27,22 @@ export function purchaseOrderReceipt(items) {
 export function purchasePlanForm(initial, distributors, urls) {
     const blank = () => ({product_id: null, product_name: '', color: '', product_kind: 'daily', brand: '', part_type: '', current_stock: 0, quantity: 0, sku: '', unit: 'pcs', unit_price: 0, allocations: []});
     let sequence = 0;
-    const decorate = item => ({...blank(), ...item, product_name: item.product_name || '', color: item.color || '', brand: item.brand || '', part_type: item.part_type || '', sku: item.sku || '', allocations: item.allocations || [], key: sequence++, searching: false, results: [], pickerOpen: !item.product_name, focusedResult: -1, collapsed: false, searchVersion: 0});
+    const decorate = item => ({...blank(), ...item, product_name: item.product_name || '', color: item.color || '', brand: item.brand || '', part_type: item.part_type || '', sku: item.sku || '', allocations: item.allocations || [], key: sequence++, searching: false, results: [], pickerOpen: !item.product_name, focusedResult: -1, searchVersion: 0});
     return {
         requestId: initial.request_id, version: initial.version, name: initial.name, plannedOn: initial.planned_on,
         reference: initial.reference || '', rows: (initial.items || []).map(decorate),
         get displayReference() { return this.reference || 'PGD-' + this.plannedOn.replaceAll('-', '') + '-' + this.requestId.replaceAll('-', '').slice(0, 12).toUpperCase(); },
-        distributors, urls, step: 1, errors: [], saving: false, importing: false, editIndex: null, manual: blank(),
+        distributors, urls, step: 1, openAllocationKey: null, errors: [], saving: false, importing: false, editIndex: null, manual: blank(),
         kinds: {daily: 'Harian', non_daily: 'Non-Harian', variation: 'Variasi'},
         add() {
             if (this.rows.length >= 100) { this.errors = ['Maksimal 100 produk per rencana.']; return; }
             this.rows.push(decorate(blank()));
         },
-        remove(index) { this.rows.splice(index, 1); },
+        remove(index) {
+            if (this.rows[index]?.key === this.openAllocationKey) this.openAllocationKey = null;
+            this.rows.splice(index, 1);
+        },
+        toggleAllocation(row) { this.openAllocationKey = this.openAllocationKey === row.key ? null : row.key; },
         async search(row) {
             const version = ++row.searchVersion;
             row.pickerOpen = true;
@@ -105,7 +109,10 @@ export function purchasePlanForm(initial, distributors, urls) {
             const error = this.validateProducts() || (this.step >= 2 ? this.validateAllocations() : '');
             this.errors = error ? [error] : [];
             if (!error) {
-                if (this.step === 1) this.rows.forEach(row => { if (!row.allocations.length) this.addAllocation(row); });
+                if (this.step === 1) {
+                    this.rows.forEach(row => { if (!row.allocations.length) this.addAllocation(row); });
+                    if (!this.rows.some(row => row.key === this.openAllocationKey)) this.openAllocationKey = this.rows[0]?.key ?? null;
+                }
                 this.step = Math.min(3, this.step + 1);
             }
         },

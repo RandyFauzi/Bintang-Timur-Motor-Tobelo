@@ -152,6 +152,28 @@ class PurchaseOrderNoteTest extends TestCase
         $this->assertDatabaseCount('stock_movements', 0);
     }
 
+    public function test_cargo_edit_cannot_move_departure_before_its_validated_note(): void
+    {
+        [$plan, $order] = $this->order();
+        $carrier = ShippingService::factory()->create();
+        $this->actingAs(User::factory()->create());
+        $this->patchJson($this->noteUrl($plan, $order), $this->notePayload($order))->assertOk();
+        $this->postJson($this->finalizeUrl($plan, $order), $this->shippingPayload($order->fresh(), $carrier))->assertOk();
+        $shipment = $order->fresh()->invoice->shipment;
+        $payload = $shipment->only(['shipping_service_id', 'cargo_name', 'origin_port', 'destination_port', 'destination_address', 'package_count']);
+        $payload['version'] = $shipment->version;
+        $payload['departed_on'] = '2026-10-20';
+
+        $this->patchJson(route('shipments.update', $shipment), $payload)->assertUnprocessable()
+            ->assertJsonValidationErrors(['departed_on' => 'Tanggal keberangkatan tidak boleh sebelum tanggal nota distributor (2026-10-21).']);
+
+        $this->assertSame('2026-10-21', $shipment->refresh()->departed_on->toDateString());
+        $this->assertSame(1, $shipment->version);
+        $payload['departed_on'] = '2026-10-22';
+        $this->patchJson(route('shipments.update', $shipment), $payload)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('2026-10-22', $shipment->fresh()->departed_on->toDateString());
+    }
+
     public function test_finalization_rejects_unissued_empty_stale_and_inactive_carrier_requests(): void
     {
         [$plan, $order] = $this->order();

@@ -1,5 +1,5 @@
 <x-app-layout>
-<div class="catalogue-page grid gap-5">
+<div class="catalogue-page procurement-detail-page grid gap-5">
     <header class="catalogue-heading !mb-0 flex flex-wrap items-center justify-between gap-4"><div><h1>Tagihan Distributor</h1><p class="mt-2 text-sm text-muted">Pantau invoice, jatuh tempo, dan pembayaran pesanan distributor.</p></div><a class="ui-button" href="{{ route('purchase-orders.create') }}"><x-ui.icon name="add" :size="18" />Buat PO</a></header>
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         @foreach(['total'=>'Total Faktur (Bruto)','paid'=>'Sudah Dibayarkan','outstanding'=>'Sisa Tagihan','overdue'=>'Sisa Terlambat'] as $key=>$label)<div class="catalogue-surface p-5"><p class="text-sm text-muted">{{ $label }}</p><p @class(['mt-3 text-xl font-semibold','text-danger'=>$key === 'overdue'])>Rp {{ number_format($summary[$key]/100,2,',','.') }}</p></div>@endforeach

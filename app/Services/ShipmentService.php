@@ -20,6 +20,13 @@ class ShipmentService
             if ($shipment) {
                 $shipment = Shipment::lockForUpdate()->findOrFail($shipment->id);
                 $this->assertEditable($shipment, (int) $data['version']);
+                $latestNoteDate = $shipment->distributorInvoices()
+                    ->whereHas('purchaseOrder', fn (Builder $query) => $query->where('note_issued', true))
+                    ->max('invoiced_on');
+                $latestNoteDate = $latestNoteDate ? CarbonImmutable::parse($latestNoteDate)->toDateString() : null;
+                if ($latestNoteDate && $data['departed_on'] < $latestNoteDate) {
+                    throw ValidationException::withMessages(['departed_on' => 'Tanggal keberangkatan tidak boleh sebelum tanggal nota distributor ('.$latestNoteDate.').']);
+                }
             }
             $carrier = ShippingService::where(fn (Builder $query) => $query->where('is_active', true)->orWhereKey($shipment?->shipping_service_id ?? 0))->lockForUpdate()->find($data['shipping_service_id']);
             if (! $carrier) {

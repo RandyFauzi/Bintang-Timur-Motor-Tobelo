@@ -164,6 +164,9 @@ class PurchaseOrderController extends Controller
             if ($order->version !== (int) $data['version']) {
                 throw ValidationException::withMessages(['version' => 'Pengadaan telah berubah. Muat ulang halaman sebelum menghapus.']);
             }
+            if ($order->purchase_plan_id !== null) {
+                throw ValidationException::withMessages(['purchase_order' => 'Order distributor dari rencana final tidak dapat dihapus secara terpisah.']);
+            }
             $invoice = $order->invoice()->lockForUpdate()->first();
             if ($order->note_issued || $order->shipment_finalized_at) {
                 throw ValidationException::withMessages(['purchase_order' => 'Pengadaan dengan nota terbit atau pengiriman yang sudah difinalisasi tidak dapat dihapus.']);

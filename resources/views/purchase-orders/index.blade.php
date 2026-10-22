@@ -49,7 +49,9 @@
                                         <x-slot:trigger><button type="button" class="procurement-more" aria-label="Aksi pengadaan {{ $order->reference }}" :aria-expanded="open"><x-ui.icon name="more-dark" :size="18" /></button></x-slot:trigger>
                                         <x-slot:content>
                                             <x-dropdown-link :href="$manageUrl">Detail</x-dropdown-link>
+                                            @if(!$order->purchase_plan_id)
                                             <button type="button" class="flex min-h-11 w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-700 hover:bg-gray-100 focus:bg-gray-100" @click="$dispatch('delete-purchase-order', @js(['url' => route('purchase-orders.destroy', $order), 'reference' => $order->reference, 'version' => $order->version]))"><x-ui.icon name="trash" :size="16" />Hapus</button>
+                                            @endif
                                         </x-slot:content>
                                     </x-dropdown>
                                 </div></td>

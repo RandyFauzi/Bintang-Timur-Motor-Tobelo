@@ -1,5 +1,7 @@
 @layer components {
-    .plan-page { display: grid; gap: 24px; }
+    .plan-page { display: grid; min-width: 0; grid-template-columns: minmax(0,1fr); gap: 24px; overflow-wrap: anywhere; }
+    .procurement-detail-page { min-width: 0; grid-template-columns: minmax(0,1fr); overflow-wrap: anywhere; }
+    .procurement-detail-page > *, .procurement-detail-page .catalogue-surface { min-width: 0; }
     .plan-heading { display: grid; gap: 12px; }
     .plan-back { display: inline-flex; width: fit-content; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 14px; text-decoration: underline; text-underline-offset: 4px; }
     .plan-heading h1 { font-size: 24px; font-weight: 600; line-height: 1.2; }
@@ -11,7 +13,7 @@
     .plan-step.is-active > span { background: var(--color-inverse); color: white; }
     .plan-step:disabled { opacity: 1; cursor: default; }
     .plan-steps__line { height: 2px; flex: 1; background: #d9e2ef; }
-    .plan-stage { display: grid; gap: 24px; }
+    .plan-stage { display: grid; min-width: 0; grid-template-columns: minmax(0,1fr); gap: 24px; }
     .plan-panel { display: grid; min-width: 0; gap: 24px; border: 1px solid var(--color-border-strong); border-radius: 12px; background: var(--color-surface); padding: 24px; box-shadow: 0 3px 10px rgb(0 0 0 / 10%); }
     .plan-panel header { display: grid; gap: 6px; }
     .plan-panel h2, .plan-empty h3 { font-size: 16px; font-weight: 500; line-height: 1.2; }
@@ -63,9 +65,9 @@
     .plan-manual-form .form-grid { row-gap: 36px; }
     .plan-panel header.plan-allocation-heading { display: flex; align-items: center; gap: 16px; }
     .plan-collapse { display: grid; width: 44px; height: 44px; flex-shrink: 0; place-items: center; border: 1px solid var(--color-border-strong); border-radius: 12px; }
-    .plan-allocation-heading > div:not(.plan-progress) { flex: 1; }
+    .plan-allocation-heading > div:not(.plan-progress) { flex: 1; min-width: 0; }
     .plan-allocation-heading p { margin-top: 6px; }
-    .plan-progress { width: 260px; }
+    .plan-progress { width: 260px; max-width: 100%; flex-shrink: 0; }
     .plan-progress > div { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; }
     .plan-progress strong { font-weight: 500; }
     .plan-progress span { color: var(--color-muted); }
@@ -81,6 +83,12 @@
     .plan-summary span { padding-right: 28px; color: #596579; font-size: 14px; }
     .plan-summary strong { font-size: 24px; font-weight: 600; }
     .plan-summary .ui-icon { position: absolute; top: 20px; right: 20px; }
+    @media(max-width: 1199px) {
+        .plan-info-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+        .plan-info-grid > :last-child { grid-column: 1 / -1; }
+        .plan-panel header.plan-allocation-heading { flex-wrap: wrap; }
+        .plan-progress { width: 100%; }
+    }
     @media(max-width: 767px) {
         .plan-info-grid { grid-template-columns: minmax(0,1fr); }
         .plan-panel { padding: 16px; }
@@ -88,11 +96,27 @@
         .plan-step { flex: 1; min-width: 0; flex-direction: column; text-align: center; padding: 8px; font-size: 11px; }
         .plan-steps__line { flex: 0 0 8px; }
         .plan-empty .plan-dashed { width: auto; flex: 1; }
+        .plan-add-actions { width: 100%; }
+        .plan-add-actions--table { padding: 16px; }
+        .plan-add-actions--table > button { flex: 1 1 100%; }
+        .plan-page .form-input, .plan-search input { min-height: 44px; font-size: 16px; }
+        .procurement-detail-page .form-input, .procurement-page input, .procurement-page select { min-height: 44px; font-size: 16px; }
+        .procurement-detail-page form > .form-field { flex: 1 1 100%; }
+        .procurement-detail-page .form-grid { grid-template-columns: minmax(0,1fr); }
+        .plan-row-actions button, .plan-remove-allocation { min-width: 44px; }
+        .plan-results { width: 100%; }
+        .plan-allocation-table th:first-child { width: 55%; }
+        .plan-allocation-table td { padding-block: 16px; }
+        .plan-footer { padding-bottom: env(safe-area-inset-bottom,0px); }
         .plan-footer > div { width: 100%; gap: 8px; }
         .plan-footer .ui-button--secondary, .plan-footer > div > .ui-button:last-child { min-width: 0; flex: 1; }
         .plan-panel header.plan-allocation-heading { flex-wrap: wrap; }
         .plan-progress { width: 100%; }
         .plan-summary { grid-template-columns: minmax(0,1fr); }
         .plan-summary > div { border-right: 0; border-bottom: 1px solid var(--color-border); }
+    }
+    @media(max-width: 399px) {
+        .plan-footer > div > .ui-button { flex: 1 1 100%; }
+        .plan-panel { padding: 12px; }
     }
 }

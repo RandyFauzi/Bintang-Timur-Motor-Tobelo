@@ -100,6 +100,30 @@ test('catalogue attributes are copied into plan rows and UI-only fields never en
     assert.equal(state.displayReference,'PGD-20261021-111111112222');
 });
 
+test('opening an allocation closes the previous product without losing either allocation', () => {
+    const state = planState();
+    for (const name of ['Oli', 'Busi']) {
+        state.add();
+        state.select(state.rows.at(-1), {product_name:name, quantity:0});
+        state.rows.at(-1).quantity = 10;
+    }
+    state.next();
+    const [first, second] = state.rows;
+    assert.equal(state.openAllocationKey, first.key);
+    first.allocations = [{distributor_id:1, quantity:10}];
+    state.toggleAllocation(second);
+    assert.equal(state.openAllocationKey, second.key);
+    assert.deepEqual(first.allocations, [{distributor_id:1, quantity:10}]);
+    state.toggleAllocation(second);
+    assert.equal(state.openAllocationKey, null);
+    state.toggleAllocation(first);
+    state.remove(0);
+    assert.equal(state.openAllocationKey, null);
+    state.goTo(1);
+    state.next();
+    assert.equal(state.openAllocationKey, second.key);
+});
+
 test('manual product modal keeps attributes and quantity in the plan without a catalogue identifier', () => {
     const state = planState();
     const events = [];

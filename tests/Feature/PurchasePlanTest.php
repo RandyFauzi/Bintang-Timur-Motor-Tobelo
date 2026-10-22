@@ -6,8 +6,10 @@ use App\Models\Distributor;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\PurchasePlan;
+use App\Models\ShippingService;
 use App\Models\User;
 use App\Services\ExcelExportService;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
@@ -156,6 +158,102 @@ class PurchasePlanTest extends TestCase
 
         $this->postJson(route('purchase-plans.import'), ['file' => UploadedFile::fake()->createWithContent('broken.xlsx', 'broken')])->assertUnprocessable()->assertJsonValidationErrors('file');
         $this->get(route('purchase-plans.template'))->assertDownload('template-rencana-pengadaan.xlsx');
+    }
+
+    public function test_draft_to_supplier_bills_cargo_receipt_and_shortage_reorder_remains_connected(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-10-22 12:00:00', 'Asia/Jayapura'));
+        $this->actingAs(User::factory()->create());
+        $payload = $this->payload();
+        $secondSupplier = Distributor::factory()->create();
+        $payload['items'][0]['allocations'][0]['quantity'] = 12;
+        $payload['items'][0]['allocations'][] = ['distributor_id' => $secondSupplier->id, 'quantity' => 18];
+        $payload['intent'] = 'draft';
+        $this->postJson(route('purchase-plans.store'), $payload)->assertOk();
+        $plan = PurchasePlan::sole();
+        $this->assertDatabaseCount('purchase_orders', 0);
+
+        $payload['version'] = $plan->version;
+        $payload['intent'] = 'finalize';
+        $this->patchJson(route('purchase-plans.update', $plan), $payload)->assertOk();
+        $orders = $plan->orders()->orderBy('id')->get();
+        $this->assertCount(2, $orders);
+        $carrier = ShippingService::factory()->create(['duration_days' => 7]);
+
+        foreach ($orders as $index => $order) {
+            $quantity = [10, 15][$index];
+            $this->patchJson(route('purchase-plans.orders.note', [$plan, $order]), [
+                'version' => $order->version, 'note_issued' => true,
+                'supplier_note_number' => 'NOTA-'.($index + 1), 'supplier_note_on' => '2026-10-21',
+                'supplier_note_total' => ['100.25', '200.75'][$index],
+                'items' => [['id' => $order->items->sole()->id, 'invoice_quantity' => $quantity]],
+            ])->assertOk();
+            $this->postJson(route('purchase-plans.orders.finalize', [$plan, $order]), [
+                'version' => $order->refresh()->version, 'shipping_service_id' => $carrier->id,
+                'origin_port' => ['Surabaya', 'Makassar'][$index], 'departed_on' => '2026-10-21', 'package_count' => 2,
+            ])->assertOk();
+            $invoice = $order->fresh()->invoice;
+            $this->assertSame([10025, 20075][$index], $invoice->total_cents);
+            $this->assertSame('2026-10-28', $invoice->shipment->estimated_arrival_on->toDateString());
+            $this->post(route('distributor-invoices.pay', $invoice), [
+                'request_id' => (string) Str::uuid(), 'version' => $invoice->version,
+                'amount' => ['100.25', '200.75'][$index], 'paid_on' => '2026-10-22', 'method' => 'transfer',
+            ])->assertRedirect()->assertSessionHasNoErrors();
+            $this->patch(route('shipments.arrive', $invoice->shipment), ['version' => $invoice->shipment->version])
+                ->assertRedirect()->assertSessionHasNoErrors();
+            $this->assertSame(0, $invoice->refresh()->remainingCents());
+            $this->assertNotNull($invoice->receivedAt());
+            $this->patch(route('purchase-orders.receive', $order), [
+                'version' => $order->refresh()->version,
+                'items' => [['id' => $order->items->sole()->id, 'actual_quantity' => $quantity]],
+            ])->assertRedirect()->assertSessionHasNoErrors();
+        }
+
+        $this->assertDatabaseCount('distributor_invoices', 2);
+        $this->assertDatabaseCount('shipments', 2);
+        $this->assertNotSame($orders[0]->fresh()->invoice->shipment_id, $orders[1]->fresh()->invoice->shipment_id);
+        $initial = $this->get(route('purchase-orders.create', ['replan' => $plan->id, 'source_items' => [0]]))
+            ->assertOk()->viewData('initial');
+        $this->assertSame(5, $initial['items'][0]['quantity']);
+        $this->assertSame([], $initial['items'][0]['allocations']);
+        $initial['intent'] = 'finalize';
+        unset($initial['reference']);
+        $initial['items'][0]['allocations'] = [['distributor_id' => $secondSupplier->id, 'quantity' => 5]];
+        $this->postJson(route('purchase-plans.store'), $initial)->assertOk();
+
+        $reorder = PurchasePlan::whereKeyNot($plan->id)->sole();
+        $this->assertSame(5, $reorder->orders->sole()->items->sole()->quantity);
+        $this->assertSame($secondSupplier->id, $reorder->orders->sole()->distributor_id);
+        $this->assertDatabaseCount('purchase_orders', 3);
+        $this->assertDatabaseCount('distributor_invoices', 2);
+        $this->assertDatabaseCount('stock_movements', 0);
+    }
+
+    public function test_distributor_orders_cannot_be_deleted_out_of_a_finalized_plan(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $this->postJson(route('purchase-plans.store'), $this->payload())->assertOk();
+        $order = PurchaseOrder::sole();
+
+        $this->deleteJson(route('purchase-orders.destroy', $order), ['version' => $order->version])
+            ->assertUnprocessable()->assertJsonValidationErrors(['purchase_order' => 'Order distributor dari rencana final tidak dapat dihapus secara terpisah.']);
+
+        $this->assertModelExists($order);
+        $this->assertDatabaseCount('purchase_order_items', 1);
+    }
+
+    #[TestWith(['items'])]
+    #[TestWith(['items.0.allocations'])]
+    public function test_draft_rejects_objects_in_product_and_allocation_lists(string $path): void
+    {
+        $payload = $this->payload();
+        $payload['intent'] = 'draft';
+        data_set($payload, $path, ['product' => data_get($payload, $path)[0]]);
+
+        $this->actingAs(User::factory()->create())->postJson(route('purchase-plans.store'), $payload)
+            ->assertUnprocessable()->assertJsonValidationErrors($path);
+
+        $this->assertDatabaseCount('purchase_plans', 0);
     }
 
     /** @return array<string, mixed> */

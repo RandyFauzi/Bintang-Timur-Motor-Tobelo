@@ -1,5 +1,5 @@
 @layer components {
-    .shipping-page { --shipping-blue: #2563eb; --shipping-ink: #17324f; --shipping-water: #eff6ff; }
+    .shipping-page { --shipping-blue: #2563eb; --shipping-ink: #17324f; --shipping-water: #eff6ff; min-width: 0; overflow-wrap: anywhere; }
     .shipping-heading { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 24px; }
     .shipping-heading h1 { font-size: 24px; font-weight: 600; letter-spacing: -.5px; }
     .shipping-eyebrow { color: var(--shipping-blue); font-size: 11px; font-weight: 600; letter-spacing: 1.5px; margin-bottom: 8px; }
