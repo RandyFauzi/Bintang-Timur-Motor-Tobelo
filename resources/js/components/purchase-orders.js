@@ -60,6 +60,7 @@ export function purchasePlanForm(initial, distributors, urls) {
             return JSON.stringify(content);
         },
         get dirty() { return this.fingerprint() !== this.savedFingerprint; },
+        get needsExitConfirmation() { return this.version > 0 || this.rows.length > 0 || Boolean(this.name.trim()) || this.dirty || this.saving || this.importing; },
         get draftStatus() {
             if (this.saving) return 'Menyimpan…';
             if (this.autosaveMessage) return this.autosaveMessage;
@@ -72,7 +73,7 @@ export function purchasePlanForm(initial, distributors, urls) {
             autosaveTimer = setTimeout(() => this.save('draft', true), 1500);
         },
         warnBeforeUnload(event) {
-            if (this.leaving || (!this.dirty && !this.saving && !this.importing)) return;
+            if (this.leaving || !this.needsExitConfirmation) return;
             event.preventDefault();
             event.returnValue = '';
         },
@@ -80,7 +81,7 @@ export function purchasePlanForm(initial, distributors, urls) {
             if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || this.leaving) return;
             const link = event.target.closest?.('a[href]');
             if (!link || link.hasAttribute('download') || (link.target && link.target !== '_self') || link.getAttribute('href').startsWith('#')) return;
-            if (!this.dirty && !this.saving && !this.importing) return;
+            if (!this.needsExitConfirmation) return;
             event.preventDefault();
             event.stopImmediatePropagation();
             this.pendingLeaveUrl = link.href;

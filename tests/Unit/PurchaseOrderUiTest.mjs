@@ -291,6 +291,32 @@ test('failed saving blocks exit and warns on refresh until a retry saves the dra
     });
 });
 
+test('saved unfinished drafts still alert on refresh or close and confirm navigation without saving again', async () => {
+    await withDraftBrowser(async ({state, response, events, navigation}) => {
+        let warnings = 0;
+        const unload = {preventDefault:() => warnings++};
+        state.name = '';
+        state.savedFingerprint = state.fingerprint();
+        state.warnBeforeUnload(unload);
+        assert.equal(warnings, 0);
+        state.add();
+        globalThis.fetch = async () => response(1);
+        await state.save('draft', true);
+        assert.equal(state.dirty, false);
+        state.warnBeforeUnload(unload);
+        assert.equal(warnings, 1);
+        assert.equal(unload.returnValue, '');
+        state.guardLink({button:0, target:{closest:() => ({href:'/dashboard', target:'', hasAttribute:() => false, getAttribute:() => '/dashboard'})}, preventDefault() {}, stopImmediatePropagation() {}});
+        assert.equal(events.at(-1).detail.id, 'plan-unsaved');
+        assert.deepEqual(navigation, []);
+        globalThis.fetch = async () => {throw new Error('Already saved drafts must not need another request');};
+        await state.saveAndLeave();
+        assert.deepEqual(navigation, ['/dashboard']);
+        state.warnBeforeUnload(unload);
+        assert.equal(warnings, 1);
+    });
+});
+
 test('version conflicts retain local changes and finalization uses the last saved version', async () => {
     await withDraftBrowser(async ({state, navigation, response}) => {
         state.add(); state.select(state.rows[0], {product_name:'Oli'});
