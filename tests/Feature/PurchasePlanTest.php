@@ -174,10 +174,13 @@ class PurchasePlanTest extends TestCase
         $this->patchJson(route('purchase-plans.update', $plan), $payload)->assertOk();
 
         $this->assertSame(3, $plan->refresh()->version);
+        $this->assertSame(1, $this->get(route('purchase-orders.index', ['status' => 'draft']))->assertOk()->viewData('orders')->total());
         $payload['intent'] = 'finalize';
         $payload['version'] = 3;
         $this->patchJson(route('purchase-plans.update', $plan), $payload)->assertOk();
         $this->assertSame('finalized', $plan->refresh()->status);
+        $this->assertSame(0, $this->get(route('purchase-orders.index', ['status' => 'draft']))->assertOk()->viewData('orders')->total());
+        $this->assertSame(1, $this->get(route('purchase-orders.index'))->assertOk()->viewData('orders')->total());
         $payload['intent'] = 'draft';
         $this->patchJson(route('purchase-plans.update', $plan), $payload)->assertUnprocessable()->assertJsonValidationErrors('plan');
     }

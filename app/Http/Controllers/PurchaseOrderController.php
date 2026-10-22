@@ -28,13 +28,13 @@ class PurchaseOrderController extends Controller
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:255'],
             'distributor_id' => ['nullable', 'integer'],
-            'status' => ['nullable', 'in:pending,checking,discrepancy,matched'],
+            'status' => ['nullable', 'in:draft,pending,checking,discrepancy,matched'],
             'from' => ['nullable', 'date_format:Y-m-d'],
             'until' => ['nullable', 'date_format:Y-m-d', ...($request->filled('from') ? ['after_or_equal:from'] : [])],
             'per_page' => ['nullable', 'integer', 'in:5,6,10,12,15,25,50'],
             'archived' => ['nullable', 'boolean'],
         ]);
-        $query = PurchaseOrder::with(['items', 'purchasePlan.orders.items'])->latest('id');
+        $query = PurchaseOrder::query();
         if (Schema::hasColumn('purchase_orders', 'archived_at')) {
             if ($request->boolean('archived')) {
                 $query->whereNotNull('archived_at');
@@ -58,7 +58,9 @@ class PurchaseOrderController extends Controller
             $query->whereDate('ordered_on', '<=', $filters['until']);
         }
         $status = $filters['status'] ?? null;
-        if ($status) {
+        if ($status === 'draft') {
+            $query->whereRaw('1 = 0');
+        } elseif ($status) {
             $query->where(fn (Builder $groups): Builder => $groups
                 ->where(fn (Builder $legacy): Builder => $legacy->whereNull('purchase_plan_id')->withReceiptStatus($status))
                 ->orWhere(fn (Builder $planned): Builder => $planned->whereNotNull('purchase_plan_id')->withReceiptStatus($status, 'purchasePlan.orders.items')));
@@ -66,7 +68,41 @@ class PurchaseOrderController extends Controller
         $representatives = (clone $query)->reorder()->selectRaw('MAX(purchase_orders.id)')->whereNotNull('purchase_plan_id')->groupBy('purchase_plan_id');
         $query->where(fn (Builder $groups): Builder => $groups->whereNull('purchase_plan_id')->orWhereIn('id', $representatives));
 
-        return view('purchase-orders.index', ['orders' => $query->paginate($filters['per_page'] ?? 10)->withQueryString(), 'distributors' => Distributor::where('is_active', true)->orderBy('name')->get(), 'drafts' => PurchasePlan::where('status', 'draft')->latest('id')->paginate(5, ['*'], 'draft_page')->withQueryString()]);
+        $drafts = PurchasePlan::where('status', 'draft');
+        if ($request->boolean('archived') || ($status && $status !== 'draft')) {
+            $drafts->whereRaw('1 = 0');
+        }
+        $allocatedDistributors = Distributor::query()->selectRaw('1');
+        if (DB::getDriverName() === 'sqlite') {
+            $allocatedDistributors->whereRaw("EXISTS (SELECT 1 FROM json_each(purchase_plans.items) AS products, json_each(products.value, '$.allocations') AS allocations WHERE json_extract(allocations.value, '$.distributor_id') = distributors.id)");
+        } else {
+            $allocatedDistributors->whereRaw("(JSON_CONTAINS(purchase_plans.items, JSON_OBJECT('allocations', JSON_ARRAY(JSON_OBJECT('distributor_id', distributors.id)))) OR JSON_CONTAINS(purchase_plans.items, JSON_OBJECT('allocations', JSON_ARRAY(JSON_OBJECT('distributor_id', CAST(distributors.id AS CHAR))))))");
+        }
+        if (! empty($filters['search'])) {
+            $term = '%'.$filters['search'].'%';
+            $drafts->where(fn (Builder $plans): Builder => $plans->where('name', 'like', $term)->orWhere('reference', 'like', $term)
+                ->orWhereExists((clone $allocatedDistributors)->where('name', 'like', $term)->toBase()));
+        }
+        if (! empty($filters['distributor_id'])) {
+            $drafts->whereExists((clone $allocatedDistributors)->where('id', $filters['distributor_id'])->toBase());
+        }
+        if (! empty($filters['from'])) {
+            $drafts->whereDate('planned_on', '>=', $filters['from']);
+        }
+        if (! empty($filters['until'])) {
+            $drafts->whereDate('planned_on', '<=', $filters['until']);
+        }
+
+        $entries = $query->reorder()->selectRaw("id, created_at, 'order' AS entry_type")->toBase()
+            ->unionAll($drafts->selectRaw("id, created_at, 'draft' AS entry_type")->toBase());
+        $orders = DB::query()->fromSub($entries, 'procurement_entries')
+            ->orderByDesc('created_at')->orderByDesc('id')->orderBy('entry_type')
+            ->paginate($filters['per_page'] ?? 10)->withQueryString();
+        $orderModels = PurchaseOrder::with(['items', 'purchasePlan.orders.items'])->whereIn('id', $orders->getCollection()->where('entry_type', 'order')->pluck('id'))->get()->keyBy('id');
+        $draftModels = PurchasePlan::whereIn('id', $orders->getCollection()->where('entry_type', 'draft')->pluck('id'))->get()->keyBy('id');
+        $orders->setCollection($orders->getCollection()->map(fn (object $entry): PurchaseOrder|PurchasePlan|null => $entry->entry_type === 'draft' ? $draftModels->get($entry->id) : $orderModels->get($entry->id))->filter()->values());
+
+        return view('purchase-orders.index', ['orders' => $orders, 'distributors' => Distributor::where('is_active', true)->orderBy('name')->get()]);
     }
 
     public function create(Request $request): View

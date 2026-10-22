@@ -16,6 +16,62 @@ class PurchaseOrderOverviewTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_drafts_share_the_table_with_orders_and_status_filters_keep_them_separate(): void
+    {
+        $draft = PurchasePlan::factory()->create(['items' => [['product_name' => 'Oli', 'quantity' => 7, 'unit_price' => 15000]]]);
+        $plan = $this->planWithTwoOrders();
+        $this->actingAs(User::factory()->create());
+
+        $response = $this->get(route('purchase-orders.index'))->assertOk()
+            ->assertSee($draft->reference)->assertSee($plan->reference)->assertSee('Lanjutkan Draft')->assertSee('105.000,00')
+            ->assertDontSee('Draft Rencana Pengadaan</h2>', false);
+        $this->assertSame(2, $response->viewData('orders')->total());
+
+        $draftRows = $this->get(route('purchase-orders.index', ['status' => 'draft']))->assertOk()->assertSee($draft->reference)->assertDontSee($plan->reference)->viewData('orders');
+        $this->assertSame(1, $draftRows->total());
+        $this->assertTrue($draftRows->sole()->is($draft));
+
+        $pending = $this->get(route('purchase-orders.index', ['status' => 'pending']))->assertOk()->assertDontSee($draft->reference)->viewData('orders');
+        $this->assertSame(1, $pending->total());
+        $this->assertSame(0, $this->get(route('purchase-orders.index', ['archived' => 1, 'status' => 'draft']))->assertOk()->viewData('orders')->total());
+    }
+
+    #[TestWith([false])]
+    #[TestWith([true])]
+    public function test_draft_filters_match_name_reference_date_and_allocated_distributor(bool $stringId): void
+    {
+        $supplier = Distributor::factory()->create(['name' => 'Pemasok Khusus Draft']);
+        $other = Distributor::factory()->create();
+        $draft = PurchasePlan::factory()->create(['name' => 'Rencana Oli Khusus', 'planned_on' => '2026-10-10', 'items' => [['quantity' => 5, 'allocations' => [['distributor_id' => null, 'quantity' => 0], ['distributor_id' => $stringId ? (string) $supplier->id : $supplier->id, 'quantity' => 5]]]]]);
+        PurchasePlan::factory()->create(['planned_on' => '2026-10-09']);
+        $this->actingAs(User::factory()->create());
+
+        foreach ([['search' => 'Rencana Oli Khusus'], ['search' => $draft->reference], ['search' => $supplier->name], ['distributor_id' => $supplier->id], ['from' => '2026-10-10', 'until' => '2026-10-10']] as $filter) {
+            $rows = $this->get(route('purchase-orders.index', $filter + ['status' => 'draft']))->assertOk()->viewData('orders');
+            $this->assertSame(1, $rows->total());
+            $this->assertTrue($rows->sole()->is($draft));
+        }
+        foreach ([['distributor_id' => $other->id], ['search' => 'Tidak Ada'], ['from' => '2026-10-11']] as $filter) {
+            $this->assertSame(0, $this->get(route('purchase-orders.index', $filter + ['status' => 'draft']))->assertOk()->viewData('orders')->total());
+        }
+    }
+
+    public function test_mixed_pagination_uses_one_total_and_stable_order_with_overlapping_ids(): void
+    {
+        PurchasePlan::factory()->count(6)->create(['created_at' => '2026-10-10 10:00:00']);
+        PurchaseOrder::factory()->count(6)->create(['created_at' => '2026-10-10 10:00:00']);
+        $this->actingAs(User::factory()->create());
+        $keys = collect();
+
+        foreach ([1 => 5, 2 => 5, 3 => 2] as $page => $count) {
+            $rows = $this->get(route('purchase-orders.index', ['per_page' => 5, 'page' => $page]))->assertOk()->viewData('orders');
+            $this->assertSame(12, $rows->total());
+            $this->assertCount($count, $rows);
+            $keys = $keys->concat($rows->getCollection()->map(fn (PurchaseOrder|PurchasePlan $row): string => $row::class.':'.$row->id));
+        }
+        $this->assertCount(12, $keys->unique());
+    }
+
     public function test_demo_is_one_parent_row_with_complete_totals_even_when_searching_or_filtering_a_single_distributor(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'admin']));
