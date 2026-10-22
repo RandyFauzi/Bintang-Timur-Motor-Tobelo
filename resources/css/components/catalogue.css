@@ -19,7 +19,11 @@
         .procurement-page .catalogue-toolbar__actions .ui-button { min-height: 44px; padding: 12px 16px; font-size: 14px; }
         .procurement-page .procurement-filters { display: grid; grid-template-columns: minmax(0,1fr); gap: 10px; padding: 16px; border-bottom: 1px solid var(--color-border); }
         .procurement-filters .filter-trigger, .procurement-filters .filter-select-label { min-width: 0; width: 100%; max-width: none; min-height: 44px; }
-        .procurement-filters .filter-trigger > span { flex: 1; text-align: left; }
+        .procurement-filters .filter-trigger > span:not(.ui-icon):not(.filter-trigger__count) { flex: 1; text-align: left; }
+        .procurement-filters > .multi-filter { min-width: 0; }
+        .procurement-filters .filter-trigger__summary { min-width: 0; overflow-wrap: anywhere; }
+        .procurement-filters .multi-filter__option { min-height: 44px; font-size: 14px; }
+        .procurement-page .multi-filter__option input { width: 18px; height: 18px; min-height: 0; flex-shrink: 0; border-radius: 50%; }
         .procurement-filters .filter-select { width: 100%; min-width: 0; max-width: none; min-height: 44px; font-size: 16px; }
         .procurement-page .filter-reset { display: flex; min-height: 44px; align-items: center; justify-content: center; }
         .procurement-page section[aria-label="Draft rencana pengadaan"] li > div { min-width: 0; }
@@ -46,7 +50,7 @@
     }
     @media(min-width:480px) and (max-width:1023px) {
         .procurement-page .procurement-filters { grid-template-columns: repeat(2,minmax(0,1fr)); }
-        .procurement-filters > .filter-select-label:nth-of-type(2) { grid-column: 1 / -1; }
+        .procurement-filters > .multi-filter:nth-child(3) { grid-column: 1 / -1; }
     }
     @media(min-width:768px) and (max-width:1023px) {
         .procurement-table tbody { grid-template-columns: repeat(2,minmax(0,1fr)); }
