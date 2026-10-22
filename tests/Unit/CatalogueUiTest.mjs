@@ -37,6 +37,21 @@ test('choosing suppliers in a product editor does not submit a partial product',
     assert.equal(focused, true);
 });
 
+test('single dropdown choice applies immediately, closes the list and keeps the parent form open', () => {
+    const filter = multiSelect(options, ['1'], 'Pilih Jasa Cargo', false);
+    let focused = false;
+    filter.$nextTick = callback => callback();
+    filter.$refs = {trigger:{focus() {focused = true;}}};
+    filter.open = true;
+    filter.choose('2');
+    assert.deepEqual(filter.selected, ['2']);
+    assert.equal(filter.summary, 'Rem');
+    assert.equal(filter.open, false);
+    assert.equal(focused, true);
+    filter.choose('unknown');
+    assert.deepEqual(filter.selected, ['2']);
+});
+
 test('reopening a cancelled filter restores applied choices', () => {
     const filter = multiSelect(options, ['1'], 'Semua');
     filter.$nextTick = (callback) => callback();

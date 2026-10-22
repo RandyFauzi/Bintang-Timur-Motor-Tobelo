@@ -50,7 +50,7 @@
                 </section>
                 <fieldset class="form-field note-cargo-picker" :disabled="finalizing || !services.length">
                     <legend class="form-field__label">Jasa Cargo</legend>
-                    <x-ui.multiselect name="shipping_service_id" id="plan-cargo-filter" label="Pilih Jasa Cargo" :options="$shippingServices->map(fn ($service): object => (object) ['id' => $service->id, 'name' => $service->name.' · '.$service->duration_days.' hari'])" :selected="[]" :multiple="false" :submit-on-apply="false" icon="ship" x-model="cargoSelection" />
+                    <x-ui.multiselect name="shipping_service_id" id="plan-cargo-filter" label="Pilih Jasa Cargo" :options="$shippingServices->map(fn ($service): object => (object) ['id' => $service->id, 'name' => $service->name.' · '.$service->duration_days.' hari'])" :selected="[]" :multiple="false" :submit-on-apply="false" :dropdown="true" icon="ship" x-model="cargoSelection" />
                 </fieldset>
                 @if($shippingServices->isEmpty())<p class="text-sm text-danger">Belum ada jasa cargo aktif. Tambahkan melalui <a class="underline" href="{{ route('shipments.index') }}">Pelacakan Pengiriman → Jasa Pengiriman</a>.</p>@endif
                 <div class="form-grid"><label class="form-field"><span class="form-field__label">Pelabuhan / Kota Asal Distributor</span><input class="form-input" x-model="shipment.origin_port" maxlength="255" required :readonly="finalizing"></label><label class="form-field"><span class="form-field__label">Tanggal Berangkat</span><input class="form-input" type="date" x-model="shipment.departed_on" required :min="selectedOrder?.saved.supplier_note_on || '2000-01-01'" max="2100-12-31" :readonly="finalizing"></label></div>

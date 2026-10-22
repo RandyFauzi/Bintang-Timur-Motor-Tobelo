@@ -59,8 +59,8 @@
     .note-cargo-picker legend { margin-bottom: 10px; }
     .note-cargo-picker .filter-trigger { max-width: none; min-height: 44px; text-align: left; }
     .note-cargo-picker .filter-trigger__summary { min-width: 0; flex: 1; white-space: normal; overflow-wrap: anywhere; }
-    .note-cargo-picker .multi-filter__backdrop { display: block; position: fixed; inset: 0; z-index: 49; background: rgb(0 0 0 / 35%); }
-    .note-cargo-picker .multi-filter__panel { position: fixed; top: var(--filter-center-y,50%); left: var(--filter-center-x,50%); transform: translate(-50%,-50%); z-index: 50; width: min(360px,var(--filter-max-width,calc(100vw - 32px))); max-width: var(--filter-max-width,calc(100vw - 32px)); max-height: var(--filter-max-height,calc(100dvh - 32px)); }
+    .note-cargo-picker .multi-filter--dropdown .multi-filter__panel { position: absolute !important; top: calc(100% + 6px) !important; left: 0 !important; transform: none !important; z-index: 25 !important; width: 100% !important; max-width: 100% !important; max-height: min(300px,45dvh); border-radius: 12px; box-shadow: 0 6px 18px rgb(0 0 0 / 12%); }
+    .note-cargo-picker .multi-filter__option.is-selected { background: var(--color-page); font-weight: 500; }
     .note-cargo-picker .multi-filter__option { min-height: 44px; font-size: 14px; overflow-wrap: anywhere; }
     .note-cargo-picker .multi-filter__option input { flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; }
     .note-cargo-picker .multi-filter__search input { min-height: 44px; font-size: 16px; }

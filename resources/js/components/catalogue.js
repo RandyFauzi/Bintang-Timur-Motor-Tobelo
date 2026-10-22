@@ -113,6 +113,11 @@ export function multiSelect(options, selected, label, submitOnApply = true) {
                 else this.$refs.trigger.focus();
             });
         },
+        choose(id) {
+            if (!this.options.some(option => option.id === id)) return;
+            this.draft = [id];
+            this.apply();
+        },
     };
 }
 
