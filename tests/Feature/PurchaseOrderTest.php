@@ -41,7 +41,7 @@ class PurchaseOrderTest extends TestCase
     #[TestWith(['payment'])]
     #[TestWith(['paid_balance'])]
     #[TestWith(['shipment'])]
-    public function test_processed_orders_cannot_be_deleted(string $state): void
+    public function test_processed_orders_are_archived_without_deleting_related_transactions(string $state): void
     {
         $item = PurchaseOrderItem::factory()->create(['actual_quantity' => $state === 'checked' ? 0 : null]);
         $invoice = DistributorInvoice::factory()->create([
@@ -54,12 +54,12 @@ class PurchaseOrderTest extends TestCase
         }
 
         $this->actingAs(User::factory()->create())->deleteJson(route('purchase-orders.destroy', $item->purchase_order_id), ['version' => 1])
-            ->assertUnprocessable()->assertJsonValidationErrors('purchase_order')
-            ->assertJsonPath('errors.purchase_order.0', 'Pengadaan yang sudah diperiksa, dibayar, atau terhubung ke pengiriman tidak dapat dihapus.');
+            ->assertRedirect(route('purchase-orders.index'))->assertSessionHasNoErrors();
 
         $this->assertModelExists($item);
         $this->assertModelExists($invoice);
         $this->assertDatabaseHas('purchase_orders', ['id' => $item->purchase_order_id]);
+        $this->assertNotNull(PurchaseOrder::findOrFail($item->purchase_order_id)->archived_at);
     }
 
     public function test_stale_delete_does_not_remove_updated_order(): void

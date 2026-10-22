@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Database\Factories\PurchasePlanFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -22,5 +23,18 @@ class PurchasePlan extends Model
     public function orders(): HasMany
     {
         return $this->hasMany(PurchaseOrder::class);
+    }
+
+    public function statusLabel(): string
+    {
+        $items = $this->orders->flatMap(fn (PurchaseOrder $order): Collection => $order->items);
+        if ($items->every(fn (PurchaseOrderItem $item): bool => $item->actual_quantity === null)) {
+            return 'Belum diperiksa';
+        }
+        if ($items->contains(fn (PurchaseOrderItem $item): bool => $item->actual_quantity === null)) {
+            return 'Sedang diperiksa';
+        }
+
+        return $items->contains(fn (PurchaseOrderItem $item): bool => $item->actual_quantity !== $item->quantity) ? 'Ada selisih' : 'Sesuai';
     }
 }

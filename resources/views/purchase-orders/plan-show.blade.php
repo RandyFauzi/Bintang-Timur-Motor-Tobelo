@@ -1,6 +1,7 @@
 <x-app-layout>
     <div class="catalogue-page plan-page note-page" x-data="purchaseOrderNotes(@js($orders), @js($shippingServices), @js(['today' => $shippingToday, 'planId' => $plan->id, 'replanUrl' => route('purchase-orders.create')]))">
         <header class="plan-heading"><a class="plan-back" href="{{ route('purchase-orders.index') }}">← Kembali ke daftar Pre Order</a><h1>{{ $plan->reference }}</h1><p>Dibuat {{ $plan->planned_on->translatedFormat('d M Y') }} · {{ $plan->name }}</p></header>
+        @if($plan->orders->isNotEmpty() && $plan->orders->every(fn ($order) => $order->archived_at !== null))<p class="note-notice">Pengadaan ini ada di Arsip. Nota, tagihan, dan pengiriman tetap tersimpan serta dapat diproses. <a class="underline" href="{{ route('purchase-orders.index', ['archived' => 1]) }}">Lihat Arsip</a></p>@endif
         @if($plan->status === 'draft')<a class="ui-button w-fit" href="{{ route('purchase-plans.edit', $plan) }}">Lanjutkan Draft</a>@endif
         <div class="plan-summary note-summary"><div><span>Produk</span><strong>{{ count($plan->items) }}</strong><x-ui.icon name="note-product" :size="20" /></div><div><span>Total Kebutuhan Unit</span><strong>{{ number_format(collect($plan->items)->sum('quantity'), 0, ',', '.') }}</strong><x-ui.icon name="note-units" :size="20" /></div><div><span>Distributor</span><strong>{{ $plan->orders->count() }}</strong><x-ui.icon name="note-distributor" :size="20" /></div></div>
         @if($plan->status === 'finalized')

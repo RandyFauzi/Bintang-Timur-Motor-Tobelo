@@ -232,10 +232,12 @@ class PurchaseOrderNoteTest extends TestCase
 
         $this->patchJson($this->noteUrl($plan, $order), $this->notePayload($order->fresh(), 8))->assertUnprocessable()->assertJsonValidationErrors('note');
         $this->patchJson(route('distributor-invoices.update', $invoice), ['version' => 1, 'due_on' => '2027-01-21', 'supplier_reference' => 'CHANGED'])->assertUnprocessable()->assertJsonValidationErrors('supplier_reference');
-        $this->deleteJson(route('purchase-orders.destroy', $order), ['version' => $order->fresh()->version])->assertUnprocessable();
+        $this->deleteJson(route('purchase-orders.destroy', $order), ['version' => $order->fresh()->version])->assertRedirect()->assertSessionHasNoErrors();
 
         $this->assertSame('INV-WMS-01', $invoice->fresh()->supplier_reference);
         $this->assertSame(6000000, $invoice->total_cents);
+        $this->assertNotNull($order->refresh()->archived_at);
+        $this->assertDatabaseCount('distributor_payments', 1);
     }
 
     public function test_shortages_are_aggregated_and_selected_products_prefill_a_new_plan(): void

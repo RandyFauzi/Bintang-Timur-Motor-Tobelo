@@ -49,6 +49,7 @@ Route::middleware('auth')->group(function () {
     Route::post('distributor-invoices/{distributorInvoice}/payments', [DistributorInvoiceController::class, 'pay'])->name('distributor-invoices.pay');
 
     Route::post('purchase-orders/distributors', [PurchaseOrderController::class, 'distributor'])->name('purchase-orders.distributors.store');
+    Route::patch('purchase-orders/{purchaseOrder}/restore', [PurchaseOrderController::class, 'restore'])->name('purchase-orders.restore');
     Route::get('purchase-orders/create', [PurchasePlanController::class, 'create'])->name('purchase-orders.create');
     Route::get('purchase-plans/products', [PurchasePlanController::class, 'products'])->name('purchase-plans.products');
     Route::get('purchase-plans/template', [PurchasePlanController::class, 'template'])->name('purchase-plans.template');

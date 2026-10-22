@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -15,7 +17,30 @@ class PurchaseOrder extends Model
 
     protected function casts(): array
     {
-        return ['ordered_on' => 'date', 'expected_on' => 'date', 'version' => 'integer', 'note_issued' => 'boolean', 'supplier_note_on' => 'date', 'supplier_note_total_cents' => 'integer', 'shipment_finalized_at' => 'datetime'];
+        return ['ordered_on' => 'date', 'expected_on' => 'date', 'version' => 'integer', 'note_issued' => 'boolean', 'supplier_note_on' => 'date', 'supplier_note_total_cents' => 'integer', 'shipment_finalized_at' => 'datetime', 'archived_at' => 'datetime'];
+    }
+
+    public function purchasePlan(): BelongsTo
+    {
+        return $this->belongsTo(PurchasePlan::class);
+    }
+
+    public function scopeWithReceiptStatus(Builder $query, string $status, string $relation = 'items'): void
+    {
+        if ($status === 'pending') {
+            $query->whereDoesntHave($relation, fn (Builder $items): Builder => $items->whereNotNull('actual_quantity'));
+        } elseif ($status === 'checking') {
+            $query->whereHas($relation, fn (Builder $items): Builder => $items->whereNull('actual_quantity'))
+                ->whereHas($relation, fn (Builder $items): Builder => $items->whereNotNull('actual_quantity'));
+        } elseif (in_array($status, ['discrepancy', 'matched'], true)) {
+            $query->whereHas($relation)->whereDoesntHave($relation, fn (Builder $items): Builder => $items->whereNull('actual_quantity'));
+            $difference = fn (Builder $items): Builder => $items->whereColumn('actual_quantity', '!=', 'quantity');
+            if ($status === 'discrepancy') {
+                $query->whereHas($relation, $difference);
+            } else {
+                $query->whereDoesntHave($relation, $difference);
+            }
+        }
     }
 
     public function items(): HasMany

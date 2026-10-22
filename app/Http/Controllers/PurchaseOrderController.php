@@ -10,11 +10,13 @@ use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\PurchasePlan;
 use App\Services\DistributorInvoiceService;
+use App\Services\PurchaseOrderDeletionService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -30,10 +32,21 @@ class PurchaseOrderController extends Controller
             'from' => ['nullable', 'date_format:Y-m-d'],
             'until' => ['nullable', 'date_format:Y-m-d', ...($request->filled('from') ? ['after_or_equal:from'] : [])],
             'per_page' => ['nullable', 'integer', 'in:5,6,10,12,15,25,50'],
+            'archived' => ['nullable', 'boolean'],
         ]);
-        $query = PurchaseOrder::with('items')->latest('id');
+        $query = PurchaseOrder::with(['items', 'purchasePlan.orders.items'])->latest('id');
+        if (Schema::hasColumn('purchase_orders', 'archived_at')) {
+            if ($request->boolean('archived')) {
+                $query->whereNotNull('archived_at');
+            } else {
+                $query->whereNull('archived_at');
+            }
+        } elseif ($request->boolean('archived')) {
+            $query->whereRaw('1 = 0');
+        }
         if (! empty($filters['search'])) {
-            $query->where(fn (Builder $q): Builder => $q->where('reference', 'like', '%'.$filters['search'].'%')->orWhere('distributor_name', 'like', '%'.$filters['search'].'%'));
+            $query->where(fn (Builder $q): Builder => $q->where('reference', 'like', '%'.$filters['search'].'%')->orWhere('distributor_name', 'like', '%'.$filters['search'].'%')
+                ->orWhereHas('purchasePlan', fn (Builder $plans): Builder => $plans->where('name', 'like', '%'.$filters['search'].'%')->orWhere('reference', 'like', '%'.$filters['search'].'%')));
         }
         if (! empty($filters['distributor_id'])) {
             $query->where('distributor_id', $filters['distributor_id']);
@@ -45,20 +58,13 @@ class PurchaseOrderController extends Controller
             $query->whereDate('ordered_on', '<=', $filters['until']);
         }
         $status = $filters['status'] ?? null;
-        if ($status === 'pending') {
-            $query->whereDoesntHave('items', fn (Builder $items): Builder => $items->whereNotNull('actual_quantity'));
-        } elseif ($status === 'checking') {
-            $query->whereHas('items', fn (Builder $items): Builder => $items->whereNull('actual_quantity'))
-                ->whereHas('items', fn (Builder $items): Builder => $items->whereNotNull('actual_quantity'));
-        } elseif (in_array($status, ['discrepancy', 'matched'], true)) {
-            $query->whereHas('items')->whereDoesntHave('items', fn (Builder $items): Builder => $items->whereNull('actual_quantity'));
-            $difference = fn (Builder $items): Builder => $items->whereColumn('actual_quantity', '!=', 'quantity');
-            if ($status === 'discrepancy') {
-                $query->whereHas('items', $difference);
-            } else {
-                $query->whereDoesntHave('items', $difference);
-            }
+        if ($status) {
+            $query->where(fn (Builder $groups): Builder => $groups
+                ->where(fn (Builder $legacy): Builder => $legacy->whereNull('purchase_plan_id')->withReceiptStatus($status))
+                ->orWhere(fn (Builder $planned): Builder => $planned->whereNotNull('purchase_plan_id')->withReceiptStatus($status, 'purchasePlan.orders.items')));
         }
+        $representatives = (clone $query)->reorder()->selectRaw('MAX(purchase_orders.id)')->whereNotNull('purchase_plan_id')->groupBy('purchase_plan_id');
+        $query->where(fn (Builder $groups): Builder => $groups->whereNull('purchase_plan_id')->orWhereIn('id', $representatives));
 
         return view('purchase-orders.index', ['orders' => $query->paginate($filters['per_page'] ?? 10)->withQueryString(), 'distributors' => Distributor::where('is_active', true)->orderBy('name')->get(), 'drafts' => PurchasePlan::where('status', 'draft')->latest('id')->paginate(5, ['*'], 'draft_page')->withQueryString()]);
     }
@@ -155,33 +161,20 @@ class PurchaseOrderController extends Controller
         return redirect()->route('purchase-orders.create', ['distributor_id' => $distributor->id])->with('success', 'Distributor ditambahkan. Silakan buat PO.');
     }
 
-    public function destroy(Request $request, PurchaseOrder $purchaseOrder): RedirectResponse
+    public function destroy(Request $request, PurchaseOrder $purchaseOrder, PurchaseOrderDeletionService $deletion): RedirectResponse
     {
         $data = $request->validate(['version' => ['required', 'integer', 'min:1']]);
 
-        DB::transaction(function () use ($purchaseOrder, $data): void {
-            $plan = $purchaseOrder->purchase_plan_id ? PurchasePlan::lockForUpdate()->findOrFail($purchaseOrder->purchase_plan_id) : null;
-            $orders = $plan ? $plan->orders()->orderBy('id')->lockForUpdate()->get() : collect([PurchaseOrder::lockForUpdate()->findOrFail($purchaseOrder->id)]);
-            $order = $orders->firstWhere('id', $purchaseOrder->id);
-            abort_unless($order, 404);
-            if ($order->version !== (int) $data['version']) {
-                throw ValidationException::withMessages(['version' => 'Pengadaan telah berubah. Muat ulang halaman sebelum menghapus.']);
-            }
-            foreach ($orders as $relatedOrder) {
-                $invoice = $relatedOrder->invoice()->lockForUpdate()->first();
-                if ($relatedOrder->note_issued || $relatedOrder->shipment_finalized_at) {
-                    throw ValidationException::withMessages(['purchase_order' => 'Pengadaan dengan nota terbit atau pengiriman yang sudah difinalisasi tidak dapat dihapus.']);
-                }
-                if ($relatedOrder->items()->whereNotNull('actual_quantity')->exists()
-                    || ($invoice && ($invoice->payments()->exists() || $invoice->paid_cents > 0 || $invoice->shipment_id !== null || $invoice->claim_amount_cents > 0))) {
-                    throw ValidationException::withMessages(['purchase_order' => 'Pengadaan yang sudah diperiksa, dibayar, atau terhubung ke pengiriman tidak dapat dihapus.']);
-                }
-                $invoice?->delete();
-                $relatedOrder->delete();
-            }
-            $plan?->delete();
-        });
+        $archived = $deletion->delete($purchaseOrder, (int) $data['version']);
 
-        return redirect()->route('purchase-orders.index')->with('success', 'Pengadaan berhasil dihapus.');
+        return redirect()->route('purchase-orders.index')->with('success', $archived ? 'Pengadaan dipindahkan ke Arsip. Nota, tagihan, pembayaran, dan pengiriman tetap tersimpan serta dapat diproses.' : 'Pengadaan yang belum diproses berhasil dihapus beserta rincian dan tagihan kosongnya.');
+    }
+
+    public function restore(Request $request, PurchaseOrder $purchaseOrder, PurchaseOrderDeletionService $deletion): RedirectResponse
+    {
+        $data = $request->validate(['version' => ['required', 'integer', 'min:1']]);
+        $deletion->restore($purchaseOrder, (int) $data['version']);
+
+        return redirect()->route('purchase-orders.index')->with('success', 'Pengadaan dikembalikan ke daftar aktif.');
     }
 }

@@ -269,7 +269,7 @@ class PurchasePlanTest extends TestCase
         $this->actingAs(User::factory()->create());
         $this->postJson(route('purchase-plans.store'), $payload)->assertOk();
         $order = PurchaseOrder::oldest('id')->firstOrFail();
-        $this->get(route('purchase-orders.index'))->assertSee('Hapus')->assertSee('seluruh rencana beserta order distributornya');
+        $this->get(route('purchase-orders.index'))->assertSee('Hapus')->assertSee('seluruh order distributor');
 
         $this->deleteJson(route('purchase-orders.destroy', $order), ['version' => $order->version])
             ->assertRedirect(route('purchase-orders.index'))->assertSessionHasNoErrors();
@@ -282,7 +282,7 @@ class PurchasePlanTest extends TestCase
     #[TestWith(['issued'])]
     #[TestWith(['checked'])]
     #[TestWith(['claim'])]
-    public function test_processed_sibling_blocks_deletion_of_entire_plan_and_rolls_back_all_orders(string $state): void
+    public function test_processed_sibling_archives_entire_plan_without_deleting_any_orders(string $state): void
     {
         $payload = $this->payload();
         $payload['items'][0]['allocations'][0]['quantity'] = 10;
@@ -300,11 +300,12 @@ class PurchasePlanTest extends TestCase
         }
 
         $this->deleteJson(route('purchase-orders.destroy', $first), ['version' => $first->version])
-            ->assertUnprocessable()->assertJsonValidationErrors('purchase_order');
+            ->assertRedirect(route('purchase-orders.index'))->assertSessionHasNoErrors();
 
         $this->assertDatabaseCount('purchase_plans', 1);
         $this->assertDatabaseCount('purchase_orders', 2);
         $this->assertDatabaseCount('purchase_order_items', 2);
+        $this->assertSame(2, PurchaseOrder::whereNotNull('archived_at')->count());
     }
 
     #[TestWith(['items'])]
