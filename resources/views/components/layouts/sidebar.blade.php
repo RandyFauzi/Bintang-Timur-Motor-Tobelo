@@ -15,7 +15,7 @@
             ['label' => 'Histori Transaksi', 'icon' => 'history', 'route' => 'transactions.index', 'active' => 'transactions.*'],
         ]],
         ['label' => 'Laporan & Analisa', 'items' => [
-            ['label' => 'Tagihan Distributor', 'icon' => 'wallet', 'route' => 'distributor-invoices.index', 'active' => 'distributor-invoices.*'],
+            ['label' => 'Tagihan Distributor', 'icon' => 'sidebar-invoice', 'route' => 'distributor-invoices.index', 'active' => 'distributor-invoices.*'],
             ['label' => 'Laporan', 'icon' => 'report', 'route' => 'reports.finance', 'active' => 'reports.finance'],
             ['label' => 'Riset Kompetitor', 'icon' => 'chart', 'route' => 'reports.index', 'active' => 'reports.index', 'create' => true],
         ]],

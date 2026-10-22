@@ -160,23 +160,26 @@ class PurchaseOrderController extends Controller
         $data = $request->validate(['version' => ['required', 'integer', 'min:1']]);
 
         DB::transaction(function () use ($purchaseOrder, $data): void {
-            $order = PurchaseOrder::lockForUpdate()->findOrFail($purchaseOrder->id);
+            $plan = $purchaseOrder->purchase_plan_id ? PurchasePlan::lockForUpdate()->findOrFail($purchaseOrder->purchase_plan_id) : null;
+            $orders = $plan ? $plan->orders()->orderBy('id')->lockForUpdate()->get() : collect([PurchaseOrder::lockForUpdate()->findOrFail($purchaseOrder->id)]);
+            $order = $orders->firstWhere('id', $purchaseOrder->id);
+            abort_unless($order, 404);
             if ($order->version !== (int) $data['version']) {
                 throw ValidationException::withMessages(['version' => 'Pengadaan telah berubah. Muat ulang halaman sebelum menghapus.']);
             }
-            if ($order->purchase_plan_id !== null) {
-                throw ValidationException::withMessages(['purchase_order' => 'Order distributor dari rencana final tidak dapat dihapus secara terpisah.']);
+            foreach ($orders as $relatedOrder) {
+                $invoice = $relatedOrder->invoice()->lockForUpdate()->first();
+                if ($relatedOrder->note_issued || $relatedOrder->shipment_finalized_at) {
+                    throw ValidationException::withMessages(['purchase_order' => 'Pengadaan dengan nota terbit atau pengiriman yang sudah difinalisasi tidak dapat dihapus.']);
+                }
+                if ($relatedOrder->items()->whereNotNull('actual_quantity')->exists()
+                    || ($invoice && ($invoice->payments()->exists() || $invoice->paid_cents > 0 || $invoice->shipment_id !== null || $invoice->claim_amount_cents > 0))) {
+                    throw ValidationException::withMessages(['purchase_order' => 'Pengadaan yang sudah diperiksa, dibayar, atau terhubung ke pengiriman tidak dapat dihapus.']);
+                }
+                $invoice?->delete();
+                $relatedOrder->delete();
             }
-            $invoice = $order->invoice()->lockForUpdate()->first();
-            if ($order->note_issued || $order->shipment_finalized_at) {
-                throw ValidationException::withMessages(['purchase_order' => 'Pengadaan dengan nota terbit atau pengiriman yang sudah difinalisasi tidak dapat dihapus.']);
-            }
-            if ($order->items()->whereNotNull('actual_quantity')->exists()
-                || ($invoice && ($invoice->payments()->exists() || $invoice->paid_cents > 0 || $invoice->shipment_id !== null))) {
-                throw ValidationException::withMessages(['purchase_order' => 'Pengadaan yang sudah diperiksa, dibayar, atau terhubung ke pengiriman tidak dapat dihapus.']);
-            }
-            $invoice?->delete();
-            $order->delete();
+            $plan?->delete();
         });
 
         return redirect()->route('purchase-orders.index')->with('success', 'Pengadaan berhasil dihapus.');

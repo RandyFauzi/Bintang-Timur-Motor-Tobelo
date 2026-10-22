@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Distributor;
+use App\Models\DistributorInvoice;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\PurchasePlan;
@@ -260,17 +261,50 @@ class PurchasePlanTest extends TestCase
         $this->assertDatabaseCount('stock_movements', 0);
     }
 
-    public function test_distributor_orders_cannot_be_deleted_out_of_a_finalized_plan(): void
+    public function test_deleting_unprocessed_plan_removes_all_distributor_orders_together(): void
     {
+        $payload = $this->payload();
+        $payload['items'][0]['allocations'][0]['quantity'] = 10;
+        $payload['items'][0]['allocations'][] = ['distributor_id' => Distributor::factory()->create()->id, 'quantity' => 20];
         $this->actingAs(User::factory()->create());
-        $this->postJson(route('purchase-plans.store'), $this->payload())->assertOk();
-        $order = PurchaseOrder::sole();
+        $this->postJson(route('purchase-plans.store'), $payload)->assertOk();
+        $order = PurchaseOrder::oldest('id')->firstOrFail();
+        $this->get(route('purchase-orders.index'))->assertSee('Hapus')->assertSee('seluruh rencana beserta order distributornya');
 
         $this->deleteJson(route('purchase-orders.destroy', $order), ['version' => $order->version])
-            ->assertUnprocessable()->assertJsonValidationErrors(['purchase_order' => 'Order distributor dari rencana final tidak dapat dihapus secara terpisah.']);
+            ->assertRedirect(route('purchase-orders.index'))->assertSessionHasNoErrors();
 
-        $this->assertModelExists($order);
-        $this->assertDatabaseCount('purchase_order_items', 1);
+        $this->assertDatabaseCount('purchase_plans', 0);
+        $this->assertDatabaseCount('purchase_orders', 0);
+        $this->assertDatabaseCount('purchase_order_items', 0);
+    }
+
+    #[TestWith(['issued'])]
+    #[TestWith(['checked'])]
+    #[TestWith(['claim'])]
+    public function test_processed_sibling_blocks_deletion_of_entire_plan_and_rolls_back_all_orders(string $state): void
+    {
+        $payload = $this->payload();
+        $payload['items'][0]['allocations'][0]['quantity'] = 10;
+        $payload['items'][0]['allocations'][] = ['distributor_id' => Distributor::factory()->create()->id, 'quantity' => 20];
+        $this->actingAs(User::factory()->create());
+        $this->postJson(route('purchase-plans.store'), $payload)->assertOk();
+        [$first, $second] = PurchaseOrder::orderBy('id')->get()->all();
+        if ($state === 'issued') {
+            $second->note_issued = true;
+            $second->save();
+        } elseif ($state === 'checked') {
+            $second->items()->firstOrFail()->update(['actual_quantity' => 0]);
+        } else {
+            DistributorInvoice::factory()->create(['purchase_order_id' => $second->id, 'claim_amount_cents' => 100]);
+        }
+
+        $this->deleteJson(route('purchase-orders.destroy', $first), ['version' => $first->version])
+            ->assertUnprocessable()->assertJsonValidationErrors('purchase_order');
+
+        $this->assertDatabaseCount('purchase_plans', 1);
+        $this->assertDatabaseCount('purchase_orders', 2);
+        $this->assertDatabaseCount('purchase_order_items', 2);
     }
 
     #[TestWith(['items'])]

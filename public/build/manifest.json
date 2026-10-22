@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-C8CwNULN.css",
+    "file": "assets/app-Bzw8Ve49.css",
     "name": "app",
     "names": [
       "app.css"
@@ -206,6 +206,10 @@
   "resources/images/icons/sidebar-add.svg": {
     "file": "assets/sidebar-add-l5tqPX-r.svg",
     "src": "resources/images/icons/sidebar-add.svg"
+  },
+  "resources/images/icons/sidebar-invoice.svg": {
+    "file": "assets/sidebar-invoice-CoTDcPBl.svg",
+    "src": "resources/images/icons/sidebar-invoice.svg"
   },
   "resources/images/icons/sidebar-toggle.svg": {
     "file": "assets/sidebar-toggle-D0Wx3_lz.svg",

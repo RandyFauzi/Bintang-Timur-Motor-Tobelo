@@ -30,28 +30,26 @@
                     <footer class="dialog-actions"><button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button><button type="submit" class="ui-button">Terapkan Tanggal</button></footer>
                 </form>
             </x-ui.dialog>
-            <div class="overflow-x-auto rounded-b-xl" role="region" aria-label="Tabel pengadaan barang" tabindex="0">
-                <table class="w-full text-left text-sm">
+            <div class="procurement-list-region overflow-x-auto rounded-b-xl" role="region" aria-label="Daftar pengadaan barang" tabindex="0">
+                <table class="procurement-table w-full text-left text-sm" role="table">
                     <thead class="bg-gray-50 text-xs uppercase text-muted"><tr>@foreach(['Pengadaan/Tanggal', 'Nama Pengadaan', 'Produk', 'Total Unit', 'Status', 'Aksi'] as $heading)<th scope="col" class="whitespace-nowrap px-4 py-5 font-medium">{{ $heading }}</th>@endforeach</tr></thead>
                     <tbody>
                         @forelse($orders as $order)
                             @php($statusLabel = $order->statusLabel())
                             @php($manageUrl = $order->purchase_plan_id ? route('purchase-plans.show', $order->purchase_plan_id) : route('purchase-orders.show', $order))
-                            <tr class="border-b hover:bg-gray-50">
-                                <td class="whitespace-nowrap p-4"><a class="font-medium underline underline-offset-4" href="{{ route('purchase-orders.show', $order) }}">{{ $order->reference }}</a><p class="mt-1 text-xs text-muted">{{ $order->ordered_on->translatedFormat('d M Y') }}</p></td>
-                                <td class="min-w-[180px] break-words p-4">@if($order->purchase_plan_id)<a class="underline underline-offset-4" href="{{ route('purchase-plans.show', $order->purchase_plan_id) }}">{{ $order->notes }}</a><p class="mt-1 text-xs text-muted">{{ $order->distributor_name }}</p>@else Pengadaan ke {{ $order->distributor_name }} @endif</td>
-                                <td class="whitespace-nowrap p-4">{{ number_format($order->items->count(), 0, ',', '.') }} <span class="text-muted">produk</span></td>
-                                <td class="whitespace-nowrap p-4">{{ number_format($order->items->sum('quantity'), 0, ',', '.') }} <span class="text-muted">unit</span><p class="mt-1 text-xs text-muted">Rp {{ number_format($order->total(), 2, ',', '.') }}</p></td>
-                                <td class="p-4"><span @class(['inline-flex whitespace-nowrap rounded-full border px-3 py-2 text-xs', 'border-green-500 bg-green-50 text-green-800' => $statusLabel === 'Sesuai', 'border-blue-400 bg-blue-50 text-blue-800' => $statusLabel === 'Sedang diperiksa', 'border-amber-500 bg-amber-50 text-amber-800' => $statusLabel === 'Ada selisih', 'border-gray-300 bg-gray-50 text-gray-700' => $statusLabel === 'Belum diperiksa'])>{{ $statusLabel }}</span></td>
-                                <td class="p-4"><div class="flex items-center gap-1">
+                            <tr class="procurement-row border-b hover:bg-gray-50" role="row">
+                                <td class="procurement-cell-reference whitespace-nowrap p-4" role="cell"><a class="font-medium underline underline-offset-4" href="{{ route('purchase-orders.show', $order) }}">{{ $order->reference }}</a><p class="mt-1 text-xs text-muted">{{ $order->ordered_on->translatedFormat('d M Y') }}</p></td>
+                                <td class="procurement-cell-name min-w-[180px] break-words p-4" role="cell">@if($order->purchase_plan_id)<a class="underline underline-offset-4" href="{{ route('purchase-plans.show', $order->purchase_plan_id) }}">{{ $order->notes }}</a><p class="mt-1 text-xs text-muted">{{ $order->distributor_name }}</p>@else Pengadaan ke {{ $order->distributor_name }} @endif</td>
+                                <td class="procurement-cell-products whitespace-nowrap p-4" role="cell" data-label="Jumlah produk">{{ number_format($order->items->count(), 0, ',', '.') }} <span class="text-muted">produk</span></td>
+                                <td class="procurement-cell-units whitespace-nowrap p-4" role="cell" data-label="Total unit / Estimasi PO">{{ number_format($order->items->sum('quantity'), 0, ',', '.') }} <span class="text-muted">unit</span><p class="mt-1 text-xs text-muted">Rp {{ number_format($order->total(), 2, ',', '.') }}</p></td>
+                                <td class="procurement-cell-status p-4" role="cell"><span @class(['inline-flex whitespace-nowrap rounded-full border px-3 py-2 text-xs', 'border-green-500 bg-green-50 text-green-800' => $statusLabel === 'Sesuai', 'border-blue-400 bg-blue-50 text-blue-800' => $statusLabel === 'Sedang diperiksa', 'border-amber-500 bg-amber-50 text-amber-800' => $statusLabel === 'Ada selisih', 'border-gray-300 bg-gray-50 text-gray-700' => $statusLabel === 'Belum diperiksa'])>{{ $statusLabel }}</span></td>
+                                <td class="procurement-cell-actions p-4" role="cell"><div class="flex items-center gap-1">
                                     <a class="ui-button ui-button--secondary" href="{{ $manageUrl }}" aria-label="Kelola pengadaan {{ $order->reference }}">Kelola<x-ui.icon name="arrow-right" :size="16" /></a>
                                     <x-dropdown :portal="true">
                                         <x-slot:trigger><button type="button" class="procurement-more" aria-label="Aksi pengadaan {{ $order->reference }}" :aria-expanded="open"><x-ui.icon name="more-dark" :size="18" /></button></x-slot:trigger>
                                         <x-slot:content>
                                             <x-dropdown-link :href="$manageUrl">Detail</x-dropdown-link>
-                                            @if(!$order->purchase_plan_id)
                                             <button type="button" class="flex min-h-11 w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-700 hover:bg-gray-100 focus:bg-gray-100" @click="$dispatch('delete-purchase-order', @js(['url' => route('purchase-orders.destroy', $order), 'reference' => $order->reference, 'version' => $order->version]))"><x-ui.icon name="trash" :size="16" />Hapus</button>
-                                            @endif
                                         </x-slot:content>
                                     </x-dropdown>
                                 </div></td>
@@ -69,6 +67,7 @@
                 @csrf @method('DELETE')
                 <input type="hidden" name="version" :value="deletion.version">
                 <p class="text-sm">Hapus pengadaan <strong x-text="deletion.reference"></strong>?</p>
+                <p class="text-sm text-muted">Jika pengadaan berasal dari rencana induk, seluruh rencana beserta order distributornya akan dihapus. Pengadaan yang sudah memiliki nota terbit, pemeriksaan barang, pembayaran, klaim, atau pengiriman tidak dapat dihapus.</p>
                 <footer class="dialog-actions"><button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button><button type="submit" class="ui-button" :disabled="submitting" x-text="submitting ? 'Menghapus…' : 'Ya, Hapus'">Ya, Hapus</button></footer>
             </form>
         </x-ui.dialog>
