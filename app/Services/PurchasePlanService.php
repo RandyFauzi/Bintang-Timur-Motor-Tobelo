@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Distributor;
+use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\PurchasePlan;
 use Illuminate\Support\Facades\DB;
@@ -11,6 +12,8 @@ use Illuminate\Validation\ValidationException;
 
 class PurchasePlanService
 {
+    public function __construct(private SupplierProductService $supplierProducts) {}
+
     /** @param array<string, mixed> $data */
     public function save(array $data, ?PurchasePlan $existing = null): PurchasePlan
     {
@@ -45,6 +48,7 @@ class PurchasePlanService
             if ($data['intent'] !== 'finalize') {
                 return $plan;
             }
+            $this->supplierProducts->ensureSchemaReady();
             $groups = [];
             foreach ($data['items'] as $item) {
                 foreach ($item['allocations'] as $allocation) {
@@ -64,10 +68,16 @@ class PurchasePlanService
                     'notes' => $plan->name,
                 ]);
                 foreach ($rows as [$item, $quantity]) {
+                    $selectedProduct = ! empty($item['product_id']) ? Product::find($item['product_id']) : null;
+                    if (! empty($item['product_id']) && (! $selectedProduct || ! $selectedProduct->is_active)) {
+                        throw ValidationException::withMessages(['items' => 'Produk katalog tidak lagi tersedia. Periksa kembali rencana.']);
+                    }
+                    $supplierProduct = $selectedProduct ? $this->supplierProducts->forDistributor($selectedProduct, $distributor, (float) $item['unit_price']) : null;
                     $order->items()->create([
+                        'product_id' => $supplierProduct?->id,
                         'product_name' => $item['product_name'],
-                        'sku' => $item['sku'] ?? '', 'unit' => $item['unit'], 'quantity' => $quantity,
-                        'unit_price' => $item['unit_price'],
+                        'sku' => $supplierProduct?->sku ?? ($item['sku'] ?? ''), 'unit' => $item['unit'], 'quantity' => $quantity,
+                        'unit_price' => $supplierProduct && $supplierProduct->id !== $selectedProduct->id ? $supplierProduct->purchase_price : $item['unit_price'],
                     ]);
                 }
             }

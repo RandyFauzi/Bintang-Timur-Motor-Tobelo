@@ -116,14 +116,14 @@ class CatalogueTest extends TestCase
         $this->assertDatabaseCount('stock_movements', 0);
     }
 
-    public function test_edit_can_clear_supplier_and_color_assignments(): void
+    public function test_edit_can_clear_color_without_changing_supplier_identity(): void
     {
         $user = User::factory()->create();
         $supplier = Distributor::factory()->create();
         $product = Product::factory()->withStock()->create();
         $product->distributors()->attach($supplier);
-        $this->actingAs($user)->patch(route('products.update', $product), ['quantity' => 10, 'stock_minimum' => 5, 'color_name' => '', '_sync_distributors' => 1])->assertRedirect();
-        $this->assertCount(0, $product->refresh()->distributors);
+        $this->actingAs($user)->patch(route('products.update', $product), ['quantity' => 10, 'stock_minimum' => 5, 'color_name' => ''])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame([$supplier->id], $product->refresh()->distributors->modelKeys());
         $this->assertNull($product->color_id);
     }
 

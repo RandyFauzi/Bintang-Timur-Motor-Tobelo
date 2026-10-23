@@ -253,16 +253,29 @@ class ProductImportTest extends TestCase
         $this->actingAs(User::factory()->create());
         $existing = Distributor::factory()->create(['name' => 'WMS']);
         $first = $this->row();
-        $first[7] = ' wms | Baru | baru | - ';
+        $first[7] = ' wms ';
         $second = $this->row();
         $second[8] = 'BARCODE-2';
         $second[9] = 'SKU-2';
-        $second[7] = 'BARU';
+        $second[7] = 'Baru';
         $this->post(route('products.import'), ['file' => $this->workbook([$first, $second])])->assertSessionHasNoErrors();
         $this->assertDatabaseCount('distributors', 2);
         $new = Distributor::where('name', 'Baru')->sole();
-        $this->assertSame([$existing->id, $new->id], Product::where('sku', 'IMP-001')->sole()->distributors->modelKeys());
+        $this->assertSame([$existing->id], Product::where('sku', 'IMP-001')->sole()->distributors->modelKeys());
         $this->assertSame([$new->id], Product::where('sku', 'SKU-2')->sole()->distributors->modelKeys());
+    }
+
+    public function test_import_rejects_multiple_distributors_in_one_row_without_creating_records(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $row = $this->row();
+        $row[7] = 'Pemasok A | Pemasok B';
+
+        $this->postJson(route('products.import'), ['file' => $this->workbook([$row])])
+            ->assertUnprocessable()->assertJsonValidationErrors('file');
+
+        $this->assertDatabaseCount('products', 0);
+        $this->assertDatabaseCount('distributors', 0);
     }
 
     public function test_new_distributors_are_rolled_back_when_stock_update_fails(): void

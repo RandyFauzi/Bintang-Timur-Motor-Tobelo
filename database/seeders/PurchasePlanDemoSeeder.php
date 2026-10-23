@@ -14,6 +14,7 @@ use App\Services\DistributorInvoiceService;
 use App\Services\PurchaseOrderNoteService;
 use App\Services\PurchasePlanService;
 use App\Services\ShipmentService;
+use App\Services\SupplierProductService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -21,9 +22,9 @@ class PurchasePlanDemoSeeder extends Seeder
 {
     private const REQUEST_ID = 'd3f0a501-5520-4c65-9cf0-000000000001';
 
-    public function run(PurchasePlanService $plans, PurchaseOrderNoteService $notes, ShipmentService $tracking, DistributorInvoiceService $billing): void
+    public function run(PurchasePlanService $plans, PurchaseOrderNoteService $notes, ShipmentService $tracking, DistributorInvoiceService $billing, SupplierProductService $supplierProducts): void
     {
-        DB::transaction(function () use ($plans, $notes, $tracking, $billing): void {
+        DB::transaction(function () use ($plans, $notes, $tracking, $billing, $supplierProducts): void {
             if (PurchasePlan::where('request_id', self::REQUEST_ID)->exists()) {
                 $this->command?->info('Simulasi PO sudah ada. Data yang telah Anda ubah tidak ditimpa.');
 
@@ -56,10 +57,8 @@ class PurchasePlanDemoSeeder extends Seeder
                 ]);
                 $allocations = [];
                 foreach ($distributors as $supplierIndex => $distributor) {
-                    $product->distributors()->syncWithoutDetaching([$distributor->id => [
-                        'distributor_sku' => $product->sku.'-D'.($supplierIndex + 1),
-                        'purchase_price' => $price, 'is_primary' => $supplierIndex === 0,
-                    ]]);
+                    $variant = $supplierProducts->forDistributor($product, $distributor, $price + $supplierIndex * 1000);
+                    $variant->distributors()->updateExistingPivot($distributor->id, ['distributor_sku' => $variant->sku]);
                     $allocations[] = ['distributor_id' => $distributor->id, 'quantity' => 10 + $index];
                 }
                 $items[] = [

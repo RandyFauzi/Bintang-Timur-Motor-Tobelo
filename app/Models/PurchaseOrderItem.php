@@ -9,7 +9,7 @@ class PurchaseOrderItem extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['product_name', 'sku', 'unit', 'quantity', 'unit_price', 'actual_quantity'];
+    protected $fillable = ['product_id', 'product_name', 'sku', 'unit', 'quantity', 'unit_price', 'actual_quantity'];
 
     protected function casts(): array
     {

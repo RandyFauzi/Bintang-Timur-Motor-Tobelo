@@ -29,11 +29,19 @@ class PurchasePlanDemoSeederTest extends TestCase
         $orders = $plan->orders()->with(['items', 'invoice.shipment'])->orderBy('id')->get();
         $this->assertSame('finalized', $plan->status);
         $this->assertCount(15, $plan->items);
-        $this->assertSame(15, Product::where('sku', 'like', 'DEMO-PO-%')->count());
+        $this->assertSame(75, Product::where('name', 'like', '[DEMO]%')->count());
+        foreach (Product::where('name', 'like', '[DEMO]%')->with('distributors')->get() as $product) {
+            $this->assertCount(1, $product->distributors);
+        }
         $this->assertSame(5, Distributor::where('name', 'like', '[DEMO]%')->count());
         $this->assertCount(5, $orders);
         foreach ($orders as $order) {
             $this->assertCount(15, $order->items);
+            foreach ($order->items as $item) {
+                $product = Product::findOrFail($item->product_id);
+                $this->assertSame([$order->distributor_id], $product->distributors->modelKeys());
+                $this->assertEquals($product->purchase_price, $item->unit_price);
+            }
         }
         $this->assertDatabaseCount('purchase_order_items', 75);
         $this->assertDatabaseCount('distributor_invoices', 4);
@@ -74,7 +82,7 @@ class PurchasePlanDemoSeederTest extends TestCase
 
         $this->assertDatabaseCount('purchase_plans', 1);
         $this->assertDatabaseCount('purchase_orders', 5);
-        $this->assertDatabaseCount('products', 15);
+        $this->assertDatabaseCount('products', 75);
         $this->assertDatabaseCount('distributors', 5);
         $this->assertDatabaseCount('distributor_invoices', 4);
         $this->assertDatabaseCount('shipments', 2);

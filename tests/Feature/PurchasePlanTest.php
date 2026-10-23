@@ -101,7 +101,7 @@ class PurchasePlanTest extends TestCase
         $this->get(route('purchase-orders.index'))->assertSee('Lanjutkan Draft')->assertSee($plan->name);
     }
 
-    public function test_finalization_splits_quantities_between_distributors_without_changing_catalogue_or_stock(): void
+    public function test_finalization_uses_separate_supplier_products_without_changing_existing_stock(): void
     {
         $product = Product::factory()->withStock(40)->create(['name' => 'Nama Katalog']);
         $first = Distributor::factory()->create();
@@ -121,7 +121,7 @@ class PurchasePlanTest extends TestCase
         $this->assertDatabaseHas('purchase_order_items', ['purchase_order_id' => PurchaseOrder::where('distributor_id', $second->id)->sole()->id, 'quantity' => 18]);
         $this->assertSame('Nama Katalog', $product->refresh()->name);
         $this->assertSame(40, $product->stock->quantity);
-        $this->assertDatabaseCount('products', 1);
+        $this->assertDatabaseCount('products', 2);
         $this->assertDatabaseCount('stock_movements', 0);
         $this->assertDatabaseCount('distributor_invoices', 0);
         $this->get(route('purchase-plans.show', $plan))->assertOk()->assertSee($first->name)->assertSee($second->name)->assertSee('Yamalube 02 Oil');

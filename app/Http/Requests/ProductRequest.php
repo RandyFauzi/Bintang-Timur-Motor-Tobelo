@@ -40,7 +40,7 @@ class ProductRequest extends FormRequest
             'type_id' => ['nullable', Rule::exists('product_types', 'id')->whereNull('deleted_at')],
             'color_id' => ['nullable', Rule::exists('colors', 'id')->whereNull('deleted_at')],
             'brand_name' => ['nullable', 'string', 'max:255'], 'type_name' => ['nullable', 'string', 'max:255'], 'color_name' => ['nullable', 'string', 'max:255'],
-            'distributor_ids' => ['sometimes', 'array', 'max:100'],
+            'distributor_ids' => ['sometimes', 'array', 'max:1'],
             'distributor_ids.*' => ['integer', 'distinct', Rule::exists('distributors', 'id')->whereNull('deleted_at')->where('is_active', true)],
         ];
     }
@@ -48,6 +48,6 @@ class ProductRequest extends FormRequest
     /** @return array<string, string> */
     public function messages(): array
     {
-        return ['*.required' => 'Kolom ini wajib diisi.', '*.numeric' => 'Masukkan angka yang valid.', '*.integer' => 'Masukkan bilangan bulat.', '*.min' => 'Nilai tidak boleh negatif.', '*.exists' => 'Pilihan tidak tersedia.', '*.unique' => 'Kode ini sudah digunakan.', 'quantity.required_without' => 'Jumlah stok wajib diisi.'];
+        return ['*.required' => 'Kolom ini wajib diisi.', '*.numeric' => 'Masukkan angka yang valid.', '*.integer' => 'Masukkan bilangan bulat.', '*.min' => 'Nilai tidak boleh negatif.', '*.exists' => 'Pilihan tidak tersedia.', '*.unique' => 'Kode ini sudah digunakan.', 'quantity.required_without' => 'Jumlah stok wajib diisi.', 'distributor_ids.max' => 'Satu ID produk hanya boleh memiliki satu distributor.'];
     }
 }

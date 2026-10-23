@@ -116,10 +116,11 @@ class PurchasePlanController extends Controller
     public function products(Request $request): JsonResponse
     {
         $data = $request->validate(['search' => ['nullable', 'string', 'max:255']]);
-        $products = Product::with(['brand', 'type', 'color', 'stock'])->where('is_active', true);
+        $products = Product::with(['brand', 'type', 'color', 'stock', 'distributors'])->where('is_active', true);
         if (! empty($data['search'])) {
             $products->where(function (Builder $query) use ($data): void {
-                $query->where('name', 'like', '%'.$data['search'].'%')->orWhere('sku', 'like', '%'.$data['search'].'%')->orWhere('barcode', 'like', '%'.$data['search'].'%');
+                $query->where('name', 'like', '%'.$data['search'].'%')->orWhere('sku', 'like', '%'.$data['search'].'%')->orWhere('barcode', 'like', '%'.$data['search'].'%')
+                    ->orWhereHas('distributors', fn (Builder $suppliers): Builder => $suppliers->where('name', 'like', '%'.$data['search'].'%'));
             });
         }
 
@@ -129,7 +130,7 @@ class PurchasePlanController extends Controller
     /** @return array<string, mixed> */
     private function productRow(Product $product): array
     {
-        return ['product_id' => $product->id, 'product_name' => $product->name, 'color' => $product->color?->name ?? '', 'product_kind' => $product->product_kind, 'brand' => $product->brand?->name ?? '', 'part_type' => $product->type?->name ?? '', 'current_stock' => $product->stock?->quantity ?? 0, 'quantity' => 0, 'sku' => $product->sku ?? '', 'unit' => $product->unit ?: 'pcs', 'unit_price' => $product->purchase_price ?? 0, 'allocations' => []];
+        return ['product_id' => $product->id, 'product_name' => $product->name, 'distributor_name' => $product->distributors->first()?->name ?? '', 'color' => $product->color?->name ?? '', 'product_kind' => $product->product_kind, 'brand' => $product->brand?->name ?? '', 'part_type' => $product->type?->name ?? '', 'current_stock' => $product->stock?->quantity ?? 0, 'quantity' => 0, 'sku' => $product->sku ?? '', 'unit' => $product->unit ?: 'pcs', 'unit_price' => $product->purchase_price ?? 0, 'allocations' => []];
     }
 
     public function template(ExcelExportService $excel): StreamedResponse

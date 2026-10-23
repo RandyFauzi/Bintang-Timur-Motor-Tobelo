@@ -22,8 +22,13 @@
             <x-ui.field name="selling_price" label="Harga Jual" type="number" :value="$product?->selling_price ?? 0" min="0" step="0.01" required />
             <x-ui.field name="product_kind" label="Tipe Produk"><select id="product_kind" name="product_kind" class="form-input">@foreach(\App\Models\Product::KINDS as $value => $kindLabel)<option value="{{ $value }}" @selected(old('product_kind',$product?->product_kind ?? 'daily') === $value)>{{ $kindLabel }}</option>@endforeach</select></x-ui.field>
             <x-ui.field name="distributor_ids" label="Distributor">
-                <x-ui.multiselect name="distributor_ids" id="distributor_ids" label="Pilih Distributor" :options="$distributors" :selected="old('distributor_ids',$product?->distributors->modelKeys() ?? [])" :submit-on-apply="false" icon="workshop" />
-                <input type="hidden" name="_sync_distributors" value="1"><p class="mt-1 text-xs text-muted">Bisa memilih lebih dari satu distributor.</p>
+                @if($product?->distributors->isNotEmpty())
+                    <input type="hidden" name="distributor_ids[]" value="{{ $product->distributors->first()->id }}">
+                    <p class="form-input flex items-center gap-2"><x-ui.icon name="workshop" :size="16" />{{ $product->distributors->first()->name }}</p>
+                @else
+                    <x-ui.multiselect name="distributor_ids[]" id="distributor_ids" label="Pilih Distributor" :options="$distributors" :selected="old('distributor_ids', [])" :multiple="false" :submit-on-apply="false" icon="workshop" />
+                @endif
+                <input type="hidden" name="_sync_distributors" value="1"><p class="mt-1 text-xs text-muted">Satu ID produk untuk satu distributor. Barang yang sama dari distributor lain harus memakai ID produk terpisah dengan modal dan stok masing-masing.</p>
             </x-ui.field>
             <x-ui.field name="barcode" label="Barcode (opsional)" :value="$product?->barcode" maxlength="100" />
             @if($product)<div class="form-field"><span class="form-field__label">SKU</span><p class="py-2 text-sm text-muted">{{ $product->sku }}</p></div>@else<x-ui.field name="sku" label="SKU (opsional)" hint="Dibuat otomatis jika dikosongkan." maxlength="100" />@endif
@@ -50,7 +55,7 @@
                 <ul class="list-disc pl-5 text-sm text-muted space-y-2">
                     <li>ID produk yang sama memperbarui data. ID kosong menambah produk baru; SKU kosong dibuat otomatis. ID yang tidak ditemukan ditolak.</li>
                     <li>Isi angka tanpa Rp atau pemisah ribuan; desimal memakai titik. Kolom yang tidak ada di file tetap dipertahankan untuk produk lama. Kolom opsional yang kosong akan dikosongkan.</li>
-                    <li>Tipe Produk: Harian, Non-Harian, atau Variasi. Distributor boleh kosong. Nama distributor yang belum terdaftar akan dibuat otomatis; pisahkan beberapa nama dengan tanda |.</li>
+                    <li>Tipe Produk: Harian, Non-Harian, atau Variasi. Maksimal satu distributor per baris. Untuk distributor berbeda, gunakan baris dan ID produk berbeda. Nama distributor yang belum terdaftar akan dibuat otomatis.</li>
                     <li>Kolom opsional menerima sel kosong, NULL, atau tanda -. Tipe Produk kosong menjadi Harian untuk produk baru; tipe produk lama tetap dipertahankan.</li>
                     <li>Format kolom SKU dan Barcode sebagai Teks agar angka nol di depan tidak hilang.</li>
                     <li>Semua baris diperiksa terlebih dahulu. Jika ada kesalahan, seluruh import dibatalkan.</li>

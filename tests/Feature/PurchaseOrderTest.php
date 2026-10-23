@@ -11,8 +11,10 @@ use App\Models\PurchaseOrderItem;
 use App\Models\Shipment;
 use App\Models\User;
 use App\Services\DistributorInvoiceService;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\TestWith;
 use Tests\TestCase;
@@ -263,6 +265,9 @@ class PurchaseOrderTest extends TestCase
 
     public function test_detaching_existing_items_preserves_names_receipts_and_invoices(): void
     {
+        Schema::table('purchase_order_items', function (Blueprint $table): void {
+            $table->dropConstrainedForeignId('product_id');
+        });
         $migration = require database_path('migrations/2026_10_17_085657_detach_purchase_order_items_from_products.php');
         $migration->down();
         $product = Product::factory()->withStock(7)->create();

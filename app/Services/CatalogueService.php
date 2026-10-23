@@ -67,6 +67,19 @@ class CatalogueService
     {
         return DB::transaction(function () use ($data, $userId, $product, $replaceSku): Product {
             $creating = $product === null;
+            if (! $creating) {
+                $product = Product::lockForUpdate()->findOrFail($product->id);
+            }
+            if (array_key_exists('distributor_ids', $data)) {
+                $supplierIds = array_values(array_unique(array_map('intval', $data['distributor_ids'])));
+                if (count($supplierIds) > 1) {
+                    throw ValidationException::withMessages(['distributor_ids' => 'Satu ID produk hanya boleh memiliki satu distributor. Buat produk terpisah untuk distributor lain.']);
+                }
+                $currentSupplierId = $product?->distributors()->value('distributors.id');
+                if ($currentSupplierId && $supplierIds !== [(int) $currentSupplierId]) {
+                    throw ValidationException::withMessages(['distributor_ids' => 'Distributor produk ini tidak dapat diganti atau dikosongkan. Gunakan ID produk baru untuk distributor lain agar stok dan riwayat tetap sesuai.']);
+                }
+            }
             $attributes = Arr::only($data, ['name', 'sku', 'barcode', 'purchase_price', 'selling_price', 'stock_minimum', 'product_kind', 'brand_id', 'type_id', 'color_id']);
             foreach (['brand' => Brand::class, 'type' => ProductType::class, 'color' => Color::class] as $field => $model) {
                 if (array_key_exists($field.'_name', $data)) {
@@ -100,7 +113,9 @@ class CatalogueService
                 $this->inventoryService->adjustStock($product, $difference, $creating ? 'initial' : 'adjustment', $creating ? 'Stok awal produk' : 'Penyesuaian stok produk', null, $userId);
             }
             if (array_key_exists('distributor_ids', $data)) {
-                $product->distributors()->sync($data['distributor_ids']);
+                $product->distributors()->sync(collect($supplierIds)->mapWithKeys(fn (int $id): array => [$id => ['purchase_price' => $product->purchase_price, 'is_primary' => true]])->all());
+            } elseif ($product->distributors()->exists()) {
+                $product->distributors()->updateExistingPivot($product->distributors()->value('distributors.id'), ['purchase_price' => $product->purchase_price]);
             }
 
             return $product;
