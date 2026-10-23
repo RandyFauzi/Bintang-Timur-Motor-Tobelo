@@ -15,12 +15,54 @@ use App\Services\PurchaseOrderNoteService;
 use App\Services\PurchasePlanService;
 use App\Services\ShipmentService;
 use App\Services\SupplierProductService;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class PurchasePlanDemoSeeder extends Seeder
 {
     private const REQUEST_ID = 'd3f0a501-5520-4c65-9cf0-000000000001';
+
+    public function reset(): void
+    {
+        $plan = PurchasePlan::where('request_id', self::REQUEST_ID)->lockForUpdate()->first();
+        $rootSkus = array_map(fn (int $index): string => 'DEMO-PO-'.str_pad((string) ($index + 1), 3, '0', STR_PAD_LEFT), array_keys($this->products()));
+        $rootIds = Product::withTrashed()->where(fn (Builder $query): Builder => $query->whereIn('sku', $rootSkus)->orWhereIn('id', collect($plan?->items ?? [])->pluck('product_id')->filter()))->pluck('id');
+        $products = Product::withTrashed()->where(fn (Builder $query): Builder => $query->whereIn('id', $rootIds)->orWhereIn('supplier_source_id', $rootIds))->orderBy('id')->lockForUpdate()->get();
+        $productIds = $products->modelKeys();
+        $orderIds = $plan?->orders()->orderBy('id')->lockForUpdate()->pluck('id') ?? collect();
+        $invoices = DB::table('distributor_invoices')->whereIn('purchase_order_id', $orderIds)->lockForUpdate()->get();
+        $invoiceIds = $invoices->pluck('id');
+        $shipmentIds = $invoices->pluck('shipment_id')->filter()->unique();
+
+        $inUse = $products->contains(fn (Product $product): bool => $product->description !== 'Barang dummy untuk preview pengadaan. Tidak mencatat stok masuk.')
+            || DB::table('sale_items')->whereIn('product_id', $productIds)->exists()
+            || DB::table('product_returns')->whereIn('product_id', $productIds)->exists()
+            || DB::table('stock_movements')->whereIn('product_id', $productIds)->exists()
+            || DB::table('product_stocks')->whereIn('product_id', $productIds)->where(fn (QueryBuilder $query): QueryBuilder => $query->where('quantity', '!=', 0)->orWhere('reserved_quantity', '!=', 0))->exists()
+            || DB::table('purchase_order_items')->whereNotIn('purchase_order_id', $orderIds)->where(fn (QueryBuilder $query): QueryBuilder => $query->whereIn('product_id', $productIds)->orWhereIn('sku', $products->pluck('sku')))->exists()
+            || DB::table('distributor_payments')->whereIn('distributor_invoice_id', $invoiceIds)->where('request_id', '!=', 'd3f0a501-5520-4c65-9cf0-000000000002')->exists()
+            || DB::table('distributor_invoices')->whereIn('shipment_id', $shipmentIds)->whereNotIn('id', $invoiceIds)->exists();
+        foreach (PurchasePlan::where('request_id', '!=', self::REQUEST_ID)->lazyById(100) as $otherPlan) {
+            if (collect($otherPlan->items)->pluck('product_id')->filter()->intersect($productIds)->isNotEmpty()) {
+                $inUse = true;
+
+                break;
+            }
+        }
+        if ($inUse) {
+            throw ValidationException::withMessages(['demo' => 'Reset dibatalkan: data demo sudah digunakan di luar simulasi atau memiliki stok/riwayat operasional. Tidak ada data yang dihapus.']);
+        }
+
+        DB::table('distributor_payments')->whereIn('distributor_invoice_id', $invoiceIds)->delete();
+        DB::table('distributor_invoices')->whereIn('id', $invoiceIds)->delete();
+        DB::table('shipments')->whereIn('id', $shipmentIds)->delete();
+        $plan?->orders()->delete();
+        $plan?->delete();
+        Product::withTrashed()->whereIn('id', $productIds)->forceDelete();
+    }
 
     public function run(PurchasePlanService $plans, PurchaseOrderNoteService $notes, ShipmentService $tracking, DistributorInvoiceService $billing, SupplierProductService $supplierProducts): void
     {
