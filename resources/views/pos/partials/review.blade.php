@@ -2,7 +2,7 @@
     <form class="pos-review-body" @submit.prevent="checkout()">
         <section aria-label="Rincian belanja">
             <div class="flex justify-between gap-3 text-sm font-medium"><h3 x-text="'Produk ('+cart.length+' jenis)'"></h3><span x-text="units+' unit'"></span></div>
-            <template x-for="item in cart" :key="item.id"><article class="pos-review-row"><div><h4 class="flex items-center gap-1.5"><x-ui.icon name="pos-box" :size="18" /><span class="truncate" x-text="item.name"></span></h4><p class="mt-1.5 text-xs text-muted" x-text="[item.color,item.brand,item.type].filter(Boolean).join(' · ')"></p><p class="mt-1.5 text-sm" x-text="item.quantity+' × '+money(item.price)"></p></div><strong x-text="money(item.quantity*item.price)"></strong></article></template>
+            <template x-for="item in cart" :key="item.id"><article class="pos-review-row"><div class="min-w-0 flex-1"><h4 class="flex items-start gap-1.5 font-medium leading-snug"><x-ui.icon name="pos-box" :size="18" class="shrink-0 mt-0.5" /><span class="break-words" x-text="item.name"></span></h4><p class="mt-1.5 text-xs text-muted" x-text="[item.color,item.brand,item.type].filter(Boolean).join(' · ')"></p><p class="mt-1.5 text-sm" x-text="item.quantity+' × '+money(item.price)"></p></div><strong x-text="money(item.quantity*item.price)"></strong></article></template>
             <dl class="mt-3 grid grid-cols-2 gap-3 text-sm"><dt class="text-muted">Subtotal</dt><dd class="text-right text-muted" x-text="money(total)"></dd><dt class="font-medium">Total Transaksi</dt><dd class="text-right font-semibold" x-text="money(total)"></dd></dl>
         </section>
         <div class="mt-auto grid gap-4">

@@ -92,25 +92,30 @@
     </nav>
 
     <div class="sidebar-footer" x-data="stockNotifications(@js($stockAlerts), @js($shipmentNotifications), @js(route('shipments.notifications')), @js($stockOverview['count']), @js($invoiceNotifications))" @focus.window="refresh()" @watch-shipments.window="watch($event.detail.ids)">
-        <div class="stock-notification" x-show="!collapsed || isMobile">
+        <div class="stock-notification" :class="{ 'stock-notification--minimized': minimized }" x-show="!collapsed || isMobile" x-data="{ minimized: false }">
             <div class="flex items-center gap-2">
                 <x-ui.icon name="notification" />
                 <h2 class="flex-1 text-sm font-medium">Notifikasi</h2>
-                <template x-if="alerts.length > 1"><span class="inline-flex items-center gap-2">
+                <template x-if="alerts.length > 1 && !minimized"><span class="inline-flex items-center gap-2">
                     <button type="button" class="notification-arrow" @click="previous()" aria-label="Notifikasi sebelumnya"><x-ui.icon name="chevron" :size="12" class="rotate-180" /></button>
                     <button type="button" class="notification-arrow" @click="next()" aria-label="Notifikasi berikutnya"><x-ui.icon name="chevron" :size="12" /></button>
                 </span></template>
+                <button type="button" @click="minimized = !minimized" class="notification-arrow" :aria-label="minimized ? 'Perluas notifikasi' : 'Minimalkan notifikasi'" :title="minimized ? 'Perluas notifikasi' : 'Minimalkan notifikasi'">
+                    <x-ui.icon name="chevron" :size="12" x-bind:class="minimized ? '' : 'rotate-180'" />
+                </button>
             </div>
-            <template x-if="alerts.length"><a :href="current.url" class="stock-notification__message" x-text="current.message"></a></template>
-            <template x-if="!alerts.length"><p class="stock-notification__message">Belum ada stok, pengiriman, atau tagihan yang perlu perhatian.</p></template>
-            @can('manage-shipments')
-                <a x-cloak x-show="shipmentCount > 0" href="{{ route('shipments.index') }}" class="stock-notification__more"><span x-text="shipmentCount + ' pengiriman perlu perhatian'"></span><span aria-hidden="true">&rsaquo;</span></a>
-            @endcan
-            @can('manage-invoices')
-                <a x-cloak x-show="invoiceCount > 0" href="{{ route('distributor-invoices.index') }}" class="stock-notification__more"><span x-text="invoiceCount + ' tagihan perlu pembayaran'"></span><span aria-hidden="true">›</span></a>
-            @endcan
-            <a x-cloak x-show="stockCount > 0" href="{{ route('dashboard') }}#low-stock" class="stock-notification__more"><span x-text="stockCount + ' produk perlu perhatian'"></span><span aria-hidden="true">&rsaquo;</span></a>
-            <a href="{{ route('notifications.index') }}" class="stock-notification__more mt-3 border-t border-white/10 pt-3 font-medium">Lihat Semua Notifikasi <span aria-hidden="true">&rarr;</span></a>
+            <div x-show="!minimized" class="grid gap-3">
+                <template x-if="alerts.length"><a :href="current.url" class="stock-notification__message" x-text="current.message"></a></template>
+                <template x-if="!alerts.length"><p class="stock-notification__message">Belum ada stok, pengiriman, atau tagihan yang perlu perhatian.</p></template>
+                @can('manage-shipments')
+                    <a x-cloak x-show="shipmentCount > 0" href="{{ route('shipments.index') }}" class="stock-notification__more"><span x-text="shipmentCount + ' pengiriman perlu perhatian'"></span><span aria-hidden="true">&rsaquo;</span></a>
+                @endcan
+                @can('manage-invoices')
+                    <a x-cloak x-show="invoiceCount > 0" href="{{ route('distributor-invoices.index') }}" class="stock-notification__more"><span x-text="invoiceCount + ' tagihan perlu pembayaran'"></span><span aria-hidden="true">›</span></a>
+                @endcan
+                <a x-cloak x-show="stockCount > 0" href="{{ route('dashboard') }}#low-stock" class="stock-notification__more"><span x-text="stockCount + ' produk perlu perhatian'"></span><span aria-hidden="true">&rsaquo;</span></a>
+                <a href="{{ route('notifications.index') }}" class="stock-notification__more mt-3 border-t border-white/10 pt-3 font-medium">Lihat Semua Notifikasi <span aria-hidden="true">&rarr;</span></a>
+            </div>
         </div>
         <div class="sidebar-profile" x-data="{ profileOpen: false }" @click.outside="profileOpen = false" @keydown.escape.stop="profileOpen = false; $refs.profile.focus()">
             <span class="profile-avatar relative overflow-hidden" aria-hidden="true">{{ mb_strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}@if(auth()->user()->avatar_path)<img src="{{ auth()->user()->avatarUrl() }}" alt="" class="absolute inset-0 h-full w-full object-cover" x-on:error="$el.remove()">@endif</span>

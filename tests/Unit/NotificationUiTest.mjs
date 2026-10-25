@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { notificationCenter } from '../../resources/js/components/notifications.js';
+import { toast } from '../../resources/js/components/ui.js';
 
 test('automatic notification refresh replaces resolved rows and updates the shared badge', async () => {
     const saved = { window: globalThis.window, document: globalThis.document, fetch: globalThis.fetch, CustomEvent: globalThis.CustomEvent };
@@ -47,4 +48,36 @@ test('refresh preserves focused pagination controls and follows a valid page aft
         assert.equal(requests, 1);
         assert.equal(target, '/notifications?type=low_stock&page=1');
     } finally { Object.assign(globalThis, saved); }
+});
+
+test('toast can be minimized and restored', () => {
+    const saved = { window: globalThis.window };
+    try {
+        let timerCleared = false;
+        let timerSet = false;
+        globalThis.window = {
+            setTimeout: (fn, delay) => { timerSet = true; return 123; },
+            clearTimeout: (id) => { timerCleared = true; },
+        };
+        const t = toast();
+        assert.equal(t.minimized, false);
+        t.show({ message: 'Barang berhasil disimpan', type: 'success' });
+        assert.equal(t.visible, true);
+        assert.equal(t.minimized, false);
+        assert.equal(t.message, 'Barang berhasil disimpan');
+
+        t.toggleMinimize();
+        assert.equal(t.minimized, true);
+
+        t.toggleMinimize();
+        assert.equal(t.minimized, false);
+
+        t.toggleMinimize();
+        assert.equal(t.minimized, true);
+        t.show({ message: 'Pesan baru', type: 'info' });
+        assert.equal(t.minimized, false);
+        assert.equal(t.message, 'Pesan baru');
+    } finally {
+        Object.assign(globalThis, saved);
+    }
 });

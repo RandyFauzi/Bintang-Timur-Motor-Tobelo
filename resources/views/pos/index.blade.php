@@ -19,7 +19,12 @@
                 <template x-for="product in products" :key="product.id">
                     <article class="pos-product" :class="{'pos-product--in-cart': quantity(product.id) > 0, 'pos-product--clickable': product.available > 0}" @click="onProductClick(product)">
                         <header><div class="pos-product__name"><x-ui.icon name="pos-box" :size="18" class="shrink-0 mt-0.5 text-muted" /><h2 class="pos-product__title" x-text="product.name" :title="product.name"></h2></div></header>
-                        <dl><dt>Merek</dt><dd x-text="product.brand || '–'"></dd><dt>Distributor</dt><dd x-text="product.distributor || '–'"></dd><dt>Warna</dt><dd x-text="product.color || '–'"></dd><dt>Stok</dt><dd><span :class="product.available <= product.minimum ? 'stock-badge' : ''" x-text="product.available"></span></dd></dl>
+                        <dl>
+                            <dt>Merek</dt><dd x-text="product.brand || '–'"></dd>
+                            <dt>Distributor</dt><dd x-text="product.distributor || '–'"></dd>
+                            <dt>Stok</dt><dd><span :class="product.available <= product.minimum ? 'stock-badge' : ''" x-text="product.available"></span></dd>
+                            <div class="contents" x-show="product.color"><dt>Warna</dt><dd x-text="product.color"></dd></div>
+                        </dl>
                         <footer>
                             <strong x-text="money(product.price)"></strong>
                             <div class="pos-product__cart-action" @click.stop>

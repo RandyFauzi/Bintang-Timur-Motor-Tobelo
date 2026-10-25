@@ -101,13 +101,20 @@ export function stockNotifications(stockAlerts, shipmentOverview = { count: 0, a
 
 export function toast() {
     return {
-        visible: false, message: '', type: 'info', timer: null,
+        visible: false, message: '', type: 'info', timer: null, minimized: false,
         show(detail) {
             this.pause();
             this.message = detail.message;
             this.type = detail.type ?? 'info';
+            this.minimized = false;
             this.visible = true;
             this.schedule();
+        },
+        toggleMinimize() {
+            this.minimized = !this.minimized;
+            if (!this.minimized) {
+                this.schedule();
+            }
         },
         pause() { window.clearTimeout(this.timer); },
         schedule() { this.timer = window.setTimeout(() => { this.visible = false; }, 6500); },

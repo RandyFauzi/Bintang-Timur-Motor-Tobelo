@@ -1,12 +1,30 @@
 <x-app-layout>
     <div class="catalogue-page notification-page" x-data="notificationCenter(@js(request()->fullUrl()), @js($counts), @js($total))" @focus.window="refresh()" @notification-count.window="if ($event.detail.count !== total) refresh()">
-        <header class="notification-heading"><div><h1>Notifikasi</h1><p>Semua yang perlu ditindaklanjuti, dalam satu halaman.</p></div></header>
-        <div class="notification-overview"><div><span class="notification-overview__dot" aria-hidden="true"></span><strong x-text="total">{{ $total }}</strong><span>notifikasi aktif</span></div><p>Prioritas utama ditampilkan lebih dulu. Notifikasi akan hilang saat kondisinya sudah ditangani.</p></div>
-        <div class="notification-metrics">
-            @foreach(\App\Services\NotificationService::TYPES as $type=>$label)
-                <a href="{{ route('notifications.index',['type'=>$type]) }}" @class(['notification-metric', 'is-active'=>request('type') === $type, 'notification-metric--urgent'=>in_array($type,['out_of_stock','shipment_delayed','invoice_overdue'])]) @if(request('type') === $type) aria-current="page" @endif>@if(request('type') === $type)<span class="notification-metric__mark" aria-hidden="true">✓</span>@endif<span>{{ $label }}</span><strong x-text="counts[@js($type)]">{{ $counts[$type] }}</strong></a>
-            @endforeach
+        <header class="notification-heading">
+            <div>
+                <h1>Notifikasi</h1>
+                <p>Semua yang perlu ditindaklanjuti, dalam satu halaman.</p>
+            </div>
+        </header>
+
+        <div x-data="{ summaryMinimized: false }">
+            <div class="sm:hidden flex items-center justify-between mb-3 px-1">
+                <button type="button" @click="summaryMinimized = !summaryMinimized" class="inline-flex items-center gap-2 text-xs font-medium text-stone-600 bg-white border border-stone-200 rounded-lg px-3 py-1.5 hover:bg-stone-50" :aria-expanded="!summaryMinimized">
+                    <span x-text="summaryMinimized ? 'Tampilkan Ringkasan & Kategori' : 'Minimalkan Ringkasan & Kategori'"></span>
+                    <x-ui.icon name="chevron" :size="12" x-bind:class="summaryMinimized ? '' : 'rotate-180'" />
+                </button>
+            </div>
+
+            <div x-show="!summaryMinimized">
+                <div class="notification-overview"><div><span class="notification-overview__dot" aria-hidden="true"></span><strong x-text="total">{{ $total }}</strong><span>notifikasi aktif</span></div><p>Prioritas utama ditampilkan lebih dulu. Notifikasi akan hilang saat kondisinya sudah ditangani.</p></div>
+                <div class="notification-metrics">
+                    @foreach(\App\Services\NotificationService::TYPES as $type=>$label)
+                        <a href="{{ route('notifications.index',['type'=>$type]) }}" @class(['notification-metric', 'is-active'=>request('type') === $type, 'notification-metric--urgent'=>in_array($type,['out_of_stock','shipment_delayed','invoice_overdue'])]) @if(request('type') === $type) aria-current="page" @endif>@if(request('type') === $type)<span class="notification-metric__mark" aria-hidden="true">✓</span>@endif<span>{{ $label }}</span><strong x-text="counts[@js($type)]">{{ $counts[$type] }}</strong></a>
+                    @endforeach
+                </div>
+            </div>
         </div>
+
         <section class="catalogue-surface" aria-label="Daftar notifikasi aktif">
             <form method="GET" action="{{ route('notifications.index') }}" class="notification-filters">
                 <label class="catalogue-search !min-w-0"><x-ui.icon name="search" :size="18"/><input type="search" name="search" value="{{ request('search') }}" placeholder="Cari produk, cargo, ekspedisi, atau resi…" aria-label="Cari notifikasi"></label>
