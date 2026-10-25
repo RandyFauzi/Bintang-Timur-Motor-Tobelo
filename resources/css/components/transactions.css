@@ -5,8 +5,16 @@
     .history-summary .stat-card:first-child .stat-card__icon { width: 175px; height: 175px; top: -10px; right: -12px; }
     .history-summary .stat-card:first-child { padding-right: 100px; }
     .history-filters .filter-trigger, .history-filters .filter-select-label { width: 180px; height: 40px; min-height: 40px; gap: 8px; border-radius: 12px; background: var(--color-surface); padding: 0 12px; color: var(--color-text); font-family: inherit; font-size: 12px; font-weight: 400; line-height: 20px; }
-    .history-filters .filter-trigger > span { flex: 1; text-align: left; }
+    .history-filters .filter-trigger > span:not(.ui-icon):not(.filter-trigger__count) { flex: 1; min-width: 0; text-align: left; }
+    .history-filters { flex-wrap: wrap; overflow: visible; }
+    .history-date-filter { position: relative; }
+    .history-date-panel { position: absolute; top: calc(100% + 8px); left: 0; z-index: 26; width: 330px; max-width: calc(100vw - 48px); max-height: min(400px,65dvh); overflow-y: auto; border: 1px solid var(--color-border-strong); border-radius: 12px; background: var(--color-surface); padding: 16px; box-shadow: 0 4px 14px rgb(0 0 0 / 12%); }
+    .history-date-panel .date-filter__input { width: 100%; min-width: 0; }
+    .history-filters .multi-filter--dropdown .multi-filter__panel { position: absolute !important; top: calc(100% + 8px) !important; left: 0 !important; transform: none !important; z-index: 26 !important; width: 260px !important; max-width: calc(100vw - 48px) !important; max-height: min(320px,55dvh); border-radius: 12px; }
+    .history-filters .multi-filter__option { min-height: 44px; overflow-wrap: anywhere; }
     .history-filters .ui-icon { flex-shrink: 0; }
+    .history-filters .filter-trigger .filter-trigger__summary { overflow: hidden; text-overflow: ellipsis; }
+    .history-filters .filter-trigger.is-active > .filter-trigger__summary { white-space: nowrap; }
     .history-filters .filter-select { flex: 1; width: 100%; min-width: 0; height: 38px; min-height: 0; padding: 0 24px 0 0; background-position: right center; background-size: 14px 14px; color: inherit; font-family: inherit; font-size: 12px; font-weight: 400; line-height: 20px; }
     .history-status { display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--color-border-strong); border-radius: 999px; padding: 8px 12px; font-size: 12px; white-space: nowrap; }
     .history-status--completed, .history-status--paid { border-color: #8dbf4a; color: var(--color-success); background: #f4f8ed; }
@@ -26,6 +34,15 @@
     .invoice-table td { border-bottom: 1px solid var(--color-border); padding: 16px 12px; }
     .correction-item { border: 1px solid var(--color-border); border-radius: 16px; padding: 16px; box-shadow: var(--shadow-card); }
     @media(max-width: 767px) {
+        .history-filters { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; padding: 12px; }
+        .history-date-filter { grid-column: 1 / -1; }
+        .history-filters > .multi-filter { min-width: 0; }
+        .history-filters .filter-trigger { width: 100%; }
+        .history-date-panel { width: 100%; max-width: 100%; }
+        .history-date-panel .date-filter__input { font-size: 16px; }
+        .history-date-panel > .grid { grid-template-columns: minmax(0,1fr); }
+        .history-filters .multi-filter--dropdown .multi-filter__panel { width: 100% !important; max-width: 100% !important; }
+        .history-filters .filter-reset { display: flex; min-height: 44px; align-items: center; justify-content: center; }
         .history-filters .filter-trigger, .history-filters .filter-select-label { height: 44px; min-height: 44px; }
         .history-filters .filter-select { height: 42px; }
         .history-summary { grid-template-columns: 1fr; }

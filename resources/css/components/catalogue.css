@@ -296,7 +296,7 @@
         .catalogue-filters--scroll { flex-wrap: nowrap; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
         .catalogue-filters--scroll > * { flex-shrink: 0; }
         .catalogue-filters--scroll .filter-reset { white-space: nowrap; }
-        html:has(.multi-filter.is-open) { overflow: hidden; }
+        html:has(.multi-filter:not(.multi-filter--dropdown).is-open) { overflow: hidden; }
         .multi-filter__close { width: 44px; height: 44px; }
         .multi-filter__options { min-height: 44px; }
         .multi-filter__footer .ui-button { min-height: 44px; }
