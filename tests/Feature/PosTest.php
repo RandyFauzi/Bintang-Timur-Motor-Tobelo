@@ -50,7 +50,7 @@ class PosTest extends TestCase
         $this->assertSame($distributor->name, $data['distributor']);
         $this->assertArrayNotHasKey('purchase_price', $data);
         $this->assertArrayNotHasKey('distributors', $data);
-        $response->assertDontSee('Semua Distributor')->assertSee('<dt>Distributor</dt>', false);
+        $response->assertDontSee('Semua Distributor')->assertSee('<dt>Merek</dt>', false)->assertSee('<dt>Distributor</dt>', false)->assertSee('<dt>Warna</dt>', false)->assertSee('<dt>Stok</dt>', false);
     }
 
     public function test_barcode_lookup_returns_current_product_metadata_and_excludes_inactive_products(): void
