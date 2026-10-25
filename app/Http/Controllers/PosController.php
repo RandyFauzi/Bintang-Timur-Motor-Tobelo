@@ -27,7 +27,7 @@ class PosController extends Controller
     public function getProductByBarcode(Request $request): JsonResponse
     {
         $data = $request->validate(['barcode' => ['required', 'string', 'max:100']]);
-        $product = Product::with(['stock', 'brand', 'type', 'color'])
+        $product = Product::with(['stock', 'brand', 'type', 'color', 'distributors'])
             ->where('is_active', true)->where('barcode', $data['barcode'])->first();
         if (! $product) {
             return response()->json(['success' => false, 'message' => 'Produk tidak ditemukan.'], 404);
@@ -57,6 +57,7 @@ class PosController extends Controller
             'available' => max(0, ($product->stock?->quantity ?? 0) - ($product->stock?->reserved_quantity ?? 0)),
             'minimum' => $product->stock_minimum, 'brand' => $product->brand?->name,
             'color' => $product->color?->name, 'type' => $product->type?->name,
+            'distributor' => $product->distributors->first()?->name,
         ];
     }
 }

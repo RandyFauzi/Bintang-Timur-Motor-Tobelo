@@ -22,12 +22,7 @@
             <x-ui.field name="selling_price" label="Harga Jual" type="number" :value="$product?->selling_price ?? 0" min="0" step="0.01" required />
             <x-ui.field name="product_kind" label="Tipe Produk"><select id="product_kind" name="product_kind" class="form-input">@foreach(\App\Models\Product::KINDS as $value => $kindLabel)<option value="{{ $value }}" @selected(old('product_kind',$product?->product_kind ?? 'daily') === $value)>{{ $kindLabel }}</option>@endforeach</select></x-ui.field>
             <x-ui.field name="distributor_ids" label="Distributor">
-                @if($product?->distributors->isNotEmpty())
-                    <input type="hidden" name="distributor_ids[]" value="{{ $product->distributors->first()->id }}">
-                    <p class="form-input flex items-center gap-2"><x-ui.icon name="workshop" :size="16" />{{ $product->distributors->first()->name }}</p>
-                @else
-                    <x-ui.multiselect class="product-distributor-picker" name="distributor_ids[]" id="distributor_ids" label="Pilih Distributor" :options="$distributors" :selected="array_slice(old('distributor_ids', []), 0, 1)" :multiple="false" :submit-on-apply="false" :dropdown="true" icon="workshop" />
-                @endif
+                <x-ui.multiselect class="product-distributor-picker" name="distributor_ids[]" id="distributor_ids" label="Pilih Distributor" :options="$distributors->merge($product?->distributors ?? collect())->unique('id')->sortBy('name')->values()" :selected="array_slice(old('distributor_ids', $product?->distributors->modelKeys() ?? []), 0, 1)" :multiple="false" :submit-on-apply="false" :dropdown="true" icon="workshop" />
                 <input type="hidden" name="_sync_distributors" value="1"><p class="mt-1 text-xs text-muted">Satu ID produk untuk satu distributor. Barang yang sama dari distributor lain harus memakai ID produk terpisah dengan modal dan stok masing-masing.</p>
             </x-ui.field>
             <x-ui.field name="barcode" label="Barcode (opsional)" :value="$product?->barcode" maxlength="100" />

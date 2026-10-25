@@ -76,8 +76,8 @@ class CatalogueService
                     throw ValidationException::withMessages(['distributor_ids' => 'Satu ID produk hanya boleh memiliki satu distributor. Buat produk terpisah untuk distributor lain.']);
                 }
                 $currentSupplierId = $product?->distributors()->value('distributors.id');
-                if ($currentSupplierId && $supplierIds !== [(int) $currentSupplierId]) {
-                    throw ValidationException::withMessages(['distributor_ids' => 'Distributor produk ini tidak dapat diganti atau dikosongkan. Gunakan ID produk baru untuk distributor lain agar stok dan riwayat tetap sesuai.']);
+                if ($currentSupplierId && $supplierIds === []) {
+                    throw ValidationException::withMessages(['distributor_ids' => 'Pilih satu distributor untuk produk ini.']);
                 }
             }
             $attributes = Arr::only($data, ['name', 'sku', 'barcode', 'purchase_price', 'selling_price', 'stock_minimum', 'product_kind', 'brand_id', 'type_id', 'color_id']);

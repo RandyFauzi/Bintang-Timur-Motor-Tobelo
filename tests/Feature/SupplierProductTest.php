@@ -44,7 +44,7 @@ class SupplierProductTest extends TestCase
         $this->assertDatabaseCount('stock_movements', 0);
     }
 
-    public function test_product_form_rejects_multiple_suppliers_and_supplier_reassignment_without_changing_stock(): void
+    public function test_product_form_rejects_multiple_suppliers_and_removing_supplier_without_changing_stock(): void
     {
         $first = Distributor::factory()->create();
         $second = Distributor::factory()->create();
@@ -52,12 +52,34 @@ class SupplierProductTest extends TestCase
         $product->distributors()->attach($first);
         $this->actingAs(User::factory()->create());
 
-        foreach ([[$first->id, $second->id], [$second->id], []] as $ids) {
+        foreach ([[$first->id, $second->id], []] as $ids) {
             $this->patchJson(route('products.update', $product), ['quantity' => 3, 'stock_minimum' => 0, 'distributor_ids' => $ids])
                 ->assertUnprocessable()->assertJsonValidationErrors('distributor_ids');
             $this->assertSame(10, $product->stock->refresh()->quantity);
             $this->assertSame([$first->id], $product->fresh()->distributors->modelKeys());
         }
+    }
+
+    public function test_product_distributor_can_be_changed_without_changing_identity_cost_or_stock(): void
+    {
+        $first = Distributor::factory()->create();
+        $second = Distributor::factory()->create();
+        $product = Product::factory()->withStock(10)->create(['purchase_price' => 12500]);
+        $product->distributors()->attach($first);
+        $sku = $product->sku;
+        $this->actingAs(User::factory()->create());
+
+        $this->get(route('products.index', ['edit' => $product->id]))->assertOk()->assertSee('product-distributor-picker');
+        $this->patch(route('products.update', $product), ['quantity' => 10, 'stock_minimum' => 0, 'distributor_ids' => [$second->id]])
+            ->assertRedirect(route('products.index'))->assertSessionHasNoErrors();
+
+        $product->refresh();
+        $this->assertSame([$second->id], $product->distributors->modelKeys());
+        $this->assertSame($sku, $product->sku);
+        $this->assertSame(12500.0, (float) $product->purchase_price);
+        $this->assertSame(10, $product->stock->quantity);
+        $this->assertDatabaseCount('products', 1);
+        $this->assertDatabaseCount('stock_movements', 0);
     }
 
     public function test_missing_migration_is_reported_without_a_database_error(): void

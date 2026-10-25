@@ -47,18 +47,22 @@ class PosTest extends TestCase
         $data = $response->viewData('catalogueProducts')->sole();
         $this->assertSame(5, $data['available']);
         $this->assertSame($brand->name, $data['brand']);
+        $this->assertSame($distributor->name, $data['distributor']);
         $this->assertArrayNotHasKey('purchase_price', $data);
         $this->assertArrayNotHasKey('distributors', $data);
-        $response->assertDontSee('Semua Distributor')->assertDontSee('<dt>Distributor</dt>', false);
+        $response->assertDontSee('Semua Distributor')->assertSee('<dt>Distributor</dt>', false);
     }
 
     public function test_barcode_lookup_returns_current_product_metadata_and_excludes_inactive_products(): void
     {
         $product = Product::factory()->withStock(5)->create(['barcode' => 'ABC-123']);
+        $distributor = Distributor::factory()->create();
+        $product->distributors()->attach($distributor);
         $product->stock()->update(['reserved_quantity' => 1]);
         Product::factory()->inactive()->create(['barcode' => 'INACTIVE']);
         $this->actingAs(User::factory()->create())->postJson(route('pos.scan'), ['barcode' => 'ABC-123'])
-            ->assertOk()->assertJsonPath('data.id', $product->id)->assertJsonPath('data.available', 4);
+            ->assertOk()->assertJsonPath('data.id', $product->id)->assertJsonPath('data.available', 4)
+            ->assertJsonPath('data.distributor', $distributor->name);
         $this->postJson(route('pos.scan'), ['barcode' => 'INACTIVE'])->assertNotFound();
         $this->postJson(route('pos.scan'), ['barcode' => []])->assertUnprocessable()->assertJsonValidationErrors('barcode');
     }
