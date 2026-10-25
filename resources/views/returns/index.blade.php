@@ -17,7 +17,7 @@
                     <x-ui.multiselect name="brand_ids" label="Semua Merk" :options="$brands" icon="barcode" />
                     <x-ui.multiselect name="distributor_ids" label="Semua Distributor" :options="$distributors" icon="workshop" />
                     <x-ui.multiselect name="type_ids" label="Semua Part" :options="$types" />
-                    <x-ui.multiselect name="status" id="return-status" label="Status Retur" :options="collect(['active' => 'Retur Aktif', 'cancelled' => 'Sudah Dibatalkan', 'all' => 'Semua Riwayat'])->map(fn (string $label, string $value): object => (object) ['id' => $value, 'name' => $label])->values()" :selected="[request('status', 'active')]" :multiple="false" :dropdown="true" icon="status-filter" />
+                    <x-ui.multiselect name="status" id="return-status" label="Status Retur" :options="collect(['active' => 'Retur Aktif', 'cancelled' => 'Sudah Dibatalkan', 'all' => 'Semua Riwayat'])->map(fn (string $label, string $value): object => (object) ['id' => $value, 'name' => $label])->values()" :selected="[request('status', 'active')]" :neutral-values="['active']" :multiple="false" :dropdown="true" icon="status-filter" />
                     @if(count(request()->except(['view','page','edit','mode','create'])) > 0)<a href="{{ route('returns.index',['view'=>request('view','list')]) }}" class="filter-reset">Reset filter</a>@endif
                 </div>
             </form>
