@@ -1,5 +1,5 @@
 @php($detailsExpanded = ! $product || (old('_dialog') === 'product-form' && old('_edit_details') === '1'))
-<x-ui.dialog name="product-form" :title="$product ? 'Edit '.$product->name : 'Tambah Produk'" :description="$product ? 'Edit jumlah stok atau detail informasi produk.' : 'Tambahkan produk baru beserta stok awalnya.'" :show="$product !== null || request()->boolean('create') || old('_dialog') === 'product-form'">
+<x-ui.dialog name="product-form" class="product-form-dialog" :wide="true" :title="$product ? 'Edit '.$product->name : 'Tambah Produk'" :description="$product ? 'Edit jumlah stok atau detail informasi produk.' : 'Tambahkan produk baru beserta stok awalnya.'" :show="$product !== null || request()->boolean('create') || old('_dialog') === 'product-form'">
     <div x-data="{ tab: @js(! $product && old('_tab') === 'import' ? 'import' : 'manual') }" class="grid gap-5">
         @if(! $product)
             <div class="catalogue-tabs !m-0 !p-0" role="tablist" aria-label="Cara tambah produk">
@@ -23,7 +23,7 @@
             <x-ui.field name="product_kind" label="Tipe Produk"><select id="product_kind" name="product_kind" class="form-input">@foreach(\App\Models\Product::KINDS as $value => $kindLabel)<option value="{{ $value }}" @selected(old('product_kind',$product?->product_kind ?? 'daily') === $value)>{{ $kindLabel }}</option>@endforeach</select></x-ui.field>
             <x-ui.field name="distributor_ids" label="Distributor">
                 <x-ui.multiselect class="product-distributor-picker" name="distributor_ids[]" id="distributor_ids" label="Pilih Distributor" :options="$distributors->merge($product?->distributors ?? collect())->unique('id')->sortBy('name')->values()" :selected="array_slice(old('distributor_ids', $product?->distributors->modelKeys() ?? []), 0, 1)" :multiple="false" :submit-on-apply="false" :dropdown="true" icon="workshop" />
-                <input type="hidden" name="_sync_distributors" value="1"><p class="mt-1 text-xs text-muted">Satu ID produk untuk satu distributor. Barang yang sama dari distributor lain harus memakai ID produk terpisah dengan modal dan stok masing-masing.</p>
+                <input type="hidden" name="_sync_distributors" value="1">
             </x-ui.field>
             <x-ui.field name="barcode" label="Barcode (opsional)" :value="$product?->barcode" maxlength="100" />
             @if($product)<div class="form-field"><span class="form-field__label">SKU</span><p class="py-2 text-sm text-muted">{{ $product->sku }}</p></div>@else<x-ui.field name="sku" label="SKU (opsional)" hint="Dibuat otomatis jika dikosongkan." maxlength="100" />@endif
