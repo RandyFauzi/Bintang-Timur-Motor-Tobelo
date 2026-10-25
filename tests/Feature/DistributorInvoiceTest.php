@@ -159,6 +159,21 @@ class DistributorInvoiceTest extends TestCase
         $this->assertSame($unpaid->id, $response->viewData('invoices')->first()->id);
     }
 
+    public function test_multiple_payment_statuses_are_combined_without_duplicates_and_keep_search_constraints(): void
+    {
+        $unpaid = DistributorInvoice::factory()->create(['reference' => 'MULTI-UNPAID', 'due_on' => DistributorInvoice::today()->subDay()->toDateString()]);
+        $partial = DistributorInvoice::factory()->create(['reference' => 'MULTI-PARTIAL', 'paid_cents' => 2500000]);
+        DistributorInvoice::factory()->create(['reference' => 'MULTI-PAID', 'paid_cents' => 10000000]);
+        DistributorInvoice::factory()->create(['reference' => 'EXCLUDED-UNPAID']);
+        $this->actingAs(User::factory()->create());
+
+        $response = $this->get(route('distributor-invoices.index', ['search' => 'MULTI-', 'status' => ['unpaid', 'partial', 'overdue']]))->assertOk();
+        $this->assertEqualsCanonicalizing([$unpaid->id, $partial->id], $response->viewData('invoices')->modelKeys());
+        $this->getJson(route('distributor-invoices.index', ['status' => ['unpaid', 'invalid']]))
+            ->assertUnprocessable()->assertJsonValidationErrors('status.1');
+        $this->assertSame(4, $this->get(route('distributor-invoices.index', ['status' => []]))->assertOk()->viewData('invoices')->total());
+    }
+
     public function test_backfill_generates_exactly_one_invoice_for_existing_orders(): void
     {
         $item = PurchaseOrderItem::factory()->create(['quantity' => 3, 'unit_price' => '123.45']);

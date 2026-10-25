@@ -8,6 +8,13 @@ use Illuminate\Validation\Rule;
 
 class DistributorInvoiceRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if ($this->isMethod('GET') && $this->filled('status') && ! is_array($this->input('status'))) {
+            $this->merge(['status' => [$this->input('status')]]);
+        }
+    }
+
     public function authorize(): bool
     {
         return $this->user() !== null;
@@ -29,6 +36,6 @@ class DistributorInvoiceRequest extends FormRequest
             ];
         }
 
-        return ['search' => ['nullable', 'string', 'max:255'], 'distributor_id' => ['nullable', 'integer'], 'status' => ['nullable', Rule::in(array_keys(DistributorInvoice::STATUSES))], 'timing' => ['nullable', Rule::in(['near', 'overdue'])]];
+        return ['search' => ['nullable', 'string', 'max:255'], 'distributor_id' => ['nullable', 'integer'], 'status' => ['nullable', 'array', 'max:4'], 'status.*' => ['required', 'string', 'distinct', Rule::in(array_keys(DistributorInvoice::STATUSES))], 'timing' => ['nullable', Rule::in(['near', 'overdue'])]];
     }
 }

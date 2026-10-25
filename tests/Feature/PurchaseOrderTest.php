@@ -140,7 +140,7 @@ class PurchaseOrderTest extends TestCase
         $response->assertOk()->assertDontSee($later->reference)->assertViewHas('orders', fn ($orders): bool => $orders->total() === 6 && $orders->count() === 5 && str_contains($orders->nextPageUrl(), 'until=2026-10-01'));
     }
 
-    #[TestWith([['status' => 'invalid'], 'status'])]
+    #[TestWith([['status' => 'invalid'], 'status.0'])]
     #[TestWith([['per_page' => 100000], 'per_page'])]
     #[TestWith([['from' => 'invalid'], 'from'])]
     #[TestWith([['until' => 'invalid'], 'until'])]

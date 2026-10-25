@@ -31,10 +31,13 @@ class TransactionHistoryService
         if (! empty($filters['end_date'])) {
             $query->where('sold_at', '<', CarbonImmutable::parse($filters['end_date'])->addDay()->startOfDay());
         }
-        foreach (['status', 'payment_status', 'user_id'] as $field) {
+        foreach (['status', 'payment_status'] as $field) {
             if (! empty($filters[$field])) {
                 $query->where($field, $filters[$field]);
             }
+        }
+        if (! empty($filters['user_id'])) {
+            $query->whereIn('user_id', (array) $filters['user_id']);
         }
         if (! empty($filters['payment_method'])) {
             $query->whereHas('payments', fn (Builder $payments) => $payments->where('method', $filters['payment_method']));

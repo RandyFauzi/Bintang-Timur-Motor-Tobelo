@@ -28,17 +28,19 @@ class DistributorInvoiceController extends Controller
             $base->whereHas('purchaseOrder', fn (Builder $q): Builder => $q->where('distributor_id', $filters['distributor_id']));
         }
         $summary = ['total' => (int) (clone $base)->sum('total_cents'), 'paid' => (int) (clone $base)->sum('paid_cents'), 'outstanding' => (int) (clone $base)->sum(DB::raw('total_cents - paid_cents')), 'overdue' => (int) (clone $base)->outstanding()->whereDate('due_on', '<', DistributorInvoice::today()->toDateString())->sum(DB::raw('total_cents - paid_cents'))];
-        if (($filters['status'] ?? null) === 'paid') {
-            $base->whereColumn('paid_cents', '>=', 'total_cents');
-        }
-        if (($filters['status'] ?? null) === 'unpaid') {
-            $base->outstanding()->where('paid_cents', 0);
-        }
-        if (($filters['status'] ?? null) === 'partial') {
-            $base->outstanding()->where('paid_cents', '>', 0);
-        }
-        if (($filters['status'] ?? null) === 'overdue') {
-            $base->outstanding()->whereDate('due_on', '<', DistributorInvoice::today()->toDateString());
+        if (! empty($filters['status'])) {
+            $base->where(function (Builder $statuses) use ($filters): void {
+                foreach ($filters['status'] as $status) {
+                    $statuses->orWhere(function (Builder $query) use ($status): void {
+                        match ($status) {
+                            'paid' => $query->whereColumn('paid_cents', '>=', 'total_cents'),
+                            'unpaid' => $query->outstanding()->where('paid_cents', 0),
+                            'partial' => $query->outstanding()->where('paid_cents', '>', 0),
+                            'overdue' => $query->outstanding()->whereDate('due_on', '<', DistributorInvoice::today()->toDateString()),
+                        };
+                    });
+                }
+            });
         }
         if (($filters['timing'] ?? null) === 'overdue') {
             $base->outstanding()->whereDate('due_on', '<', DistributorInvoice::today()->toDateString());

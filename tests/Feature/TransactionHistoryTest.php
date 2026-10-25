@@ -61,6 +61,26 @@ class TransactionHistoryTest extends TestCase
         $this->assertSame([$matching->id], $response->viewData('transactions')->modelKeys());
     }
 
+    public function test_multiple_cashiers_filter_listing_summary_and_export_together(): void
+    {
+        $first = User::factory()->create();
+        $second = User::factory()->create();
+        $matching = Sale::factory()->for($first)->create(['customer_name' => 'Kasir Pertama']);
+        $otherMatching = Sale::factory()->for($second)->create(['customer_name' => 'Kasir Kedua']);
+        $excluded = Sale::factory()->create(['customer_name' => 'Kasir Lain']);
+        $filters = ['user_id' => [$first->id, $second->id]];
+        $this->actingAs($first);
+
+        $response = $this->get(route('transactions.index', $filters))->assertOk();
+        $this->assertEqualsCanonicalizing([$matching->id, $otherMatching->id], $response->viewData('transactions')->modelKeys());
+        $this->assertSame(2, $response->viewData('summary')['transactions']);
+        $this->assertSame(200000.0, $response->viewData('summary')['revenue']);
+        $export = $this->get(route('transactions.export', $filters))->assertOk()->streamedContent();
+        $this->assertStringContainsString($matching->invoice_number, $export);
+        $this->assertStringContainsString($otherMatching->invoice_number, $export);
+        $this->assertStringNotContainsString($excluded->invoice_number, $export);
+    }
+
     public function test_search_uses_historical_product_values_even_after_product_deletion(): void
     {
         $sale = Sale::factory()->create();
@@ -139,7 +159,8 @@ class TransactionHistoryTest extends TestCase
             'invalid date' => [['start_date' => '2026-02-30'], 'start_date'],
             'invalid status' => [['status' => 'deleted'], 'status'],
             'invalid payment' => [['payment_status' => 'whatever'], 'payment_status'],
-            'invalid cashier' => [['user_id' => 999999], 'user_id'],
+            'invalid cashier' => [['user_id' => 999999], 'user_id.0'],
+            'invalid multiple cashiers' => [['user_id' => [999998, 999999]], 'user_id.1'],
             'unbounded page size' => [['per_page' => 10000], 'per_page'],
             'invalid view' => [['view' => 'raw'], 'view'],
             'invalid search shape' => [['search' => ['value']], 'search'],

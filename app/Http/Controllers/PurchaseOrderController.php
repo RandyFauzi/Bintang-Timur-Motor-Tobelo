@@ -27,10 +27,17 @@ class PurchaseOrderController extends Controller
 {
     public function index(Request $request): View
     {
+        foreach (['status', 'distributor_id'] as $field) {
+            if ($request->filled($field) && ! is_array($request->input($field))) {
+                $request->merge([$field => [$request->input($field)]]);
+            }
+        }
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:255'],
-            'distributor_id' => ['nullable', 'integer'],
-            'status' => ['nullable', 'in:draft,pending,checking,discrepancy,matched'],
+            'distributor_id' => ['nullable', 'array', 'max:100'],
+            'distributor_id.*' => ['required', 'integer', 'distinct'],
+            'status' => ['nullable', 'array', 'max:5'],
+            'status.*' => ['required', 'distinct', 'in:draft,pending,checking,discrepancy,matched'],
             'from' => ['nullable', 'date_format:Y-m-d'],
             'until' => ['nullable', 'date_format:Y-m-d', ...($request->filled('from') ? ['after_or_equal:from'] : [])],
             'per_page' => ['nullable', 'integer', 'in:5,6,10,12,15,25,50'],
@@ -51,7 +58,7 @@ class PurchaseOrderController extends Controller
                 ->orWhereHas('purchasePlan', fn (Builder $plans): Builder => $plans->where('name', 'like', '%'.$filters['search'].'%')->orWhere('reference', 'like', '%'.$filters['search'].'%')));
         }
         if (! empty($filters['distributor_id'])) {
-            $query->where('distributor_id', $filters['distributor_id']);
+            $query->whereIn('distributor_id', $filters['distributor_id']);
         }
         if (! empty($filters['from'])) {
             $query->whereDate('ordered_on', '>=', $filters['from']);
@@ -59,19 +66,26 @@ class PurchaseOrderController extends Controller
         if (! empty($filters['until'])) {
             $query->whereDate('ordered_on', '<=', $filters['until']);
         }
-        $status = $filters['status'] ?? null;
-        if ($status === 'draft') {
-            $query->whereRaw('1 = 0');
-        } elseif ($status) {
-            $query->where(fn (Builder $groups): Builder => $groups
-                ->where(fn (Builder $legacy): Builder => $legacy->whereNull('purchase_plan_id')->withReceiptStatus($status))
-                ->orWhere(fn (Builder $planned): Builder => $planned->whereNotNull('purchase_plan_id')->withReceiptStatus($status, 'purchasePlan.orders.items')));
+        $statuses = $filters['status'] ?? [];
+        if ($statuses) {
+            $receiptStatuses = array_values(array_diff($statuses, ['draft']));
+            if ($receiptStatuses === []) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->where(function (Builder $matches) use ($receiptStatuses): void {
+                    foreach ($receiptStatuses as $status) {
+                        $matches->orWhere(fn (Builder $groups): Builder => $groups
+                            ->where(fn (Builder $legacy): Builder => $legacy->whereNull('purchase_plan_id')->withReceiptStatus($status))
+                            ->orWhere(fn (Builder $planned): Builder => $planned->whereNotNull('purchase_plan_id')->withReceiptStatus($status, 'purchasePlan.orders.items')));
+                    }
+                });
+            }
         }
         $representatives = (clone $query)->reorder()->selectRaw('MAX(purchase_orders.id)')->whereNotNull('purchase_plan_id')->groupBy('purchase_plan_id');
         $query->where(fn (Builder $groups): Builder => $groups->whereNull('purchase_plan_id')->orWhereIn('id', $representatives));
 
         $drafts = PurchasePlan::where('status', 'draft');
-        if ($request->boolean('archived') || ($status && $status !== 'draft')) {
+        if ($request->boolean('archived') || ($statuses && ! in_array('draft', $statuses, true))) {
             $drafts->whereRaw('1 = 0');
         }
         $allocatedDistributors = Distributor::query()->selectRaw('1');
@@ -86,7 +100,7 @@ class PurchaseOrderController extends Controller
                 ->orWhereExists((clone $allocatedDistributors)->where('name', 'like', $term)->toBase()));
         }
         if (! empty($filters['distributor_id'])) {
-            $drafts->whereExists((clone $allocatedDistributors)->where('id', $filters['distributor_id'])->toBase());
+            $drafts->whereExists((clone $allocatedDistributors)->whereIn('id', $filters['distributor_id'])->toBase());
         }
         if (! empty($filters['from'])) {
             $drafts->whereDate('planned_on', '>=', $filters['from']);

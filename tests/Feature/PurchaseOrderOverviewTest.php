@@ -128,6 +128,27 @@ class PurchaseOrderOverviewTest extends TestCase
         $this->assertCount(7, $keys->unique());
     }
 
+    public function test_multiple_statuses_and_distributors_include_matching_drafts_and_grouped_orders_once(): void
+    {
+        $plan = $this->planWithTwoOrders();
+        $suppliers = $plan->orders->pluck('distributor_id')->all();
+        $draft = PurchasePlan::factory()->create(['items' => [['quantity' => 2, 'allocations' => [['distributor_id' => $suppliers[0], 'quantity' => 2]]]]]);
+        PurchasePlan::factory()->create();
+        $excluded = PurchaseOrderItem::factory()->create();
+        $this->actingAs(User::factory()->create());
+
+        $response = $this->get(route('purchase-orders.index', ['status' => ['draft', 'pending'], 'distributor_id' => $suppliers]))->assertOk();
+        $this->assertSame(2, $response->viewData('orders')->total());
+        $response->assertSee($draft->reference)->assertSee($plan->reference)->assertDontSee(PurchaseOrder::findOrFail($excluded->purchase_order_id)->reference);
+        $this->assertSame(1, $response->viewData('orders')->getCollection()->whereInstanceOf(PurchaseOrder::class)->count());
+        $completed = PurchaseOrder::factory()->create(['distributor_id' => $suppliers[1]]);
+        PurchaseOrderItem::factory()->create(['purchase_order_id' => $completed->id, 'quantity' => 1, 'actual_quantity' => 1]);
+        $this->assertSame(2, $this->get(route('purchase-orders.index', ['status' => ['pending', 'matched'], 'distributor_id' => $suppliers]))
+            ->assertOk()->viewData('orders')->total());
+        $this->getJson(route('purchase-orders.index', ['status' => ['draft', 'invalid']]))
+            ->assertUnprocessable()->assertJsonValidationErrors('status.1');
+    }
+
     private function planWithTwoOrders(): PurchasePlan
     {
         $plan = PurchasePlan::factory()->create(['status' => 'finalized', 'items' => [['product_name' => 'Oli', 'quantity' => 3, 'unit_price' => 10000]]]);
