@@ -66,9 +66,9 @@
         <div x-cloak x-show="selected.length" class="product-selection-dock" :style="{ '--selection-sidebar-width': isMobile ? '0px' : (collapsed ? '80px' : '256px') }">
             <div class="return-bulk-bar" role="group" aria-label="Aksi produk terpilih">
                 <span class="product-selection-count text-sm" role="status" aria-live="polite" aria-atomic="true" x-text="selected.length + ' Terpilih'"></span>
-                <button type="button" class="ui-button product-selection-edit" @click="$dispatch('open-dialog', {id: 'product-bulk-edit'})"><x-ui.icon name="edit" :size="16" />Edit Massal</button>
-                <button type="button" class="ui-button ui-button--secondary product-selection-delete" @click="$dispatch('open-dialog', {id: 'product-bulk-delete'})"><x-ui.icon name="trash" :size="16" />Hapus Terpilih</button>
-                <button type="button" class="product-selection-cancel text-sm underline" @click="selected = []">Batal Pilih</button>
+                <button type="button" class="ui-button product-selection-edit" aria-label="Edit massal produk terpilih" @click="$dispatch('open-dialog', {id: 'product-bulk-edit'})"><x-ui.icon name="edit" :size="16" /><span class="product-selection-label-full">Edit Massal</span><span class="product-selection-label-short" aria-hidden="true">Edit</span></button>
+                <button type="button" class="ui-button ui-button--secondary product-selection-delete" aria-label="Hapus produk terpilih" @click="$dispatch('open-dialog', {id: 'product-bulk-delete'})"><x-ui.icon name="trash" :size="16" /><span class="product-selection-label-full">Hapus Terpilih</span><span class="product-selection-label-short" aria-hidden="true">Hapus</span></button>
+                <button type="button" class="ui-button ui-button--secondary product-selection-cancel text-sm" @click="selected = []">Batal Pilih</button>
             </div>
         </div>
         @include('products.partials.form', ['product' => $editing])
