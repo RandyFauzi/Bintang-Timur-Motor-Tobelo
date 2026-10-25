@@ -245,3 +245,55 @@ test('entered note total is required, validated independently, saved exactly and
     row.note_issued=false; model.toggleIssued(row);
     assert.equal(row.supplier_note_total,'');
 });
+
+test('batch finalization selects multiple distributors, sets individual koli and shipping cost, and calculates totals', async () => {
+    const model = state([order(1, 5), order(2, 8)]);
+    const events = [];
+    model.$dispatch = (name) => events.push(name);
+
+    assert.equal(model.eligibleFinalizeOrders.length, 2);
+    assert.equal(model.allEligibleFinalizeSelected, false);
+
+    model.toggleSelectAllFinalize(true);
+    assert.equal(model.allEligibleFinalizeSelected, true);
+    assert.equal(model.selectedFinalizeOrders.length, 2);
+
+    model.openBatchFinalize();
+    assert.equal(events.at(-1), 'open-dialog');
+    assert.equal(model.totalBatchPackageCount, 2);
+    assert.equal(model.totalBatchShippingCost, 0);
+
+    model.shipment.orderInputs[1].package_count = 3;
+    model.shipment.orderInputs[1].shipping_cost = '150000';
+    model.shipment.orderInputs[2].package_count = 5;
+    model.shipment.orderInputs[2].shipping_cost = '250000';
+
+    assert.equal(model.totalBatchPackageCount, 8);
+    assert.equal(model.totalBatchShippingCost, 400000);
+
+    model.cargoSelection = ['1'];
+    model.shipment.notes = 'Catatan kargo batch';
+
+    let sent;
+    model.request = async (url, method, payload) => {
+        sent = { url, method, payload };
+        return {
+            orders: [
+                { ...order(1, 5), package_count: 3, shipping_cost: '150000.00', finalized: true },
+                { ...order(2, 8), package_count: 5, shipping_cost: '250000.00', finalized: true },
+            ],
+            message: 'Pengiriman bersama untuk 2 distributor berhasil difinalisasi.'
+        };
+    };
+
+    await model.finalize();
+    assert.equal(sent.payload.orders.length, 2);
+    assert.equal(sent.payload.orders[0].package_count, 3);
+    assert.equal(sent.payload.orders[0].shipping_cost, '150000');
+    assert.equal(sent.payload.orders[1].package_count, 5);
+    assert.equal(sent.payload.orders[1].shipping_cost, '250000');
+    assert.equal(sent.payload.notes, 'Catatan kargo batch');
+    assert.equal(model.orders[0].finalized, true);
+    assert.equal(model.orders[1].finalized, true);
+    assert.equal(events.at(-1), 'close-plan-shipment');
+});

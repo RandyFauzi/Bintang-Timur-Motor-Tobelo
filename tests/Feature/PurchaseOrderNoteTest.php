@@ -308,6 +308,109 @@ class PurchaseOrderNoteTest extends TestCase
         $this->assertDatabaseCount('shipments', 1);
     }
 
+    public function test_multiple_distributors_can_be_finalized_together_into_a_single_shipment_with_individual_koli_and_shipping_costs_and_notes(): void
+    {
+        [$plan, $firstOrder] = $this->order(null, 'Distributor Alfa');
+        [$unused, $secondOrder] = $this->order($plan, 'Distributor Beta');
+        $carrier = ShippingService::factory()->create();
+        $this->actingAs(User::factory()->create());
+
+        $this->patchJson($this->noteUrl($plan, $firstOrder), $this->notePayload($firstOrder, 5))->assertOk();
+        $this->patchJson($this->noteUrl($plan, $secondOrder), $this->notePayload($secondOrder, 8))->assertOk();
+
+        $payload = [
+            'shipping_service_id' => $carrier->id,
+            'origin_port' => 'Surabaya',
+            'departed_on' => '2026-10-21',
+            'notes' => 'Catatan kargo gabungan distributor Alfa dan Beta',
+            'orders' => [
+                [
+                    'id' => $firstOrder->id,
+                    'version' => $firstOrder->fresh()->version,
+                    'package_count' => 3,
+                    'shipping_cost' => '150000.00',
+                ],
+                [
+                    'id' => $secondOrder->id,
+                    'version' => $secondOrder->fresh()->version,
+                    'package_count' => 5,
+                    'shipping_cost' => '250000.00',
+                ],
+            ],
+        ];
+
+        $response = $this->postJson(route('purchase-plans.shipment.finalize', $plan), $payload);
+        $response->assertOk()
+            ->assertJsonPath('message', 'Pengiriman bersama untuk 2 distributor berhasil difinalisasi.')
+            ->assertJsonCount(2, 'orders');
+
+        $this->assertDatabaseCount('shipments', 1);
+        $shipment = Shipment::sole();
+        $this->assertSame(8, $shipment->package_count);
+        $this->assertSame(40000000, $shipment->shipping_cost_cents);
+        $this->assertSame('Catatan kargo gabungan distributor Alfa dan Beta', $shipment->notes);
+        $this->assertStringContainsString('Distributor Alfa', $shipment->cargo_name);
+        $this->assertStringContainsString('Distributor Beta', $shipment->cargo_name);
+
+        $this->assertSame($shipment->id, $firstOrder->fresh()->invoice->shipment_id);
+        $this->assertSame($shipment->id, $secondOrder->fresh()->invoice->shipment_id);
+
+        $this->assertSame(3, $firstOrder->fresh()->package_count);
+        $this->assertSame(15000000, $firstOrder->fresh()->shipping_cost_cents);
+        $this->assertNotNull($firstOrder->fresh()->shipment_finalized_at);
+
+        $this->assertSame(5, $secondOrder->fresh()->package_count);
+        $this->assertSame(25000000, $secondOrder->fresh()->shipping_cost_cents);
+        $this->assertNotNull($secondOrder->fresh()->shipment_finalized_at);
+
+        $shipmentResponse = $this->get(route('shipments.index', ['shipment' => $shipment->id]))->assertOk();
+        $shipmentResponse->assertSee('Distributor Alfa')
+            ->assertSee('Distributor Beta')
+            ->assertSee('3 koli')
+            ->assertSee('5 koli')
+            ->assertSee('Rp 150.000,00')
+            ->assertSee('Rp 250.000,00')
+            ->assertSee('Catatan kargo gabungan distributor Alfa dan Beta');
+    }
+
+    public function test_batch_finalization_validation_fails_atomically_if_any_order_has_unissued_notes_or_stale_version(): void
+    {
+        [$plan, $firstOrder] = $this->order(null, 'Distributor Satu');
+        [$unused, $secondOrder] = $this->order($plan, 'Distributor Dua');
+        $carrier = ShippingService::factory()->create();
+        $this->actingAs(User::factory()->create());
+
+        $this->patchJson($this->noteUrl($plan, $firstOrder), $this->notePayload($firstOrder, 5))->assertOk();
+
+        $payload = [
+            'shipping_service_id' => $carrier->id,
+            'origin_port' => 'Surabaya',
+            'departed_on' => '2026-10-21',
+            'orders' => [
+                [
+                    'id' => $firstOrder->id,
+                    'version' => $firstOrder->fresh()->version,
+                    'package_count' => 3,
+                    'shipping_cost' => '150000.00',
+                ],
+                [
+                    'id' => $secondOrder->id,
+                    'version' => $secondOrder->fresh()->version,
+                    'package_count' => 5,
+                    'shipping_cost' => '250000.00',
+                ],
+            ],
+        ];
+
+        $this->postJson(route('purchase-plans.shipment.finalize', $plan), $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('note');
+
+        $this->assertDatabaseCount('shipments', 0);
+        $this->assertNull($firstOrder->fresh()->shipment_finalized_at);
+        $this->assertNull($secondOrder->fresh()->shipment_finalized_at);
+    }
+
     #[TestWith([null])]
     #[TestWith([''])]
     #[TestWith(['-1'])]

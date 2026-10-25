@@ -62,6 +62,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('purchase-plans', PurchasePlanController::class)->only(['store', 'edit', 'update', 'show', 'destroy'])->parameters(['purchase-plans' => 'purchasePlan']);
         Route::patch('purchase-plans/{purchasePlan}/orders/{purchaseOrder}/note', [PurchaseOrderNoteController::class, 'update'])->name('purchase-plans.orders.note');
         Route::post('purchase-plans/{purchasePlan}/orders/{purchaseOrder}/finalize', [PurchaseOrderNoteController::class, 'finalize'])->name('purchase-plans.orders.finalize');
+        Route::post('purchase-plans/{purchasePlan}/finalize-shipment', [PurchaseOrderNoteController::class, 'finalizeShipment'])->name('purchase-plans.shipment.finalize');
         Route::patch('purchase-orders/{purchaseOrder}/receipt', [PurchaseOrderController::class, 'receive'])->name('purchase-orders.receive');
         Route::resource('purchase-orders', PurchaseOrderController::class)->only(['index', 'store', 'show', 'destroy'])->parameters(['purchase-orders' => 'purchaseOrder']);
     });

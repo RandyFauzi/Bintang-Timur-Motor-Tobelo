@@ -21,7 +21,7 @@
         <div class="mt-3 grid gap-4">
             @forelse($selected->distributorInvoices as $cargoInvoice)
                 <article class="min-w-0 rounded-xl border bg-gray-50 p-4">
-                    <header class="flex flex-wrap items-start justify-between gap-3"><div class="min-w-0"><h4 class="break-words font-medium">{{ $cargoInvoice->purchaseOrder->distributor_name }}</h4><p class="mt-1 break-words text-xs text-muted">PO {{ $cargoInvoice->purchaseOrder->reference }} · Nota {{ $cargoInvoice->supplier_reference ?: '-' }}</p></div><a class="text-sm underline" href="{{ route('distributor-invoices.show', $cargoInvoice) }}">Lihat Tagihan</a></header>
+                    <header class="flex flex-wrap items-start justify-between gap-3"><div class="min-w-0"><h4 class="break-words font-medium">{{ $cargoInvoice->purchaseOrder->distributor_name }}</h4><p class="mt-1 break-words text-xs text-muted">PO {{ $cargoInvoice->purchaseOrder->reference }} · Nota {{ $cargoInvoice->supplier_reference ?: '-' }} · {{ $cargoInvoice->purchaseOrder->package_count ?: 1 }} koli · {{ $cargoInvoice->purchaseOrder->shipping_cost_cents > 0 ? 'Rp '.number_format($cargoInvoice->purchaseOrder->shipping_cost_cents/100,2,',','.') : 'Bebas Ongkir' }}</p></div><a class="text-sm underline" href="{{ route('distributor-invoices.show', $cargoInvoice) }}">Lihat Tagihan</a></header>
                     <p class="mt-2 break-words text-xs text-muted">Tagihan {{ $cargoInvoice->reference }}</p>
                     <ul class="mt-3 divide-y">
                         @foreach($cargoInvoice->purchaseOrder->items as $cargoItem)
