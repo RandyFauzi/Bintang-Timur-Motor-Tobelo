@@ -1,5 +1,5 @@
 <x-app-layout :stock-overview="$stockOverview">
-    <div class="catalogue-page" x-data="productSelection(@js(old('selected', [])))">
+    <div class="catalogue-page product-catalogue" x-data="productSelection(@js(old('selected', [])))" :class="{ 'has-selection': selected.length > 0 }">
         @php($pageProductIds = $products->modelKeys())
         <header class="catalogue-heading"><h1>Stok & Produk</h1></header>
         <div class="catalogue-summary">
@@ -61,14 +61,16 @@
                     </tr>@empty<tr><td colspan="10"><x-ui.empty-state title="Produk tidak ditemukan" description="Tambahkan produk baru atau ubah pilihan filter." /></td></tr>@endforelse</tbody>
                 </table></div>
             @endif
-            <div x-cloak x-show="selected.length" class="return-bulk-bar">
-                <span class="text-sm" x-text="selected.length + ' Terpilih'"></span>
-                <button type="button" class="ui-button" @click="$dispatch('open-dialog', {id: 'product-bulk-edit'})"><x-ui.icon name="edit" :size="16" />Edit Massal</button>
-                <button type="button" class="ui-button ui-button--secondary" @click="$dispatch('open-dialog', {id: 'product-bulk-delete'})"><x-ui.icon name="trash" :size="16" />Hapus Terpilih</button>
-                <button type="button" class="text-sm underline" @click="selected = []">Batal Pilih</button>
-            </div>
             <x-ui.pagination :paginator="$products" />
         </section>
+        <div x-cloak x-show="selected.length" class="product-selection-dock" :style="{ '--selection-sidebar-width': isMobile ? '0px' : (collapsed ? '80px' : '256px') }">
+            <div class="return-bulk-bar" role="group" aria-label="Aksi produk terpilih">
+                <span class="product-selection-count text-sm" role="status" aria-live="polite" aria-atomic="true" x-text="selected.length + ' Terpilih'"></span>
+                <button type="button" class="ui-button product-selection-edit" @click="$dispatch('open-dialog', {id: 'product-bulk-edit'})"><x-ui.icon name="edit" :size="16" />Edit Massal</button>
+                <button type="button" class="ui-button ui-button--secondary product-selection-delete" @click="$dispatch('open-dialog', {id: 'product-bulk-delete'})"><x-ui.icon name="trash" :size="16" />Hapus Terpilih</button>
+                <button type="button" class="product-selection-cancel text-sm underline" @click="selected = []">Batal Pilih</button>
+            </div>
+        </div>
         @include('products.partials.form', ['product' => $editing])
         @include('products.partials.bulk')
         <x-ui.dialog name="product-delete" title="Hapus Produk" description="Produk akan dihapus dari katalog. Riwayat transaksi dan retur tetap tersimpan.">
