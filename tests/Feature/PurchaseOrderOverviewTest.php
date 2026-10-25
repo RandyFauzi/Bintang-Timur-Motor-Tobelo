@@ -89,7 +89,7 @@ class PurchaseOrderOverviewTest extends TestCase
         }
     }
 
-    #[TestWith(['pending', [null, null], 'Belum diperiksa'])]
+    #[TestWith(['pending', [null, null], 'In Progress'])]
     #[TestWith(['checking', [1, null], 'Sedang diperiksa'])]
     #[TestWith(['matched', [1, 2], 'Sesuai'])]
     #[TestWith(['discrepancy', [1, 0], 'Ada selisih'])]

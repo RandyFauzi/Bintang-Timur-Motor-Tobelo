@@ -56,7 +56,7 @@ class PurchaseOrder extends Model
     public function statusLabel(): string
     {
         if ($this->items->every(fn (PurchaseOrderItem $item): bool => $item->actual_quantity === null)) {
-            return 'Belum diperiksa';
+            return 'In Progress';
         }
         if ($this->items->contains(fn (PurchaseOrderItem $item): bool => $item->actual_quantity === null)) {
             return 'Sedang diperiksa';

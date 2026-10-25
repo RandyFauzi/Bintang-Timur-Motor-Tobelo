@@ -29,7 +29,7 @@ class PurchasePlan extends Model
     {
         $items = $this->orders->flatMap(fn (PurchaseOrder $order): Collection => $order->items);
         if ($items->every(fn (PurchaseOrderItem $item): bool => $item->actual_quantity === null)) {
-            return 'Belum diperiksa';
+            return 'In Progress';
         }
         if ($items->contains(fn (PurchaseOrderItem $item): bool => $item->actual_quantity === null)) {
             return 'Sedang diperiksa';

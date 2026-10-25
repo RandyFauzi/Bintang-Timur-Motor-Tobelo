@@ -1,4 +1,9 @@
 @layer components {
+    .procurement-status { display: inline-flex; align-items: center; justify-content: center; min-width: 110px; min-height: 38px; border: 1px solid; border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 500; line-height: 1.2; white-space: nowrap; }
+    .procurement-status--complete { border-color: #7c9c49; background: #f1f6e8; color: #35521b; }
+    .procurement-status--progress { border-color: #5c8db7; background: #edf5fc; color: #245780; }
+    .procurement-status--draft { border-color: #bdc3bc; background: #f0f1ed; color: #555b54; }
+    .procurement-status--discrepancy { border-color: #cf922e; background: #fff8eb; color: #80530c; }
     .plan-page { display: grid; min-width: 0; grid-template-columns: minmax(0,1fr); gap: 24px; overflow-wrap: anywhere; }
     .procurement-detail-page { min-width: 0; grid-template-columns: minmax(0,1fr); overflow-wrap: anywhere; }
     .procurement-detail-page > *, .procurement-detail-page .catalogue-surface { min-width: 0; }

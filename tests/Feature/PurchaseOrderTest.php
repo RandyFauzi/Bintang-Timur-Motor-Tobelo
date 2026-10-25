@@ -94,7 +94,7 @@ class PurchaseOrderTest extends TestCase
         $this->assertModelExists($order);
     }
 
-    #[TestWith(['pending', 'Belum diperiksa'])]
+    #[TestWith(['pending', 'In Progress'])]
     #[TestWith(['checking', 'Sedang diperiksa'])]
     #[TestWith(['discrepancy', 'Ada selisih'])]
     #[TestWith(['matched', 'Sesuai'])]

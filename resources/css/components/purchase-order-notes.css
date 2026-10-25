@@ -17,10 +17,11 @@
     .note-card__heading > div { flex: 1; min-width: 0; padding-top: 4px; }
     .note-card__heading h2 { overflow-wrap: anywhere; font-size: 16px; font-weight: 500; }
     .note-card__heading p { margin-top: 6px; color: var(--color-muted); font-size: 14px; }
-    .note-badge { display: inline-flex; flex-shrink: 0; align-items: center; border: 1px solid; border-radius: 64px; padding: 8px 12px; font-size: 14px; line-height: 1.2; }
+    .note-badge { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; min-width: 110px; min-height: 38px; border: 1px solid; border-radius: 64px; padding: 8px 14px; font-size: 14px; font-weight: 500; line-height: 1.2; }
     .note-badge--pending { border-color: #cf922e; background: #fff8eb; color: #80530c; }
     .note-badge--issued { border-color: #347ccb; background: #eff6ff; color: #1e457d; }
-    .note-badge--shipping { border-color: #8c68c8; background: #f5f0ff; color: #5e3b9b; }
+    .note-badge--shipping { border-color: #5c8db7; background: #edf5fc; color: #245780; }
+    .note-badge--delivered { border-color: #7c9c49; background: #f1f6e8; color: #35521b; }
     .note-card__content { display: grid; min-width: 0; gap: 24px; margin-top: 24px; }
     .note-fields { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 16px; padding-block: 16px; }
     .note-fields .form-field { gap: 12px; }
