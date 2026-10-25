@@ -7,6 +7,7 @@
 @import './components/auth.css';
 @import './components/shipments.css';
 @import './components/notifications.css';
+@import './components/select-picker.css';
 
 @font-face {
     font-family: Roboto;

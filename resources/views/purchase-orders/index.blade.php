@@ -8,23 +8,15 @@
                     <label class="catalogue-search"><span class="sr-only">Cari pengadaan atau distributor</span><x-ui.icon name="search" :size="18" /><input type="search" name="search" value="{{ request('search') }}" placeholder="Cari PO, nama rencana, atau distributor..." maxlength="255"></label>
                     <div class="catalogue-toolbar__actions flex-wrap"><button type="submit" class="ui-button ui-button--secondary">Cari</button><a class="ui-button procurement-create" href="{{ route('purchase-orders.create') }}"><x-ui.icon name="add" :size="18" />Buat Pengadaan</a></div>
                 </div>
-                <x-ui.query-fields :values="request()->only(['from', 'until'])" />
                 @if(request()->boolean('archived'))<input type="hidden" name="archived" value="1">@endif
                 <div class="catalogue-filters catalogue-filters--scroll procurement-filters" role="region" aria-label="Filter pengadaan, geser untuk melihat pilihan lainnya" tabindex="0">
-                    <button type="button" @class(['filter-trigger', 'is-active' => request()->filled('from') || request()->filled('until')]) @click="$dispatch('open-dialog', { id: 'procurement-date-filter' })"><x-ui.icon name="calendar" :size="16" /><span>{{ request()->filled('from') || request()->filled('until') ? 'Tanggal Dipilih' : 'Semua Tanggal' }}</span><x-ui.icon name="chevron" :size="16" class="rotate-90" /></button>
+                    <x-ui.inline-date-filter id="procurement-date-filter" start-name="from" end-name="until" />
                     <x-ui.multiselect name="status" id="procurement-status" label="Semua Status" :options="collect(['draft' => 'Draft', 'pending' => 'In Progress', 'checking' => 'Sedang diperiksa', 'discrepancy' => 'Ada selisih', 'matched' => 'Selesai'])->map(fn (string $label, string $value): object => (object) ['id' => $value, 'name' => $label])->values()" :selected="(array) request('status', [])" icon="status-filter" />
                     <x-ui.multiselect name="distributor_id" id="procurement-distributor" label="Semua Distributor" :options="$distributors" :selected="(array) request('distributor_id', [])" icon="workshop" />
                     @if(request()->filled('per_page'))<input type="hidden" name="per_page" value="{{ request('per_page') }}">@endif
                     @if(request()->filled('search') || request()->filled('status') || request()->filled('distributor_id') || request()->filled('from') || request()->filled('until'))<a class="filter-reset" href="{{ route('purchase-orders.index', request()->boolean('archived') ? ['archived' => 1] : []) }}">Reset Filter</a>@endif
                 </div>
             </form>
-            <x-ui.dialog name="procurement-date-filter" title="Filter Tanggal" description="Pilih rentang tanggal pengadaan.">
-                <form method="GET" action="{{ route('purchase-orders.index') }}" class="dialog-form">
-                    <x-ui.query-fields :values="request()->except(['from', 'until', 'page'])" />
-                    <div class="form-grid"><x-ui.field name="from" label="Dari Tanggal" type="date" :value="request('from')" /><x-ui.field name="until" label="Sampai Tanggal" type="date" :value="request('until')" /></div>
-                    <footer class="dialog-actions"><button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button><button type="submit" class="ui-button">Terapkan Tanggal</button></footer>
-                </form>
-            </x-ui.dialog>
             <div class="procurement-list-region overflow-x-auto rounded-b-xl" role="region" aria-label="Daftar pengadaan barang" tabindex="0">
                 <table class="procurement-table w-full text-left text-sm" role="table">
                     <thead class="bg-gray-50 text-xs uppercase text-muted"><tr>@foreach(['Pengadaan/Tanggal', 'Nama Pengadaan', 'Produk', 'Total Unit', 'Status', 'Aksi'] as $heading)<th scope="col" class="whitespace-nowrap px-4 py-5 font-medium">{{ $heading }}</th>@endforeach</tr></thead>

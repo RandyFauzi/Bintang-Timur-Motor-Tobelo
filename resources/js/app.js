@@ -10,6 +10,7 @@ import { appDialog, multiSelect, observationForm } from './components/catalogue'
 import { returnSelection, productPicker } from './components/product-returns';
 import { posRegister } from './components/pos';
 import { transactionEditor } from './components/transaction-editor';
+import { startSelectPickers } from './components/select-picker';
 
 import.meta.glob('../images/**/*', { eager: true, query: '?url', import: 'default' });
 
@@ -36,3 +37,4 @@ Alpine.data('purchasePlanForm', purchasePlanForm);
 Alpine.data('purchaseOrderNotes', purchaseOrderNotes);
 window.Alpine = Alpine;
 Alpine.start();
+queueMicrotask(() => startSelectPickers(Alpine));

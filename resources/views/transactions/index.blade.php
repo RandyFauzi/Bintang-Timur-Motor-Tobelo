@@ -10,17 +10,7 @@
             <form method="GET" action="{{ route('transactions.index') }}">
                 <x-ui.catalogue-toolbar export-route="transactions.export" create-label="Tambah Transaksi" :create-href="route('pos.index')" />
                 <div class="catalogue-filters history-filters" role="region" aria-label="Filter histori transaksi">
-                    <div class="history-date-filter" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.stop="open = false; $refs.trigger.focus()">
-                        <button type="button" @class(['filter-trigger', 'is-active' => request()->filled('start_date') || request()->filled('end_date')]) x-ref="trigger" @click="open = !open; if (open) $nextTick(() => $refs.start.focus())" :aria-expanded="open" aria-controls="history-date-panel"><x-ui.icon name="calendar" :size="16" /><span>{{ request()->filled('start_date') || request()->filled('end_date') ? 'Tanggal Dipilih' : 'Semua Tanggal' }}</span><x-ui.icon name="chevron" :size="16" class="rotate-90" /></button>
-                        <div id="history-date-panel" class="history-date-panel grid gap-4" x-show="open" x-cloak x-transition.opacity>
-                            <p class="text-sm font-medium">Filter Tanggal</p>
-                            <div class="grid grid-cols-2 gap-3">
-                                <label class="grid min-w-0 gap-2 text-xs font-medium">Tanggal Mulai<input x-ref="start" type="date" name="start_date" value="{{ request('start_date') }}" class="date-filter__input"></label>
-                                <label class="grid min-w-0 gap-2 text-xs font-medium">Tanggal Akhir<input type="date" name="end_date" value="{{ request('end_date') }}" class="date-filter__input"></label>
-                            </div>
-                            <button type="submit" class="ui-button w-full">Terapkan Tanggal</button>
-                        </div>
-                    </div>
+                    <x-ui.inline-date-filter id="history-date-filter" class="history-date-filter" />
                     <x-ui.multiselect name="status" id="history-status" label="Semua Status" :options="collect(['' => 'Semua Status', 'completed' => 'Selesai', 'cancelled' => 'Batal'])->map(fn (string $label, string $value): object => (object) ['id' => $value, 'name' => $label])->values()" :selected="[request('status', '')]" :multiple="false" :dropdown="true" icon="status-filter" />
                     <x-ui.multiselect name="user_id" id="history-cashier" label="Semua Kasir" :options="$cashiers" :selected="(array) request('user_id', [])" icon="cashier-filter" />
                     <x-ui.multiselect name="payment_status" id="history-payment-status" label="Semua Pembayaran" :options="collect(['' => 'Semua Pembayaran', 'paid' => 'Lunas', 'unpaid' => 'Belum Dibayar', 'partial' => 'Dibayar Sebagian'])->map(fn (string $label, string $value): object => (object) ['id' => $value, 'name' => $label])->values()" :selected="[request('payment_status', '')]" :multiple="false" :dropdown="true" icon="invoice" />

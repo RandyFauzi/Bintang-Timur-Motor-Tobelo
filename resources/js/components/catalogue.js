@@ -55,11 +55,13 @@ export function multiSelect(options, selected, label, submitOnApply = true) {
             this.viewport?.addEventListener('resize', this.viewportListener);
             this.viewport?.addEventListener('scroll', this.viewportListener);
             globalThis.window?.addEventListener('resize', this.viewportListener);
+            globalThis.window?.addEventListener('scroll', this.viewportListener, true);
         },
         destroy() {
             this.viewport?.removeEventListener('resize', this.viewportListener);
             this.viewport?.removeEventListener('scroll', this.viewportListener);
             globalThis.window?.removeEventListener('resize', this.viewportListener);
+            globalThis.window?.removeEventListener('scroll', this.viewportListener, true);
         },
         positionPanel(viewport = globalThis.window?.visualViewport) {
             const width = viewport?.width ?? globalThis.window?.innerWidth;
@@ -71,6 +73,24 @@ export function multiSelect(options, selected, label, submitOnApply = true) {
                 '--filter-max-height': `${Math.max(0, height - 32)}px`,
                 '--filter-max-width': `${Math.max(0, width - 32)}px`,
             };
+            const bounds = this.$refs?.trigger?.getBoundingClientRect?.();
+            if (bounds) {
+                const top = viewport?.offsetTop ?? 0;
+                const left = viewport?.offsetLeft ?? 0;
+                const anchorTop = Math.min(Math.max(bounds.top, top + 12), top + height - 12);
+                const anchorBottom = Math.min(Math.max(bounds.bottom, top + 12), top + height - 12);
+                const below = top + height - anchorBottom - 12;
+                const above = anchorTop - top - 12;
+                const upwards = below < 240 && above > below;
+                const panelWidth = Math.min(Math.max(bounds.width, 260), width - 24);
+                Object.assign(this.panelPosition, {
+                    '--filter-anchor-width': `${panelWidth}px`,
+                    '--filter-anchor-left': `${Math.max(left + 12, Math.min(bounds.left, left + width - panelWidth - 12))}px`,
+                    '--filter-anchor-top': upwards ? 'auto' : `${anchorBottom + 6}px`,
+                    '--filter-anchor-bottom': upwards ? `${(globalThis.window?.innerHeight ?? height) - anchorTop + 6}px` : 'auto',
+                    '--filter-anchor-height': `${Math.min(400, Math.max(100, upwards ? above : below))}px`,
+                });
+            }
         },
         get filtered() {
             const search = this.search.trim().toLocaleLowerCase('id');
@@ -92,7 +112,7 @@ export function multiSelect(options, selected, label, submitOnApply = true) {
             if (this.open) {
                 this.draft = [...this.selected];
                 this.search = '';
-                this.$nextTick(() => this.$refs.search?.focus({ preventScroll: true }));
+                this.$nextTick(() => (globalThis.window?.innerWidth <= 767 ? this.$refs.panel : this.$refs.search)?.focus({ preventScroll: true }));
             }
         },
         close(restoreFocus = true) {

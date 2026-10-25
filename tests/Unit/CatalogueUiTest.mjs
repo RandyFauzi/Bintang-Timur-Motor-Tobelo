@@ -158,6 +158,37 @@ test('popup follows the visible viewport when the mobile keyboard changes its he
     assert.equal(filter.panelPosition['--filter-max-width'], '328px');
 });
 
+test('dropdown stays anchored to its trigger and fits the right viewport edge', () => {
+    const filter = multiSelect(options, [], 'Semua');
+    filter.$refs = {trigger: {getBoundingClientRect: () => ({left: 300, top: 610, bottom: 650, width: 160})}};
+
+    filter.positionPanel({width: 360, height: 700, offsetLeft: 0, offsetTop: 0});
+
+    assert.equal(filter.panelPosition['--filter-anchor-width'], '260px');
+    assert.equal(filter.panelPosition['--filter-anchor-left'], '88px');
+    assert.equal(filter.panelPosition['--filter-anchor-top'], 'auto');
+    assert.equal(filter.panelPosition['--filter-anchor-bottom'], '96px');
+});
+
+test('opening a dropdown on mobile does not force the keyboard open', () => {
+    const previousWindow = globalThis.window;
+    globalThis.window = {innerWidth: 390, innerHeight: 800};
+    try {
+        const filter = multiSelect(options, [], 'Semua');
+        let focused = '';
+        filter.$refs = {panel: {focus() { focused = 'panel'; }}, search: {focus() { focused = 'search'; }}};
+        filter.$nextTick = callback => callback();
+
+        filter.toggle();
+
+        assert.equal(focused, 'panel');
+        assert.equal(filter.open, true);
+    } finally {
+        if (previousWindow === undefined) delete globalThis.window;
+        else globalThis.window = previousWindow;
+    }
+});
+
 
 test('viewport listeners follow keyboard resizing and are removed when a filter is destroyed', () => {
     const originalWindow = globalThis.window;
