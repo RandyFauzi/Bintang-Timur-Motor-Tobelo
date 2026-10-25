@@ -13,7 +13,7 @@ class DistributorInvoice extends Model
 {
     use HasFactory;
 
-    public const STATUSES = ['unpaid' => 'Belum Dibayar', 'partial' => 'Dibayar Sebagian', 'paid' => 'Lunas', 'overdue' => 'Terlambat'];
+    public const STATUSES = ['unpaid' => 'Belum Dibayar', 'partial' => 'Dibayar Sebagian', 'paid' => 'Lunas', 'overdue' => 'Perlu Dibayar'];
 
     public const REMINDER_DAYS = 7;
 
@@ -46,7 +46,7 @@ class DistributorInvoice extends Model
 
     public function billingStatus(): string
     {
-        return $this->remainingCents() > 0 && $this->due_on->toDateString() < self::today()->toDateString() ? 'overdue' : $this->status();
+        return $this->remainingCents() > 0 && $this->due_on->toDateString() <= self::today()->toDateString() ? 'overdue' : $this->status();
     }
 
     public function reminderStage(): ?string

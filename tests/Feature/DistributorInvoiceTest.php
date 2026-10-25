@@ -174,6 +174,56 @@ class DistributorInvoiceTest extends TestCase
         $this->assertSame(4, $this->get(route('distributor-invoices.index', ['status' => []]))->assertOk()->viewData('invoices')->total());
     }
 
+    public function test_due_timing_filter_and_perlu_dibayar_status_on_due_date(): void
+    {
+        $today = DistributorInvoice::today();
+        $this->travelTo($today->setTime(8, 0, 0));
+
+        $dueToday = DistributorInvoice::factory()->create([
+            'reference' => 'INV-TODAY',
+            'due_on' => $today->toDateString(),
+            'total_cents' => 10000000,
+            'paid_cents' => 0,
+        ]);
+        $dueOneMonth = DistributorInvoice::factory()->create([
+            'reference' => 'INV-1M',
+            'due_on' => $today->addDays(20)->toDateString(),
+        ]);
+        $dueTwoMonths = DistributorInvoice::factory()->create([
+            'reference' => 'INV-2M',
+            'due_on' => $today->addDays(45)->toDateString(),
+        ]);
+
+        $this->assertSame('overdue', $dueToday->billingStatus());
+        $this->assertSame('Perlu Dibayar', DistributorInvoice::STATUSES[$dueToday->billingStatus()]);
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $response = $this->get(route('distributor-invoices.index'))->assertOk();
+        $response->assertSee('Perlu Dibayar');
+        $response->assertSee(route('distributor-invoices.show', ['distributorInvoice' => $dueToday->id, 'pay' => 1]), false);
+        $response->assertSee(route('distributor-invoices.show', ['distributorInvoice' => $dueToday->id, 'edit' => 1]), false);
+
+        $res1m = $this->get(route('distributor-invoices.index', ['timing' => '1']))->assertOk();
+        $this->assertTrue($res1m->viewData('invoices')->contains($dueToday));
+        $this->assertTrue($res1m->viewData('invoices')->contains($dueOneMonth));
+        $this->assertFalse($res1m->viewData('invoices')->contains($dueTwoMonths));
+
+        $res2m = $this->get(route('distributor-invoices.index', ['timing' => '2']))->assertOk();
+        $this->assertFalse($res2m->viewData('invoices')->contains($dueToday));
+        $this->assertFalse($res2m->viewData('invoices')->contains($dueOneMonth));
+        $this->assertTrue($res2m->viewData('invoices')->contains($dueTwoMonths));
+
+        $this->get(route('distributor-invoices.show', ['distributorInvoice' => $dueToday->id, 'pay' => 1]))->assertOk()
+            ->assertSee('Catat Pembayaran')
+            ->assertSee('appDialog(true)', false);
+
+        $this->get(route('distributor-invoices.show', ['distributorInvoice' => $dueToday->id, 'edit' => 1]))->assertOk()
+            ->assertSee('Edit Faktur, Kargo & Tempo')
+            ->assertSee('appDialog(true)', false);
+    }
+
     public function test_backfill_generates_exactly_one_invoice_for_existing_orders(): void
     {
         $item = PurchaseOrderItem::factory()->create(['quantity' => 3, 'unit_price' => '123.45']);

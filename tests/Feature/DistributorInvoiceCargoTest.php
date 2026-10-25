@@ -164,8 +164,9 @@ class DistributorInvoiceCargoTest extends TestCase
     {
         $invoice = DistributorInvoice::factory()->create(['discrepancy_notes' => 'Retur 2 pcs dan kurang 5 pcs']);
         $this->actingAs(User::factory()->create())->get(route('distributor-invoices.index'))->assertOk()
-            ->assertSee('Retur 2 pcs dan kurang 5 pcs')->assertSee('Edit Tempo')
-            ->assertSee(route('distributor-invoices.show', ['distributorInvoice' => $invoice->id, 'edit' => 1]), false);
+            ->assertSee('Retur 2 pcs dan kurang 5 pcs')->assertSee('Edit Data')->assertSee('Bayar')
+            ->assertSee(route('distributor-invoices.show', ['distributorInvoice' => $invoice->id, 'edit' => 1]), false)
+            ->assertSee(route('distributor-invoices.show', ['distributorInvoice' => $invoice->id, 'pay' => 1]), false);
         $this->get(route('distributor-invoices.show', ['distributorInvoice' => $invoice->id, 'edit' => 1]))->assertOk()
             ->assertSee('appDialog(true)', false)->assertSee('Jatuh Tempo');
     }

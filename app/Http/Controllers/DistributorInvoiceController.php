@@ -27,26 +27,39 @@ class DistributorInvoiceController extends Controller
         if (! empty($filters['distributor_id'])) {
             $base->whereHas('purchaseOrder', fn (Builder $q): Builder => $q->where('distributor_id', $filters['distributor_id']));
         }
-        $summary = ['total' => (int) (clone $base)->sum('total_cents'), 'paid' => (int) (clone $base)->sum('paid_cents'), 'outstanding' => (int) (clone $base)->sum(DB::raw('total_cents - paid_cents')), 'overdue' => (int) (clone $base)->outstanding()->whereDate('due_on', '<', DistributorInvoice::today()->toDateString())->sum(DB::raw('total_cents - paid_cents'))];
+        $today = DistributorInvoice::today();
+        $summary = ['total' => (int) (clone $base)->sum('total_cents'), 'paid' => (int) (clone $base)->sum('paid_cents'), 'outstanding' => (int) (clone $base)->sum(DB::raw('total_cents - paid_cents')), 'overdue' => (int) (clone $base)->outstanding()->whereDate('due_on', '<=', $today->toDateString())->sum(DB::raw('total_cents - paid_cents'))];
         if (! empty($filters['status'])) {
-            $base->where(function (Builder $statuses) use ($filters): void {
+            $base->where(function (Builder $statuses) use ($filters, $today): void {
                 foreach ($filters['status'] as $status) {
-                    $statuses->orWhere(function (Builder $query) use ($status): void {
+                    $statuses->orWhere(function (Builder $query) use ($status, $today): void {
                         match ($status) {
                             'paid' => $query->whereColumn('paid_cents', '>=', 'total_cents'),
                             'unpaid' => $query->outstanding()->where('paid_cents', 0),
                             'partial' => $query->outstanding()->where('paid_cents', '>', 0),
-                            'overdue' => $query->outstanding()->whereDate('due_on', '<', DistributorInvoice::today()->toDateString()),
+                            'overdue' => $query->outstanding()->whereDate('due_on', '<=', $today->toDateString()),
                         };
                     });
                 }
             });
         }
-        if (($filters['timing'] ?? null) === 'overdue') {
-            $base->outstanding()->whereDate('due_on', '<', DistributorInvoice::today()->toDateString());
-        }
-        if (($filters['timing'] ?? null) === 'near') {
-            $base->needsReminder()->whereDate('due_on', '>=', DistributorInvoice::today()->toDateString());
+        $timing = (string) ($filters['timing'] ?? '');
+        if ($timing === '1') {
+            $base->whereDate('due_on', '>=', $today->toDateString())
+                ->whereDate('due_on', '<=', $today->addMonthsNoOverflow(1)->toDateString());
+        } elseif ($timing === '2') {
+            $base->whereDate('due_on', '>', $today->addMonthsNoOverflow(1)->toDateString())
+                ->whereDate('due_on', '<=', $today->addMonthsNoOverflow(2)->toDateString());
+        } elseif ($timing === '3') {
+            $base->whereDate('due_on', '>', $today->addMonthsNoOverflow(2)->toDateString())
+                ->whereDate('due_on', '<=', $today->addMonthsNoOverflow(3)->toDateString());
+        } elseif ($timing === '4') {
+            $base->whereDate('due_on', '>', $today->addMonthsNoOverflow(3)->toDateString())
+                ->whereDate('due_on', '<=', $today->addMonthsNoOverflow(4)->toDateString());
+        } elseif ($timing === 'overdue') {
+            $base->outstanding()->whereDate('due_on', '<=', $today->toDateString());
+        } elseif ($timing === 'near') {
+            $base->needsReminder()->whereDate('due_on', '>=', $today->toDateString());
         }
 
         return view('distributor-invoices.index', ['invoices' => $base->with(['purchaseOrder', 'shipment'])->orderByRaw('paid_cents >= total_cents')->orderBy('due_on')->orderBy('id')->paginate(15)->withQueryString(), 'distributors' => Distributor::orderBy('name')->get(), 'summary' => $summary]);
