@@ -17,10 +17,24 @@
             </form>
             <div class="pos-products">
                 <template x-for="product in products" :key="product.id">
-                    <article class="pos-product">
+                    <article class="pos-product" :class="{'pos-product--in-cart': quantity(product.id) > 0, 'pos-product--clickable': product.available > 0}" @click="onProductClick(product)">
                         <header><div class="pos-product__name"><x-ui.icon name="pos-box" :size="18" class="shrink-0 mt-0.5 text-muted" /><h2 class="pos-product__title" x-text="product.name" :title="product.name"></h2></div></header>
                         <dl><dt>Merek</dt><dd x-text="product.brand || '–'"></dd><dt>Distributor</dt><dd x-text="product.distributor || '–'"></dd><dt>Warna</dt><dd x-text="product.color || '–'"></dd><dt>Stok</dt><dd><span :class="product.available <= product.minimum ? 'stock-badge' : ''" x-text="product.available"></span></dd></dl>
-                        <footer><strong x-text="money(product.price)"></strong><div class="pos-product__cart-action"><span class="text-xs font-medium text-muted whitespace-nowrap" x-cloak x-show="quantity(product.id) > 0" x-text="quantity(product.id) + ' item'" :aria-label="quantity(product.id) + ' item ' + product.name + ' di keranjang'" aria-live="polite" aria-atomic="true"></span><button type="button" class="ui-button pos-add" :disabled="busy || quantity(product.id) >= product.available" @click="add(product)" :aria-label="'Tambah '+product.name+' ke keranjang'"><x-ui.icon name="pos-cart" :size="18" /></button></div></footer>
+                        <footer>
+                            <strong x-text="money(product.price)"></strong>
+                            <div class="pos-product__cart-action" @click.stop>
+                                <button type="button" class="ui-button pos-add" x-show="quantity(product.id) === 0" :disabled="busy || product.available < 1" @click.stop="add(product)" :aria-label="'Tambah '+product.name+' ke keranjang'"><x-ui.icon name="pos-cart" :size="18" /></button>
+                                <div class="pos-stepper" x-show="quantity(product.id) > 0" x-cloak role="group" :aria-label="'Ubah jumlah ' + product.name">
+                                    <button type="button" class="pos-stepper__btn pos-stepper__btn--minus" @click.stop="decrement(product.id)" :disabled="busy" :aria-label="'Kurangi '+product.name">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    </button>
+                                    <input type="number" min="1" :max="product.available" step="1" :value="quantity(product.id)" :disabled="busy" @input="updateQuantityInput(product.id, $event.target)" @change="updateQuantityInput(product.id, $event.target, true)" @click.stop class="pos-stepper__input" :aria-label="'Jumlah '+product.name">
+                                    <button type="button" class="pos-stepper__btn pos-stepper__btn--plus" @click.stop="add(product)" :disabled="busy || quantity(product.id) >= product.available" :aria-label="'Tambah '+product.name">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </footer>
                     </article>
                 </template>
                 @if($products->isEmpty())<div class="col-span-full"><x-ui.empty-state title="Produk tidak ditemukan" description="Ubah pencarian atau filter untuk memilih produk lainnya." /></div>@endif

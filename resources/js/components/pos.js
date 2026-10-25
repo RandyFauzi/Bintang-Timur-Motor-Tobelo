@@ -66,6 +66,22 @@ export function posRegister(products, endpoints, storageKey) {
             this.cart = this.cart.filter((row) => row.id !== id);
             this.persist();
         },
+        decrement(id) {
+            if (this.busy) return;
+            const row = this.cart.find((item) => item.id === id);
+            if (!row) return;
+            if (row.quantity <= 1) {
+                this.remove(id);
+            } else {
+                this.setQuantity(id, row.quantity - 1);
+            }
+        },
+        onProductClick(product) {
+            if (this.busy || product.available < 1) return;
+            if (this.quantity(product.id) === 0) {
+                this.add(product);
+            }
+        },
         openCart() { this.$dispatch('open-dialog', { id: 'pos-cart' }); },
         review() {
             if (!this.canCheckout) {

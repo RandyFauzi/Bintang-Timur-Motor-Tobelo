@@ -164,3 +164,36 @@ test('cart cannot advance to review with quantities above refreshed stock', () =
     state.cart[0].quantity = 1.5;
     assert.equal(state.canCheckout, false);
 });
+
+test('decrement reduces quantity or removes product from cart, and onProductClick adds only unselected items', () => {
+    const state = register();
+    assert.equal(state.quantity(product.id), 0);
+
+    // Clicking unselected product adds it
+    state.onProductClick(product);
+    assert.equal(state.quantity(product.id), 1);
+    assert.equal(state.units, 1);
+
+    // Clicking already selected product via onProductClick does not auto-add (user uses stepper)
+    state.onProductClick(product);
+    assert.equal(state.quantity(product.id), 1);
+
+    // Incrementing via add
+    state.add(product);
+    assert.equal(state.quantity(product.id), 2);
+
+    // Decrementing via decrement
+    state.decrement(product.id);
+    assert.equal(state.quantity(product.id), 1);
+    assert.equal(state.units, 1);
+
+    // Decrementing on quantity 1 removes product from cart completely
+    state.decrement(product.id);
+    assert.equal(state.quantity(product.id), 0);
+    assert.equal(state.units, 0);
+    assert.equal(state.cart.length, 0);
+
+    // Out of stock product is not added on click
+    state.onProductClick({ ...product, available: 0 });
+    assert.equal(state.quantity(product.id), 0);
+});

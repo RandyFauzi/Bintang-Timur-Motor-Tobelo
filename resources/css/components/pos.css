@@ -14,6 +14,52 @@
     .pos-product footer strong { overflow-wrap: anywhere; font-size: 18px; }
     .pos-product__cart-action { display: flex; flex-shrink: 0; align-items: center; gap: 8px; margin-left: auto; }
     .pos-add { min-width: 46px; padding-inline: 12px; }
+    .pos-product.pos-product--clickable { cursor: pointer; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+    .pos-product.pos-product--clickable:hover { border-color: #000000; box-shadow: 2px 4px 18px -2px rgb(0 0 0 / 12%); }
+    .pos-product.pos-product--in-cart { border-color: #000000; box-shadow: 0 0 0 1px #000000, 2px 2px 15px -4px rgb(0 0 0 / 10%); }
+    .pos-stepper { display: inline-flex; align-items: center; gap: 8px; user-select: none; }
+    .pos-stepper__btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background-color: #000000;
+        color: #ffffff;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        transition: background-color 0.15s ease, transform 0.1s ease;
+    }
+    .pos-stepper__btn:hover:not(:disabled) { background-color: #262626; }
+    .pos-stepper__btn:active:not(:disabled) { transform: scale(0.92); }
+    .pos-stepper__btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .pos-stepper__input {
+        width: 46px;
+        height: 36px;
+        border: 1px solid #262626;
+        border-radius: 10px;
+        background-color: #ffffff;
+        color: #000000;
+        font-size: 15px;
+        font-weight: 600;
+        text-align: center;
+        padding: 0;
+        appearance: textfield;
+        -moz-appearance: textfield;
+        outline: none;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .pos-stepper__input:focus {
+        border-color: #000000;
+        box-shadow: 0 0 0 1px #000000;
+    }
+    .pos-stepper__input::-webkit-outer-spin-button,
+    .pos-stepper__input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
     .ui-dialog.pos-panel { position: fixed; inset: 24px 24px 24px auto; width: min(420px, calc(100vw - 32px)); height: calc(100dvh - 48px); max-height: calc(100dvh - 48px); margin: 0; padding: 0; overflow: auto; border-radius: 16px; }
     .pos-panel .ui-dialog__header { padding: 20px 16px; }
     .pos-panel .dialog-close { min-width: 32px; }
