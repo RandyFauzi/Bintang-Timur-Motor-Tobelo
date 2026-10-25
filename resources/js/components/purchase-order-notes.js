@@ -28,6 +28,22 @@ export function purchaseOrderNotes(initial, services, config) {
             return this.shortages.filter(item => !term || (item.product_name + ' ' + item.color).toLocaleLowerCase('id').includes(term));
         },
         get selectedShortages() { return this.shortages.filter(item => this.selected.map(Number).includes(item.source_index)); },
+        get allVisibleShortagesSelected() {
+            return this.visibleShortages.length > 0 && this.visibleShortages.every(item => this.selected.map(String).includes(String(item.source_index)));
+        },
+        get someVisibleShortagesSelected() {
+            return this.visibleShortages.some(item => this.selected.map(String).includes(String(item.source_index)));
+        },
+        selectVisibleShortages(checked) {
+            const validIds = new Set(this.shortages.map(item => String(item.source_index)));
+            const selected = new Set(this.selected.map(String).filter(id => validIds.has(id)));
+            for (const item of this.visibleShortages) {
+                const id = String(item.source_index);
+                if (checked) selected.add(id);
+                else selected.delete(id);
+            }
+            this.selected = [...selected];
+        },
         get selectedOrder() { return this.orders.find(order => order.id === this.selectedOrderId); },
         get cargoSelection() { return this.shipment.shipping_service_id ? [String(this.shipment.shipping_service_id)] : []; },
         set cargoSelection(values) {

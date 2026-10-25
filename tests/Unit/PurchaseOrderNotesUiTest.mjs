@@ -5,6 +5,46 @@ import {purchaseOrderNotes} from '../../resources/js/components/purchase-order-n
 const order = (id = 1, quantity = 5) => ({id,reference:'PO-'+id,distributor_id:id,distributor_name:id === 1 ? 'WMS' : 'WIN',origin_port:'Surabaya',version:2,note_issued:true,supplier_note_number:'INV-'+id,supplier_note_on:'2026-10-21',supplier_note_total:'60000.00',finalized:false,can_edit:true,shipment_url:null,shipment_status:null,invoice_url:'/bills/'+id,save_url:'/orders/'+id+'/note',finalize_url:'/orders/'+id+'/finalize',items:[{id:id*10,product_name:'Yamalube 02 Oil',color:'Gold',source_index:0,quantity:15,invoice_quantity:quantity}]});
 const state = (orders=[order()]) => purchaseOrderNotes(orders, [{id:1,name:'Cargo Reguler',duration_days:14}], {today:'2026-10-21',planId:4,replanUrl:'/purchase-orders/create'});
 
+test('select all shortages supports partial selection and does not duplicate selected source identities', () => {
+    const row = order();
+    row.items.push({...row.items[0], id: 11, source_index: 1, product_name: 'Busi NGK'});
+    const model = state([row]);
+    model.selected = ['0'];
+    assert.equal(model.allVisibleShortagesSelected, false);
+    assert.equal(model.someVisibleShortagesSelected, true);
+
+    model.selectVisibleShortages(true);
+    model.selectVisibleShortages(true);
+    assert.deepEqual(model.selected, ['0', '1']);
+    assert.equal(model.allVisibleShortagesSelected, true);
+    assert.equal(model.selectedShortages.length, 2);
+
+    model.selectVisibleShortages(false);
+    assert.deepEqual(model.selected, []);
+    assert.equal(model.someVisibleShortagesSelected, false);
+    assert.equal(model.allVisibleShortagesSelected, false);
+});
+
+test('select all applies to search results while preserving selections outside the current search', () => {
+    const row = order();
+    row.items.push({...row.items[0], id: 11, source_index: 1, product_name: 'Busi NGK'});
+    const model = state([row]);
+    model.selected = ['0', '999'];
+    model.search = 'busi';
+
+    model.selectVisibleShortages(true);
+    assert.deepEqual(model.selected, ['0', '1']);
+    assert.equal(model.allVisibleShortagesSelected, true);
+    model.selectVisibleShortages(false);
+    assert.deepEqual(model.selected, ['0']);
+    assert.equal(model.someVisibleShortagesSelected, false);
+
+    model.search = 'Tidak ditemukan';
+    assert.equal(model.allVisibleShortagesSelected, false);
+    model.selectVisibleShortages(true);
+    assert.deepEqual(model.selected, ['0']);
+});
+
 test('shortages aggregate suppliers and offset excess instead of ordering the same requirement twice', () => {
     const model=state([order(1,5),order(2,2)]);
     assert.equal(model.shortages.length,1);
