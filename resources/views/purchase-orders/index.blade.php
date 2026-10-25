@@ -6,11 +6,11 @@
             <form method="GET" action="{{ route('purchase-orders.index') }}">
                 <div class="catalogue-toolbar flex-wrap">
                     <label class="catalogue-search"><span class="sr-only">Cari pengadaan atau distributor</span><x-ui.icon name="search" :size="18" /><input type="search" name="search" value="{{ request('search') }}" placeholder="Cari PO, nama rencana, atau distributor..." maxlength="255"></label>
-                    <div class="catalogue-toolbar__actions flex-wrap"><button type="submit" class="ui-button ui-button--secondary">Cari</button><a class="ui-button" href="{{ route('purchase-orders.create') }}"><x-ui.icon name="add" :size="18" />Buat Pengadaan</a></div>
+                    <div class="catalogue-toolbar__actions flex-wrap"><button type="submit" class="ui-button ui-button--secondary">Cari</button><a class="ui-button procurement-create" href="{{ route('purchase-orders.create') }}"><x-ui.icon name="add" :size="18" />Buat Pengadaan</a></div>
                 </div>
                 <x-ui.query-fields :values="request()->only(['from', 'until'])" />
                 @if(request()->boolean('archived'))<input type="hidden" name="archived" value="1">@endif
-                <div class="catalogue-filters procurement-filters">
+                <div class="catalogue-filters catalogue-filters--scroll procurement-filters" role="region" aria-label="Filter pengadaan, geser untuk melihat pilihan lainnya" tabindex="0">
                     <button type="button" @class(['filter-trigger', 'is-active' => request()->filled('from') || request()->filled('until')]) @click="$dispatch('open-dialog', { id: 'procurement-date-filter' })"><x-ui.icon name="calendar" :size="16" /><span>{{ request()->filled('from') || request()->filled('until') ? 'Tanggal Dipilih' : 'Semua Tanggal' }}</span><x-ui.icon name="chevron" :size="16" class="rotate-90" /></button>
                     <x-ui.multiselect name="status" id="procurement-status" label="Semua Status" :options="collect(['' => 'Semua Status', 'draft' => 'Draft', 'pending' => 'In Progress', 'checking' => 'Sedang diperiksa', 'discrepancy' => 'Ada selisih', 'matched' => 'Selesai'])->map(fn (string $label, string $value): object => (object) ['id' => $value, 'name' => $label])->values()" :selected="[request('status', '')]" :multiple="false" icon="status-filter" />
                     <x-ui.multiselect name="distributor_id" id="procurement-distributor" label="Semua Distributor" :options="collect([(object) ['id' => '', 'name' => 'Semua Distributor']])->concat($distributors)" :selected="[request('distributor_id', '')]" :multiple="false" icon="workshop" />

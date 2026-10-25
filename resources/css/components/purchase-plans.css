@@ -97,6 +97,13 @@
         .plan-progress { width: 100%; }
     }
     @media(max-width: 767px) {
+        .procurement-page { padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
+        .procurement-page .catalogue-toolbar { grid-template-columns: minmax(0,1fr) auto; gap: 8px; padding: 12px; }
+        .procurement-page .catalogue-toolbar__actions { grid-template-columns: auto; width: auto; }
+        .procurement-page .catalogue-toolbar__actions .procurement-create { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 35; min-height: 52px; gap: 8px; border-radius: 999px; padding: 14px 20px; font-size: 14px; box-shadow: 0 6px 20px rgb(0 0 0 / 20%); }
+        .procurement-page .procurement-filters { display: flex; flex-wrap: nowrap; gap: 12px; padding: 16px; }
+        .procurement-page .procurement-filters .filter-trigger { width: auto; max-width: 270px; padding: 8px 12px; }
+        .procurement-page .procurement-filters > .multi-filter { flex: 0 0 auto; }
         .plan-info-grid { grid-template-columns: minmax(0,1fr); }
         .plan-panel { padding: 16px; }
         .plan-steps { padding-block: 8px; }
