@@ -45,37 +45,49 @@
 
     <nav class="sidebar-navigation sidebar-scroll">
         @foreach ($navigation as $group)
-            <div class="sidebar-group">
-                @if ($group['label'])
-                    <p class="sidebar-group__label" x-show="!collapsed || isMobile">{{ $group['label'] }}</p>
-                @endif
-                <div class="grid gap-1">
-                    @foreach ($group['items'] as $item)
-                        @continue(($item['route'] ?? null) === 'users.index' && !auth()->user()->can('manage-users'))
-                        @continue(($item['route'] ?? null) === 'activity-logs.index' && !auth()->user()->can('view-activity-logs'))
-                        @if ($item['route'])
-                            <div class="sidebar-item">
-                                <a href="{{ route($item['route']) }}" @class(['sidebar-link', 'sidebar-link--with-action' => $item['create'] ?? false, 'sidebar-link--active' => request()->routeIs($item['active'])]) @if(request()->routeIs($item['active'])) aria-current="page" @endif title="{{ $item['label'] }}">
+            @php
+                $visibleItems = collect($group['items'])->filter(function ($item) {
+                    $route = $item['route'] ?? null;
+                    if ($route === 'users.index' && !auth()->user()?->can('manage-users')) return false;
+                    if ($route === 'activity-logs.index' && !auth()->user()?->can('view-activity-logs')) return false;
+                    if ($route === 'purchase-orders.index' && !auth()->user()?->can('manage-purchase-orders')) return false;
+                    if ($route === 'shipments.index' && !auth()->user()?->can('manage-shipments')) return false;
+                    if ($route === 'distributor-invoices.index' && !auth()->user()?->can('manage-invoices')) return false;
+                    if (($route === 'reports.finance' || $route === 'reports.index') && !auth()->user()?->can('view-reports')) return false;
+                    return true;
+                });
+            @endphp
+            @if ($visibleItems->isNotEmpty())
+                <div class="sidebar-group">
+                    @if ($group['label'])
+                        <p class="sidebar-group__label" x-show="!collapsed || isMobile">{{ $group['label'] }}</p>
+                    @endif
+                    <div class="grid gap-1">
+                        @foreach ($visibleItems as $item)
+                            @if ($item['route'])
+                                <div class="sidebar-item">
+                                    <a href="{{ route($item['route']) }}" @class(['sidebar-link', 'sidebar-link--with-action' => $item['create'] ?? false, 'sidebar-link--active' => request()->routeIs($item['active'])]) @if(request()->routeIs($item['active'])) aria-current="page" @endif title="{{ $item['label'] }}">
+                                        <x-ui.icon :name="$item['icon']" :style="$item['icon'] === 'ship' ? 'filter: brightness(0) invert(1)' : null" />
+                                        <span x-show="!collapsed || isMobile">{{ $item['label'] }}</span>
+                                        @if($item['route'] === 'notifications.index')
+                                            <span data-notification-badge class="notification-nav-badge" :class="{'notification-nav-badge--compact': collapsed && !isMobile}" x-show="activeNotificationCount > 0" x-cloak x-text="activeNotificationCount > 99 ? '99+' : activeNotificationCount" :aria-label="activeNotificationCount + ' notifikasi aktif'" role="status" aria-live="polite">{{ $stockOverview['count'] + $shipmentNotifications['count'] + $invoiceNotifications['count'] }}</span>
+                                        @endif
+                                    </a>
+                                    @if($item['create'] ?? false)
+                                        <a href="{{ route($item['route'], ['create' => 1]) }}" class="sidebar-create" x-show="!collapsed || isMobile" aria-label="Catat pengerjaan kompetitor" title="Catat pengerjaan kompetitor"><x-ui.icon name="sidebar-add" :size="18" /></a>
+                                    @endif
+                                </div>
+                            @else
+                                <button type="button" class="sidebar-link sidebar-link--upcoming" title="{{ $item['label'] }} &mdash; segera tersedia" @click="$dispatch('notify', { message: '{{ $item['label'] }} belum tersedia. Modul ini akan ditambahkan pada tahap berikutnya.', type: 'info' })">
                                     <x-ui.icon :name="$item['icon']" :style="$item['icon'] === 'ship' ? 'filter: brightness(0) invert(1)' : null" />
                                     <span x-show="!collapsed || isMobile">{{ $item['label'] }}</span>
-                                    @if($item['route'] === 'notifications.index')
-                                        <span data-notification-badge class="notification-nav-badge" :class="{'notification-nav-badge--compact': collapsed && !isMobile}" x-show="activeNotificationCount > 0" x-cloak x-text="activeNotificationCount > 99 ? '99+' : activeNotificationCount" :aria-label="activeNotificationCount + ' notifikasi aktif'" role="status" aria-live="polite">{{ $stockOverview['count'] + $shipmentNotifications['count'] + $invoiceNotifications['count'] }}</span>
-                                    @endif
-                                </a>
-                                @if($item['create'] ?? false)
-                                    <a href="{{ route($item['route'], ['create' => 1]) }}" class="sidebar-create" x-show="!collapsed || isMobile" aria-label="Catat pengerjaan kompetitor" title="Catat pengerjaan kompetitor"><x-ui.icon name="sidebar-add" :size="18" /></a>
-                                @endif
-                            </div>
-                        @else
-                            <button type="button" class="sidebar-link sidebar-link--upcoming" title="{{ $item['label'] }} &mdash; segera tersedia" @click="$dispatch('notify', { message: '{{ $item['label'] }} belum tersedia. Modul ini akan ditambahkan pada tahap berikutnya.', type: 'info' })">
-                                <x-ui.icon :name="$item['icon']" :style="$item['icon'] === 'ship' ? 'filter: brightness(0) invert(1)' : null" />
-                                <span x-show="!collapsed || isMobile">{{ $item['label'] }}</span>
-                                <span x-show="!collapsed || isMobile" class="sidebar-coming" aria-label="Segera tersedia">+</span>
-                            </button>
-                        @endif
-                    @endforeach
+                                    <span x-show="!collapsed || isMobile" class="sidebar-coming" aria-label="Segera tersedia">+</span>
+                                </button>
+                            @endif
+                        @endforeach
+                    </div>
                 </div>
-            </div>
+            @endif
         @endforeach
     </nav>
 
@@ -91,8 +103,12 @@
             </div>
             <template x-if="alerts.length"><a :href="current.url" class="stock-notification__message" x-text="current.message"></a></template>
             <template x-if="!alerts.length"><p class="stock-notification__message">Belum ada stok, pengiriman, atau tagihan yang perlu perhatian.</p></template>
-            <a x-cloak x-show="shipmentCount > 0" href="{{ route('shipments.index') }}" class="stock-notification__more"><span x-text="shipmentCount + ' pengiriman perlu perhatian'"></span><span aria-hidden="true">&rsaquo;</span></a>
-            <a x-cloak x-show="invoiceCount > 0" href="{{ route('distributor-invoices.index') }}" class="stock-notification__more"><span x-text="invoiceCount + ' tagihan perlu pembayaran'"></span><span aria-hidden="true">›</span></a>
+            @can('manage-shipments')
+                <a x-cloak x-show="shipmentCount > 0" href="{{ route('shipments.index') }}" class="stock-notification__more"><span x-text="shipmentCount + ' pengiriman perlu perhatian'"></span><span aria-hidden="true">&rsaquo;</span></a>
+            @endcan
+            @can('manage-invoices')
+                <a x-cloak x-show="invoiceCount > 0" href="{{ route('distributor-invoices.index') }}" class="stock-notification__more"><span x-text="invoiceCount + ' tagihan perlu pembayaran'"></span><span aria-hidden="true">›</span></a>
+            @endcan
             <a x-cloak x-show="stockCount > 0" href="{{ route('dashboard') }}#low-stock" class="stock-notification__more"><span x-text="stockCount + ' produk perlu perhatian'"></span><span aria-hidden="true">&rsaquo;</span></a>
             <a href="{{ route('notifications.index') }}" class="stock-notification__more mt-3 border-t border-white/10 pt-3 font-medium">Lihat Semua Notifikasi <span aria-hidden="true">&rarr;</span></a>
         </div>

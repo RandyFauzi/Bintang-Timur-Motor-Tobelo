@@ -22,6 +22,16 @@ class User extends Authenticatable
         return $this->avatar_path ? route('users.avatar', ['user' => $this, 'v' => substr(hash('sha256', $this->avatar_path), 0, 12)]) : null;
     }
 
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    public function isStaff(): bool
+    {
+        return $this->role === 'staff';
+    }
+
     /**
      * Get the attributes that should be cast.
      *

@@ -45,15 +45,25 @@ class NotificationService
             ->whereRaw('COALESCE(product_stocks.quantity, 0) <= products.stock_minimum')
             ->selectRaw("products.id AS source_id, products.name AS title, products.sku AS reference, 'product' AS source, CASE WHEN COALESCE(product_stocks.quantity, 0) <= 0 THEN 'out_of_stock' ELSE 'low_stock' END AS category, CASE WHEN COALESCE(product_stocks.quantity, 0) <= 0 THEN 1 ELSE 3 END AS priority, COALESCE(product_stocks.quantity, 0) AS quantity, products.stock_minimum AS minimum, NULL AS due_on, products.sku AS context, '' AS origin, '' AS destination")
             ->toBase();
-        foreach (['delayed' => ['shipment_delayed', 0], 'near_arrival' => ['shipment_near', 2]] as $status => [$category, $priority]) {
-            $shipments = Shipment::withStatus($status)->selectRaw("id AS source_id, cargo_name AS title, reference, 'shipment' AS source, ? AS category, ? AS priority, package_count AS quantity, NULL AS minimum, estimated_arrival_on AS due_on, service_name AS context, origin_port AS origin, destination_port AS destination", [$category, $priority])->toBase();
-            $stock->unionAll($shipments);
+
+        $user = auth()->user();
+        if ($user && ! $user->can('manage-shipments') && ! $user->can('manage-invoices')) {
+            return $stock;
         }
 
-        $today = DistributorInvoice::today()->toDateString();
-        $invoices = DistributorInvoice::needsReminder()->join('purchase_orders', 'purchase_orders.id', '=', 'distributor_invoices.purchase_order_id')
-            ->selectRaw("distributor_invoices.id AS source_id, purchase_orders.distributor_name AS title, distributor_invoices.reference, 'invoice' AS source, CASE WHEN DATE(due_on) < ? THEN 'invoice_overdue' ELSE 'invoice_due' END AS category, CASE WHEN DATE(due_on) < ? THEN 0 WHEN DATE(due_on) <= ? THEN 1 ELSE 2 END AS priority, (total_cents - paid_cents) AS quantity, NULL AS minimum, due_on, purchase_orders.reference AS context, '' AS origin, '' AS destination", [$today, $today, DistributorInvoice::today()->addDays(3)->toDateString()])->toBase();
-        $stock->unionAll($invoices);
+        if (! $user || $user->can('manage-shipments')) {
+            foreach (['delayed' => ['shipment_delayed', 0], 'near_arrival' => ['shipment_near', 2]] as $status => [$category, $priority]) {
+                $shipments = Shipment::withStatus($status)->selectRaw("id AS source_id, cargo_name AS title, reference, 'shipment' AS source, ? AS category, ? AS priority, package_count AS quantity, NULL AS minimum, estimated_arrival_on AS due_on, service_name AS context, origin_port AS origin, destination_port AS destination", [$category, $priority])->toBase();
+                $stock->unionAll($shipments);
+            }
+        }
+
+        if (! $user || $user->can('manage-invoices')) {
+            $today = DistributorInvoice::today()->toDateString();
+            $invoices = DistributorInvoice::needsReminder()->join('purchase_orders', 'purchase_orders.id', '=', 'distributor_invoices.purchase_order_id')
+                ->selectRaw("distributor_invoices.id AS source_id, purchase_orders.distributor_name AS title, distributor_invoices.reference, 'invoice' AS source, CASE WHEN DATE(due_on) < ? THEN 'invoice_overdue' ELSE 'invoice_due' END AS category, CASE WHEN DATE(due_on) < ? THEN 0 WHEN DATE(due_on) <= ? THEN 1 ELSE 2 END AS priority, (total_cents - paid_cents) AS quantity, NULL AS minimum, due_on, purchase_orders.reference AS context, '' AS origin, '' AS destination", [$today, $today, DistributorInvoice::today()->addDays(3)->toDateString()])->toBase();
+            $stock->unionAll($invoices);
+        }
 
         return $stock;
     }

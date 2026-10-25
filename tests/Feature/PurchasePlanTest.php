@@ -104,8 +104,8 @@ class PurchasePlanTest extends TestCase
     public function test_finalization_uses_separate_supplier_products_without_changing_existing_stock(): void
     {
         $product = Product::factory()->withStock(40)->create(['name' => 'Nama Katalog']);
-        $first = Distributor::factory()->create();
-        $second = Distributor::factory()->create();
+        $first = Distributor::factory()->create(['name' => 'Distributor Pertama']);
+        $second = Distributor::factory()->create(['name' => 'Distributor Kedua']);
         $payload = $this->payload();
         $payload['items'][0]['product_id'] = $product->id;
         $payload['items'][0]['allocations'] = [['distributor_id' => $first->id, 'quantity' => 12], ['distributor_id' => $second->id, 'quantity' => 18]];

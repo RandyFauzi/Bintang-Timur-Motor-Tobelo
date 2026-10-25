@@ -32,11 +32,15 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::define('manage-business', fn (User $user): bool => $user->role === 'admin');
+        Gate::define('manage-users', fn (User $user): bool => $user->role === 'admin');
+        Gate::define('view-activity-logs', fn (User $user): bool => $user->role === 'admin');
+        Gate::define('view-reports', fn (User $user): bool => $user->role === 'admin');
+        Gate::define('manage-purchase-orders', fn (User $user): bool => $user->role === 'admin');
+        Gate::define('manage-invoices', fn (User $user): bool => $user->role === 'admin');
+        Gate::define('manage-shipments', fn (User $user): bool => $user->role === 'admin');
         User::deleted(function (User $user): void {
             DB::afterCommit(fn () => app(ImageStorageService::class)->delete($user->avatar_path));
         });
-        Gate::define('manage-users', fn (User $user): bool => $user->role === 'admin');
-        Gate::define('view-activity-logs', fn (User $user): bool => $user->role === 'admin');
         Event::listen(['eloquent.created: App\\Models\\*', 'eloquent.updated: App\\Models\\*', 'eloquent.deleted: App\\Models\\*', 'eloquent.restored: App\\Models\\*'], function (string $event, array $models): void {
             app(ActivityRecorder::class)->capture($event, $models[0]);
         });

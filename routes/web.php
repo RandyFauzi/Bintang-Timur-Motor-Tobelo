@@ -35,30 +35,36 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::get('shipments', [ShipmentController::class, 'index'])->name('shipments.index');
+    Route::middleware('can:manage-shipments')->group(function () {
+        Route::get('shipments', [ShipmentController::class, 'index'])->name('shipments.index');
+        Route::post('shipments', [ShipmentController::class, 'store'])->name('shipments.store');
+        Route::patch('shipments/{shipment}', [ShipmentController::class, 'update'])->name('shipments.update');
+        Route::patch('shipments/{shipment}/arrive', [ShipmentController::class, 'arrive'])->name('shipments.arrive');
+        Route::post('shipping-services', [ShippingServiceController::class, 'store'])->name('shipping-services.store');
+        Route::patch('shipping-services/{shippingService}', [ShippingServiceController::class, 'update'])->name('shipping-services.update');
+    });
     Route::get('shipments/notifications', [ShipmentController::class, 'notifications'])->name('shipments.notifications');
-    Route::post('shipments', [ShipmentController::class, 'store'])->name('shipments.store');
-    Route::patch('shipments/{shipment}', [ShipmentController::class, 'update'])->name('shipments.update');
-    Route::patch('shipments/{shipment}/arrive', [ShipmentController::class, 'arrive'])->name('shipments.arrive');
-    Route::post('shipping-services', [ShippingServiceController::class, 'store'])->name('shipping-services.store');
-    Route::patch('shipping-services/{shippingService}', [ShippingServiceController::class, 'update'])->name('shipping-services.update');
 
-    Route::get('distributor-invoices', [DistributorInvoiceController::class, 'index'])->name('distributor-invoices.index');
-    Route::get('distributor-invoices/{distributorInvoice}', [DistributorInvoiceController::class, 'show'])->name('distributor-invoices.show');
-    Route::patch('distributor-invoices/{distributorInvoice}', [DistributorInvoiceController::class, 'update'])->name('distributor-invoices.update');
-    Route::post('distributor-invoices/{distributorInvoice}/payments', [DistributorInvoiceController::class, 'pay'])->name('distributor-invoices.pay');
+    Route::middleware('can:manage-invoices')->group(function () {
+        Route::get('distributor-invoices', [DistributorInvoiceController::class, 'index'])->name('distributor-invoices.index');
+        Route::get('distributor-invoices/{distributorInvoice}', [DistributorInvoiceController::class, 'show'])->name('distributor-invoices.show');
+        Route::patch('distributor-invoices/{distributorInvoice}', [DistributorInvoiceController::class, 'update'])->name('distributor-invoices.update');
+        Route::post('distributor-invoices/{distributorInvoice}/payments', [DistributorInvoiceController::class, 'pay'])->name('distributor-invoices.pay');
+    });
 
-    Route::post('purchase-orders/distributors', [PurchaseOrderController::class, 'distributor'])->name('purchase-orders.distributors.store');
-    Route::patch('purchase-orders/{purchaseOrder}/restore', [PurchaseOrderController::class, 'restore'])->name('purchase-orders.restore');
-    Route::get('purchase-orders/create', [PurchasePlanController::class, 'create'])->name('purchase-orders.create');
-    Route::get('purchase-plans/products', [PurchasePlanController::class, 'products'])->name('purchase-plans.products');
-    Route::get('purchase-plans/template', [PurchasePlanController::class, 'template'])->name('purchase-plans.template');
-    Route::post('purchase-plans/import', [PurchasePlanController::class, 'import'])->middleware('throttle:10,1')->name('purchase-plans.import');
-    Route::resource('purchase-plans', PurchasePlanController::class)->only(['store', 'edit', 'update', 'show', 'destroy'])->parameters(['purchase-plans' => 'purchasePlan']);
-    Route::patch('purchase-plans/{purchasePlan}/orders/{purchaseOrder}/note', [PurchaseOrderNoteController::class, 'update'])->name('purchase-plans.orders.note');
-    Route::post('purchase-plans/{purchasePlan}/orders/{purchaseOrder}/finalize', [PurchaseOrderNoteController::class, 'finalize'])->name('purchase-plans.orders.finalize');
-    Route::patch('purchase-orders/{purchaseOrder}/receipt', [PurchaseOrderController::class, 'receive'])->name('purchase-orders.receive');
-    Route::resource('purchase-orders', PurchaseOrderController::class)->only(['index', 'store', 'show', 'destroy'])->parameters(['purchase-orders' => 'purchaseOrder']);
+    Route::middleware('can:manage-purchase-orders')->group(function () {
+        Route::post('purchase-orders/distributors', [PurchaseOrderController::class, 'distributor'])->name('purchase-orders.distributors.store');
+        Route::patch('purchase-orders/{purchaseOrder}/restore', [PurchaseOrderController::class, 'restore'])->name('purchase-orders.restore');
+        Route::get('purchase-orders/create', [PurchasePlanController::class, 'create'])->name('purchase-orders.create');
+        Route::get('purchase-plans/products', [PurchasePlanController::class, 'products'])->name('purchase-plans.products');
+        Route::get('purchase-plans/template', [PurchasePlanController::class, 'template'])->name('purchase-plans.template');
+        Route::post('purchase-plans/import', [PurchasePlanController::class, 'import'])->middleware('throttle:10,1')->name('purchase-plans.import');
+        Route::resource('purchase-plans', PurchasePlanController::class)->only(['store', 'edit', 'update', 'show', 'destroy'])->parameters(['purchase-plans' => 'purchasePlan']);
+        Route::patch('purchase-plans/{purchasePlan}/orders/{purchaseOrder}/note', [PurchaseOrderNoteController::class, 'update'])->name('purchase-plans.orders.note');
+        Route::post('purchase-plans/{purchasePlan}/orders/{purchaseOrder}/finalize', [PurchaseOrderNoteController::class, 'finalize'])->name('purchase-plans.orders.finalize');
+        Route::patch('purchase-orders/{purchaseOrder}/receipt', [PurchaseOrderController::class, 'receive'])->name('purchase-orders.receive');
+        Route::resource('purchase-orders', PurchaseOrderController::class)->only(['index', 'store', 'show', 'destroy'])->parameters(['purchase-orders' => 'purchaseOrder']);
+    });
 
     // Products
     Route::get('products/import/template', [ProductImportController::class, 'template'])->name('products.import.template');
@@ -90,24 +96,30 @@ Route::middleware('auth')->group(function () {
     Route::delete('/returns/{productReturn}', [ProductReturnController::class, 'destroy'])->whereUuid('productReturn')->name('returns.destroy');
 
     // Reports & Finance
-    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
-    Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
-    Route::get('/reports/finance', [ReportController::class, 'finance'])->name('reports.finance');
-    Route::post('/reports/observations', [CompetitorObservationController::class, 'store'])->name('reports.observations.store');
-    Route::patch('/reports/observations/{observation}', [CompetitorObservationController::class, 'update'])->name('reports.observations.update');
-    Route::post('/reports/workshops', [ReportLookupController::class, 'workshops'])->name('reports.workshops.store');
-    Route::post('/reports/work-types', [ReportLookupController::class, 'workTypes'])->name('reports.work-types.store');
-    Route::post('/reports/expenses', [ReportController::class, 'storeExpense'])->name('reports.expenses.store');
+    Route::middleware('can:view-reports')->group(function () {
+        Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
+        Route::get('/reports/finance', [ReportController::class, 'finance'])->name('reports.finance');
+        Route::post('/reports/observations', [CompetitorObservationController::class, 'store'])->name('reports.observations.store');
+        Route::patch('/reports/observations/{observation}', [CompetitorObservationController::class, 'update'])->name('reports.observations.update');
+        Route::post('/reports/workshops', [ReportLookupController::class, 'workshops'])->name('reports.workshops.store');
+        Route::post('/reports/work-types', [ReportLookupController::class, 'workTypes'])->name('reports.work-types.store');
+        Route::post('/reports/expenses', [ReportController::class, 'storeExpense'])->name('reports.expenses.store');
+    });
 
-    Route::get('/activity-logs/export', [ActivityLogController::class, 'export'])->name('activity-logs.export');
-    Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
+    Route::middleware('can:view-activity-logs')->group(function () {
+        Route::get('/activity-logs/export', [ActivityLogController::class, 'export'])->name('activity-logs.export');
+        Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
+    });
 
     Route::get('/users/{user}/avatar', UserAvatarController::class)->name('users.avatar');
     Route::patch('/settings/business', [BusinessSettingController::class, 'update'])->name('business.update');
 
     // Users Management
-    Route::get('/users/export', [UserController::class, 'export'])->name('users.export');
-    Route::resource('users', UserController::class)->except(['create', 'show', 'edit']);
+    Route::middleware('can:manage-users')->group(function () {
+        Route::get('/users/export', [UserController::class, 'export'])->name('users.export');
+        Route::resource('users', UserController::class)->except(['create', 'show', 'edit']);
+    });
 
     Route::get('/distributors/export', [DistributorController::class, 'export'])->name('distributors.export');
     Route::resource('distributors', DistributorController::class)->only(['index', 'store', 'update']);

@@ -30,7 +30,7 @@ class ActivityLogTest extends TestCase
 
     public function test_reads_expense_writes_and_validation_failures_are_recorded_without_payload_secrets(): void
     {
-        $user = User::factory()->create(['role' => 'staff']);
+        $user = User::factory()->create(['role' => 'admin']);
         $this->actingAs($user)->get(route('reports.finance', ['period' => '7days', 'token' => 'never-store-this']))->assertOk();
         $this->from(route('reports.finance'))->post(route('reports.expenses.store'), ['category' => 'Konsumsi', 'amount' => 12500, 'expense_date' => now()->toDateString(), 'description' => 'sensitive free text', 'password' => 'never-store-this'])->assertRedirect();
         $log = ActivityLog::where('route_name', 'reports.expenses.store')->firstOrFail();

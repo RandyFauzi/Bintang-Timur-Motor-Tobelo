@@ -67,10 +67,16 @@ class ShipmentController extends Controller
 
     public function notifications(ShipmentRequest $request, ShipmentService $tracking, DashboardService $dashboard, DistributorInvoiceService $billing): JsonResponse
     {
-        $states = Shipment::whereKey($request->validated('ids', []))->get()->mapWithKeys(fn (Shipment $shipment): array => [$shipment->id => $shipment->trackingState()]);
+        $user = $request->user();
+        $canShipments = $user?->can('manage-shipments') ?? false;
+        $canInvoices = $user?->can('manage-invoices') ?? false;
 
-        $shipping = $tracking->notifications();
-        $invoices = $billing->notifications();
+        $states = $canShipments
+            ? Shipment::whereKey($request->validated('ids', []))->get()->mapWithKeys(fn (Shipment $shipment): array => [$shipment->id => $shipment->trackingState()])
+            : collect();
+
+        $shipping = $canShipments ? $tracking->notifications() : ['count' => 0, 'alerts' => []];
+        $invoices = $canInvoices ? $billing->notifications() : ['count' => 0, 'alerts' => []];
         $stock = $dashboard->stockOverview();
         $stockAlerts = $stock['products']->map(fn (Product $product): array => [
             'name' => $product->name, 'quantity' => (int) $product->current_stock,
@@ -79,7 +85,7 @@ class ShipmentController extends Controller
         ])->values();
 
         return response()->json($shipping + [
-            'states' => $states, 'counts' => $tracking->counts(),
+            'states' => $states, 'counts' => $canShipments ? $tracking->counts() : [],
             'stock_count' => $stock['count'], 'stock_alerts' => $stockAlerts,
             'invoice_count' => $invoices['count'], 'invoice_alerts' => $invoices['alerts'],
             'active_count' => $stock['count'] + $shipping['count'] + $invoices['count'],
