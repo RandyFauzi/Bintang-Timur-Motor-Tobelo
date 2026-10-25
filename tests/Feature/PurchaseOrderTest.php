@@ -97,7 +97,7 @@ class PurchaseOrderTest extends TestCase
     #[TestWith(['pending', 'In Progress'])]
     #[TestWith(['checking', 'Sedang diperiksa'])]
     #[TestWith(['discrepancy', 'Ada selisih'])]
-    #[TestWith(['matched', 'Sesuai'])]
+    #[TestWith(['matched', 'Selesai'])]
     public function test_list_filters_match_receipt_status(string $status, string $label): void
     {
         $orders = [];

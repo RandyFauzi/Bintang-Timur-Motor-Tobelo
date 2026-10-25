@@ -35,6 +35,6 @@ class PurchasePlan extends Model
             return 'Sedang diperiksa';
         }
 
-        return $items->contains(fn (PurchaseOrderItem $item): bool => $item->actual_quantity !== $item->quantity) ? 'Ada selisih' : 'Sesuai';
+        return $items->contains(fn (PurchaseOrderItem $item): bool => $item->actual_quantity !== $item->quantity) ? 'Ada selisih' : 'Selesai';
     }
 }

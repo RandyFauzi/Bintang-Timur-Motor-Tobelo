@@ -62,7 +62,7 @@ class PurchaseOrder extends Model
             return 'Sedang diperiksa';
         }
 
-        return $this->items->contains(fn (PurchaseOrderItem $item): bool => $item->actual_quantity !== $item->quantity) ? 'Ada selisih' : 'Sesuai';
+        return $this->items->contains(fn (PurchaseOrderItem $item): bool => $item->actual_quantity !== $item->quantity) ? 'Ada selisih' : 'Selesai';
     }
 
     public function total(): float

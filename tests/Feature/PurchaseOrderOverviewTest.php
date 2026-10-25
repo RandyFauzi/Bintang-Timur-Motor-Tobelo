@@ -91,7 +91,7 @@ class PurchaseOrderOverviewTest extends TestCase
 
     #[TestWith(['pending', [null, null], 'In Progress'])]
     #[TestWith(['checking', [1, null], 'Sedang diperiksa'])]
-    #[TestWith(['matched', [1, 2], 'Sesuai'])]
+    #[TestWith(['matched', [1, 2], 'Selesai'])]
     #[TestWith(['discrepancy', [1, 0], 'Ada selisih'])]
     public function test_status_filters_use_all_distributors_in_the_plan(string $status, array $actuals, string $label): void
     {
