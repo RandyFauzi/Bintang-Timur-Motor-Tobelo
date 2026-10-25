@@ -41,6 +41,7 @@ class ShipmentRequest extends FormRequest
             'destination_port' => ['required', 'string', 'max:255'],
             'destination_address' => ['nullable', 'string', 'max:1000'],
             'package_count' => ['required', 'integer', 'min:1', 'max:1000000'],
+            'shipping_cost' => ['nullable', 'numeric', 'min:0', 'max:90000000000000', 'regex:/^\d+(\.\d{1,2})?$/'],
             'departed_on' => ['required', 'date_format:Y-m-d', 'after_or_equal:2000-01-01', 'before_or_equal:2100-12-31'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ] + ($this->isMethod('patch') ? $version : []);

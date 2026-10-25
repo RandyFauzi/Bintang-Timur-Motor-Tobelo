@@ -17,11 +17,21 @@ class Shipment extends Model
 
     public const STATUSES = ['scheduled' => 'Terjadwal', 'in_transit' => 'Sedang Berjalan', 'near_arrival' => 'Sudah Dekat Sampai', 'delayed' => 'Pengiriman Terlambat', 'delivered' => 'Sudah Sampai'];
 
-    protected $fillable = ['reference', 'shipping_service_id', 'service_name', 'duration_days', 'cargo_name', 'vessel_name', 'origin_port', 'destination_port', 'destination_address', 'package_count', 'departed_on', 'estimated_arrival_on', 'notes'];
+    protected $fillable = ['reference', 'shipping_service_id', 'service_name', 'duration_days', 'cargo_name', 'vessel_name', 'origin_port', 'destination_port', 'destination_address', 'package_count', 'shipping_cost_cents', 'departed_on', 'estimated_arrival_on', 'notes'];
 
     protected function casts(): array
     {
-        return ['departed_on' => 'immutable_date', 'estimated_arrival_on' => 'immutable_date', 'delivered_at' => 'immutable_datetime', 'duration_days' => 'integer', 'package_count' => 'integer', 'version' => 'integer'];
+        return ['departed_on' => 'immutable_date', 'estimated_arrival_on' => 'immutable_date', 'delivered_at' => 'immutable_datetime', 'duration_days' => 'integer', 'package_count' => 'integer', 'shipping_cost_cents' => 'integer', 'version' => 'integer'];
+    }
+
+    public function shippingCost(): float
+    {
+        return ($this->shipping_cost_cents ?? 0) / 100;
+    }
+
+    public function formattedShippingCost(): string
+    {
+        return 'Rp '.number_format($this->shippingCost(), 2, ',', '.');
     }
 
     public static function today(): CarbonImmutable

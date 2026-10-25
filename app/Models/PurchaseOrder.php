@@ -13,11 +13,16 @@ class PurchaseOrder extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['request_id', 'reference', 'distributor_id', 'distributor_name', 'ordered_on', 'expected_on', 'notes', 'purchase_plan_id'];
+    protected $fillable = ['request_id', 'reference', 'distributor_id', 'distributor_name', 'ordered_on', 'expected_on', 'notes', 'purchase_plan_id', 'package_count', 'shipping_cost_cents'];
 
     protected function casts(): array
     {
-        return ['ordered_on' => 'date', 'expected_on' => 'date', 'version' => 'integer', 'note_issued' => 'boolean', 'supplier_note_on' => 'date', 'supplier_note_total_cents' => 'integer', 'shipment_finalized_at' => 'datetime', 'archived_at' => 'datetime'];
+        return ['ordered_on' => 'date', 'expected_on' => 'date', 'version' => 'integer', 'note_issued' => 'boolean', 'supplier_note_on' => 'date', 'supplier_note_total_cents' => 'integer', 'package_count' => 'integer', 'shipping_cost_cents' => 'integer', 'shipment_finalized_at' => 'datetime', 'archived_at' => 'datetime'];
+    }
+
+    public function shippingCost(): float
+    {
+        return ($this->shipping_cost_cents ?? 0) / 100;
     }
 
     public function purchasePlan(): BelongsTo

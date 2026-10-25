@@ -67,7 +67,8 @@ class PurchaseOrderNoteService
             $invoice = $order->invoice()->lockForUpdate()->first();
             if ($order->shipment_finalized_at) {
                 $shipment = $invoice?->shipment;
-                if ($shipment && $shipment->shipping_service_id === (int) $data['shipping_service_id'] && $shipment->origin_port === $data['origin_port'] && $shipment->departed_on->toDateString() === $data['departed_on'] && (! array_key_exists('package_count', $data) || $shipment->package_count === (int) $data['package_count'])) {
+                $costMatches = ! array_key_exists('shipping_cost', $data) || ($shipment && $shipment->shipping_cost_cents === (! empty($data['shipping_cost']) ? DistributorInvoiceService::cents($data['shipping_cost']) : 0));
+                if ($shipment && $shipment->shipping_service_id === (int) $data['shipping_service_id'] && $shipment->origin_port === $data['origin_port'] && $shipment->departed_on->toDateString() === $data['departed_on'] && (! array_key_exists('package_count', $data) || $shipment->package_count === (int) $data['package_count']) && $costMatches) {
                     return;
                 }
                 throw ValidationException::withMessages(['note' => 'Pengiriman sudah difinalisasi. Muat ulang halaman.']);
@@ -86,16 +87,21 @@ class PurchaseOrderNoteService
             if ($invoice->shipment_id !== null || $invoice->total_cents !== $this->invoiceTotal($order)) {
                 throw ValidationException::withMessages(['note' => 'Data tagihan sudah berubah. Periksa nota sebelum finalisasi.']);
             }
+            $packageCount = (int) ($data['package_count'] ?? 1);
+            $shippingCostCents = ! empty($data['shipping_cost']) ? DistributorInvoiceService::cents($data['shipping_cost']) : 0;
             $shipment = $tracking->save([
                 'shipping_service_id' => $data['shipping_service_id'],
                 'cargo_name' => Str::limit('Pengadaan '.$order->distributor_name, 255, ''),
                 'origin_port' => $data['origin_port'], 'destination_port' => config('shipping.destination_port'),
-                'destination_address' => config('shipping.destination_address'), 'package_count' => $data['package_count'] ?? 1,
+                'destination_address' => config('shipping.destination_address'), 'package_count' => $packageCount,
+                'shipping_cost_cents' => $shippingCostCents,
                 'departed_on' => $data['departed_on'], 'notes' => 'PO '.$order->reference.' | Nota '.$order->supplier_note_number,
             ], $user);
             $invoice->shipment_id = $shipment->id;
             $invoice->version++;
             $invoice->save();
+            $order->package_count = $packageCount;
+            $order->shipping_cost_cents = $shippingCostCents;
             $order->shipment_finalized_at = now();
             $order->version++;
             $order->save();
@@ -148,6 +154,8 @@ class PurchaseOrderNoteService
             $invoice = $order->invoice;
             $shipment = $invoice?->shipment;
             $totalCents = $order->supplier_note_total_cents ?? $invoice?->total_cents;
+            $shippingCostCents = $order->shipping_cost_cents ?: ($shipment?->shipping_cost_cents ?? 0);
+            $packageCount = $order->package_count ?: ($shipment?->package_count ?? 1);
 
             return [
                 'id' => $order->id, 'reference' => $order->reference, 'distributor_id' => $order->distributor_id,
@@ -155,6 +163,8 @@ class PurchaseOrderNoteService
                 'version' => $order->version, 'note_issued' => $order->note_issued,
                 'supplier_note_number' => $order->supplier_note_number ?? '', 'supplier_note_on' => $order->supplier_note_on?->toDateString() ?? '',
                 'supplier_note_total' => $order->note_issued && $totalCents !== null ? intdiv($totalCents, 100).'.'.str_pad((string) ($totalCents % 100), 2, '0', STR_PAD_LEFT) : '',
+                'package_count' => $packageCount,
+                'shipping_cost' => $shippingCostCents > 0 ? intdiv($shippingCostCents, 100).'.'.str_pad((string) ($shippingCostCents % 100), 2, '0', STR_PAD_LEFT) : '',
                 'finalized' => $order->shipment_finalized_at !== null,
                 'can_edit' => $order->shipment_finalized_at === null && (! $invoice || ($invoice->paid_cents === 0 && $invoice->shipment_id === null && $invoice->claim_amount_cents === 0 && $invoice->payments->isEmpty())),
                 'shipment_url' => $shipment ? route('shipments.index', ['shipment' => $shipment->id]) : null,

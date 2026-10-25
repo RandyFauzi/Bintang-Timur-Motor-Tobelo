@@ -12,11 +12,10 @@
             <x-ui.field name="origin_port" label="Pelabuhan / Kota Asal" :value="$editing?->origin_port" required maxlength="255" placeholder="Contoh: Surabaya" />
             <x-ui.field name="destination_port" label="Pelabuhan / Kota Tujuan" :value="$editing?->destination_port ?? config('shipping.destination_port')" required maxlength="255" />
             <x-ui.field name="departed_on" label="Tanggal Berangkat" type="date" x-model="departedOn" :value="$editing?->departed_on->toDateString() ?? \App\Models\Shipment::today()->toDateString()" required />
+            <x-ui.field name="package_count" label="Jumlah Koli" type="number" min="1" max="1000000" :value="old('package_count', $editing?->package_count ?? 1)" required />
+            <x-ui.field name="shipping_cost" label="Ongkir Ekspedisi (Rp)" type="number" min="0" step="0.01" :value="old('shipping_cost', $editing && $editing->shipping_cost_cents > 0 ? number_format($editing->shipping_cost_cents / 100, 2, '.', '') : '')" placeholder="Contoh: 150000" />
             @if($editing && $editing->distributorInvoices->isNotEmpty())
-                <input type="hidden" name="package_count" value="{{ $editing->package_count }}">
                 <div class="form-field"><span class="form-field__label">Distributor</span><p class="break-words text-sm">{{ $editing->distributorInvoices->pluck('purchaseOrder.distributor_name')->unique()->join(', ') }}</p></div>
-            @else
-                <x-ui.field name="package_count" label="Jumlah Koli" type="number" min="1" max="1000000" :value="$editing?->package_count ?? 1" required />
             @endif
         </div>
         <p class="shipping-estimate" aria-live="polite">Estimasi tiba: <strong x-text="estimatedArrival"></strong></p>

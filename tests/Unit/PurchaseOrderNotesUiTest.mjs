@@ -153,7 +153,11 @@ test('finalization creates cargo using the selected catalogue service and keeps 
     model.openFinalize(model.orders[0]);
     assert.equal(model.shipment.origin_port,'Surabaya');
     assert.equal(model.shipment.shipping_service_id,'');
+    assert.equal(model.shipment.package_count,1);
+    assert.equal(model.shipment.shipping_cost,'');
     model.cargoSelection=['1'];
+    model.shipment.package_count=3;
+    model.shipment.shipping_cost='150000';
     model.request=async()=>{throw {errors:['Cargo tidak aktif.']};};
     await model.finalize();
     assert.equal(model.orders[0].finalized,false);
@@ -164,7 +168,8 @@ test('finalization creates cargo using the selected catalogue service and keeps 
     await model.finalize();
     assert.equal(sent.payload.shipping_service_id,'1');
     assert.equal(sent.payload.version,2);
-    assert.equal(Object.hasOwn(sent.payload,'package_count'),false);
+    assert.equal(sent.payload.package_count,3);
+    assert.equal(sent.payload.shipping_cost,'150000');
     assert.equal(model.orders[0].shipment_url,'/shipments?shipment=9');
     assert.equal(model.badge(model.orders[0]),'Dalam Pengiriman');
     assert.equal(events.at(-1),'close-plan-shipment');

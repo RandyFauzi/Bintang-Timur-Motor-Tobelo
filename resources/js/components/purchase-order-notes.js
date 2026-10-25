@@ -110,7 +110,13 @@ export function purchaseOrderNotes(initial, services, config) {
         openFinalize(order) {
             if (!this.canFinalize(order)) return;
             this.selectedOrderId = order.id;
-            this.shipment = {shipping_service_id: '', origin_port: order.origin_port || '', departed_on: order.saved.supplier_note_on > this.config.today ? order.saved.supplier_note_on : this.config.today};
+            this.shipment = {
+                shipping_service_id: '',
+                origin_port: order.origin_port || '',
+                departed_on: order.saved.supplier_note_on > this.config.today ? order.saved.supplier_note_on : this.config.today,
+                package_count: order.package_count || 1,
+                shipping_cost: order.shipping_cost || '',
+            };
             this.finalizeErrors = [];
             this.$dispatch('open-dialog', {id: 'finalize-plan-shipment'});
         },
@@ -119,9 +125,16 @@ export function purchaseOrderNotes(initial, services, config) {
             if (!order || this.finalizing || !this.canFinalize(order)) return;
             this.finalizeErrors = [];
             if (!this.shipment.shipping_service_id || !this.shipment.origin_port.trim() || !this.shipment.departed_on) { this.finalizeErrors = ['Pilih jasa cargo, isi kota asal dan tanggal berangkat.']; return; }
+            if (this.shipment.package_count === '' || Number(this.shipment.package_count) < 1) { this.finalizeErrors = ['Jumlah koli minimal 1.']; return; }
             this.finalizing = true;
             try {
-                const data = await this.request(order.finalize_url, 'POST', {...this.shipment, origin_port: this.shipment.origin_port.trim(), version: order.version});
+                const data = await this.request(order.finalize_url, 'POST', {
+                    ...this.shipment,
+                    package_count: Number(this.shipment.package_count) || 1,
+                    shipping_cost: this.shipment.shipping_cost !== '' && this.shipment.shipping_cost !== null ? this.shipment.shipping_cost : null,
+                    origin_port: this.shipment.origin_port.trim(),
+                    version: order.version,
+                });
                 Object.assign(order, decorate(data.order));
                 this.notice = data.message;
                 this.$dispatch('close-plan-shipment');

@@ -145,6 +145,10 @@ class PurchaseOrderNoteTest extends TestCase
         $this->assertSame('Makassar', $secondInvoice->shipment->origin_port);
         $this->assertSame('2026-10-28', $firstInvoice->shipment->estimated_arrival_on->toDateString());
         $this->assertSame('Tobelo', $firstInvoice->shipment->destination_port);
+        $this->assertSame(2, $firstInvoice->shipment->package_count);
+        $this->assertSame(15000000, $firstInvoice->shipment->shipping_cost_cents);
+        $this->assertSame(2, $first->fresh()->package_count);
+        $this->assertSame(15000000, $first->fresh()->shipping_cost_cents);
         $this->assertNotNull($first->fresh()->shipment_finalized_at);
         $this->patchJson($this->noteUrl($plan, $first), $this->notePayload($first->fresh(), 8))->assertUnprocessable()->assertJsonValidationErrors('version');
         $this->get(route('shipments.index', ['shipment' => $firstInvoice->shipment_id]))->assertOk()->assertSee($firstInvoice->reference);
@@ -366,7 +370,7 @@ class PurchaseOrderNoteTest extends TestCase
     /** @return array<string, mixed> */
     private function shippingPayload(PurchaseOrder $order, ShippingService $carrier, string $origin = 'Surabaya'): array
     {
-        return ['version' => $order->version, 'shipping_service_id' => $carrier->id, 'origin_port' => $origin, 'departed_on' => '2026-10-21', 'package_count' => 2];
+        return ['version' => $order->version, 'shipping_service_id' => $carrier->id, 'origin_port' => $origin, 'departed_on' => '2026-10-21', 'package_count' => 2, 'shipping_cost' => '150000.00'];
     }
 
     private function noteUrl(PurchasePlan $plan, PurchaseOrder $order): string

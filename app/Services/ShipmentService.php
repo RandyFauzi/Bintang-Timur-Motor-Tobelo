@@ -38,6 +38,12 @@ class ShipmentService
             $data['duration_days'] = $duration;
             $data['estimated_arrival_on'] = CarbonImmutable::parse($data['departed_on'], config('shipping.timezone'))->addDays($duration)->toDateString();
             $data['reference'] = ($data['reference'] ?? null) ?: ($shipment?->reference ?? 'CGO-'.Str::ulid());
+            if (array_key_exists('shipping_cost', $data)) {
+                $data['shipping_cost_cents'] = $data['shipping_cost'] !== null && $data['shipping_cost'] !== ''
+                    ? DistributorInvoiceService::cents($data['shipping_cost'])
+                    : 0;
+                unset($data['shipping_cost']);
+            }
             if (! $shipment) {
                 $shipment = new Shipment;
                 $shipment->created_by = $user->id;
