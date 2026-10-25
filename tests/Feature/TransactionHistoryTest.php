@@ -8,12 +8,27 @@ use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Vite;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class TransactionHistoryTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_history_filters_render_with_the_production_asset_manifest(): void
+    {
+        $vite = app(Vite::class);
+        $hotFile = $vite->hotFile();
+        $vite->useHotFile(storage_path('framework/testing-history-vite.hot'));
+
+        try {
+            $this->actingAs(User::factory()->create())->get(route('transactions.index'))
+                ->assertOk()->assertSee($vite->asset('resources/images/icons/wallet.svg'), false);
+        } finally {
+            $vite->useHotFile($hotFile);
+        }
+    }
 
     public function test_guests_cannot_access_history_details_or_exports(): void
     {
