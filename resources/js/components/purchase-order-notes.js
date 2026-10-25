@@ -6,6 +6,16 @@ export function purchaseOrderNotes(initial, services, config) {
     return {
         orders: initial.map(decorate), services, config, tab: 'distributors', search: '', distributorId: '', noteStatus: '', selected: [],
         selectedOrderId: null, finalizing: false, finalizeErrors: [], notice: '', shipment: {shipping_service_id: '', origin_port: '', departed_on: config.today},
+        get distributorSelection() { return this.distributorId ? [String(this.distributorId)] : []; },
+        set distributorSelection(values) {
+            const id = values[0] ?? '';
+            this.distributorId = this.orders.some(order => String(order.distributor_id) === String(id)) ? String(id) : '';
+        },
+        get noteStatusSelection() { return this.noteStatus ? [this.noteStatus] : []; },
+        set noteStatusSelection(values) {
+            const status = values[0] ?? '';
+            this.noteStatus = ['unissued', 'issued', 'shipping'].includes(status) ? status : '';
+        },
         get filteredOrders() {
             const term = this.search.trim().toLocaleLowerCase('id');
             return this.orders.filter(order => (!this.distributorId || String(order.distributor_id) === String(this.distributorId)) && (!this.noteStatus || (this.noteStatus === 'unissued' && !order.saved.note_issued) || (this.noteStatus === 'issued' && order.saved.note_issued && !order.finalized) || (this.noteStatus === 'shipping' && order.finalized)) && (!term || [order.distributor_name, order.supplier_note_number, order.reference, ...order.items.map(item => item.product_name + ' ' + item.color)].join(' ').toLocaleLowerCase('id').includes(term)));

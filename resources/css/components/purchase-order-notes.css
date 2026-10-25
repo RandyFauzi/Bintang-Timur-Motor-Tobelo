@@ -6,8 +6,10 @@
     .note-tabs > button.is-active { border-bottom: 1px solid #383d38; background: #f0f1ed; color: var(--color-text); font-weight: 600; }
     .note-action-count { display: inline-grid; min-width: 18px; height: 18px; place-items: center; border-radius: 12px; background: #c83d3d; padding: 2px 5px; color: white; font-size: 12px; font-weight: 400; }
     .note-filters { display: flex; flex-wrap: wrap; gap: 16px; }
-    .note-filters .filter-select-label { background: white; }
-    .note-filters .filter-select { max-width: 260px; }
+    .note-filters > .multi-filter { width: min(280px,100%); min-width: 0; }
+    .note-filters .filter-trigger { width: 100%; min-height: 44px; background: var(--color-surface); }
+    .note-filters .filter-trigger__summary { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+    .note-filters .multi-filter__option { min-height: 44px; overflow-wrap: anywhere; }
     .note-search { width: 100%; }
     .note-cards { display: grid; min-width: 0; grid-template-columns: minmax(0,1fr); gap: 24px; }
     .note-card { min-width: 0; border: 1px solid var(--color-border-strong); border-radius: 12px; background: white; padding: 24px; box-shadow: 0 3px 10px rgb(0 0 0 / 10%); }
@@ -59,7 +61,7 @@
     .note-cargo-picker legend { margin-bottom: 10px; }
     .note-cargo-picker .filter-trigger { max-width: none; min-height: 44px; text-align: left; }
     .note-cargo-picker .filter-trigger__summary { min-width: 0; flex: 1; white-space: normal; overflow-wrap: anywhere; }
-    .note-cargo-picker .multi-filter--dropdown .multi-filter__panel { position: absolute !important; top: calc(100% + 6px) !important; left: 0 !important; transform: none !important; z-index: 25 !important; width: 100% !important; max-width: 100% !important; max-height: min(300px,45dvh); border-radius: 12px; box-shadow: 0 6px 18px rgb(0 0 0 / 12%); }
+    .note-cargo-picker .multi-filter--dropdown .multi-filter__panel, .note-filters .multi-filter--dropdown .multi-filter__panel { position: absolute !important; top: calc(100% + 6px) !important; left: 0 !important; transform: none !important; z-index: 25 !important; width: 100% !important; max-width: 100% !important; max-height: min(300px,45dvh); border-radius: 12px; box-shadow: 0 6px 18px rgb(0 0 0 / 12%); }
     .note-cargo-picker .multi-filter__option.is-selected { background: var(--color-page); font-weight: 500; }
     .note-cargo-picker .multi-filter__option { min-height: 44px; font-size: 14px; overflow-wrap: anywhere; }
     .note-cargo-picker .multi-filter__option input { flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; }
@@ -88,8 +90,8 @@
         .note-card__actions { padding: 0; gap: 8px; }
         .note-card__actions > .ui-button { flex-basis: 100%; }
         .note-replan-footer > .ui-button { width: 100%; }
-        .note-filters > .filter-select-label { width: 100%; min-width: 0; }
-        .note-filters .filter-select { width: 100%; max-width: none; min-width: 0; min-height: 44px; font-size: 16px; }
+        .note-filters > .multi-filter { width: 100%; }
+        .note-filters .multi-filter__search input { font-size: 16px; }
         .note-card__links { justify-content: flex-start; overflow-wrap: anywhere; }
         .note-tabs > button { flex-wrap: wrap; gap: 6px; }
         .note-fields .form-input { min-height: 44px; }

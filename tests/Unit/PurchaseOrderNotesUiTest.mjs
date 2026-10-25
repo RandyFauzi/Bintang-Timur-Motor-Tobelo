@@ -5,6 +5,27 @@ import {purchaseOrderNotes} from '../../resources/js/components/purchase-order-n
 const order = (id = 1, quantity = 5) => ({id,reference:'PO-'+id,distributor_id:id,distributor_name:id === 1 ? 'WMS' : 'WIN',origin_port:'Surabaya',version:2,note_issued:true,supplier_note_number:'INV-'+id,supplier_note_on:'2026-10-21',supplier_note_total:'60000.00',finalized:false,can_edit:true,shipment_url:null,shipment_status:null,invoice_url:'/bills/'+id,save_url:'/orders/'+id+'/note',finalize_url:'/orders/'+id+'/finalize',items:[{id:id*10,product_name:'Yamalube 02 Oil',color:'Gold',source_index:0,quantity:15,invoice_quantity:quantity}]});
 const state = (orders=[order()]) => purchaseOrderNotes(orders, [{id:1,name:'Cargo Reguler',duration_days:14}], {today:'2026-10-21',planId:4,replanUrl:'/purchase-orders/create'});
 
+test('dropdown selections filter notes immediately and clearing one filter preserves the other', () => {
+    const model = state([order(1), {...order(2), note_issued: false}]);
+    model.distributorSelection = ['2'];
+    model.noteStatusSelection = ['unissued'];
+    assert.deepEqual(model.distributorSelection, ['2']);
+    assert.deepEqual(model.noteStatusSelection, ['unissued']);
+    assert.deepEqual(model.filteredOrders.map(row => row.id), [2]);
+
+    model.distributorSelection = [''];
+    assert.deepEqual(model.distributorSelection, []);
+    assert.equal(model.noteStatus, 'unissued');
+    assert.deepEqual(model.filteredOrders.map(row => row.id), [2]);
+
+    model.noteStatusSelection = [];
+    assert.equal(model.filteredOrders.length, 2);
+    model.distributorSelection = ['999'];
+    model.noteStatusSelection = ['invalid'];
+    assert.equal(model.distributorId, '');
+    assert.equal(model.noteStatus, '');
+});
+
 test('select all shortages supports partial selection and does not duplicate selected source identities', () => {
     const row = order();
     row.items.push({...row.items[0], id: 11, source_index: 1, product_name: 'Busi NGK'});
