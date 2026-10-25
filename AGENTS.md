@@ -146,3 +146,8 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Run `vendor/bin/phpunit` to call the test runner directly. It accepts the same file path and `--filter=testName` arguments.
 
 </laravel-boost-guidelines>
+
+## User workflow preferences
+
+- Review changes through source code, tests, builds, and direct HTTP checks. Do not open or control Chrome for reviews unless the user explicitly requests it.
+- After verifying completed changes, commit and push the task's changes. Leave unrelated work out of the commit.
