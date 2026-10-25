@@ -26,7 +26,7 @@
                     <input type="hidden" name="distributor_ids[]" value="{{ $product->distributors->first()->id }}">
                     <p class="form-input flex items-center gap-2"><x-ui.icon name="workshop" :size="16" />{{ $product->distributors->first()->name }}</p>
                 @else
-                    <x-ui.multiselect name="distributor_ids[]" id="distributor_ids" label="Pilih Distributor" :options="$distributors" :selected="old('distributor_ids', [])" :multiple="false" :submit-on-apply="false" icon="workshop" />
+                    <x-ui.multiselect class="product-distributor-picker" name="distributor_ids[]" id="distributor_ids" label="Pilih Distributor" :options="$distributors" :selected="array_slice(old('distributor_ids', []), 0, 1)" :multiple="false" :submit-on-apply="false" :dropdown="true" icon="workshop" />
                 @endif
                 <input type="hidden" name="_sync_distributors" value="1"><p class="mt-1 text-xs text-muted">Satu ID produk untuk satu distributor. Barang yang sama dari distributor lain harus memakai ID produk terpisah dengan modal dan stok masing-masing.</p>
             </x-ui.field>

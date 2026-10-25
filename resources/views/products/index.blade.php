@@ -25,11 +25,18 @@
                 </div>
             </form>
             @if(request('view') === 'cards')
+                @if($products->isNotEmpty())
+                    <div class="px-3">
+                        <label class="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm">
+                            <input type="checkbox" class="rounded" :checked="pageSelected(@js($pageProductIds))" x-effect="$el.indeterminate = @js($pageProductIds).some(id => has(id)) && !pageSelected(@js($pageProductIds))" @change="togglePage(@js($pageProductIds), $event.target.checked)" aria-label="Pilih semua produk pada halaman ini">
+                            <span>Pilih Semua</span>
+                        </label>
+                    </div>
+                @endif
                 <div class="catalogue-card-grid">
                     @forelse($products as $product)
-                        <article class="product-card">
-                            <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="rounded" :checked="has({{ $product->id }})" @change="toggle({{ $product->id }}, $event.target.checked)" aria-label="Pilih {{ $product->name }}">Pilih produk</label>
-                            <header><div><h2>{{ $product->name }}</h2><p class="mt-2 text-sm text-muted">{{ $product->color?->name ?? '–' }}</p></div><div class="product-card__actions">
+                        <article class="product-card" :class="{ 'is-selected': has({{ $product->id }}) }">
+                            <header><div><h2><label class="flex min-h-11 cursor-pointer items-start gap-2"><input type="checkbox" class="mt-1 shrink-0 rounded" :checked="has({{ $product->id }})" @change="toggle({{ $product->id }}, $event.target.checked)" aria-label="Pilih {{ $product->name }}"><span class="min-w-0">{{ $product->name }}</span></label></h2><p class="mt-2 text-sm text-muted">{{ $product->color?->name ?? '–' }}</p></div><div class="product-card__actions">
                                 <x-ui.product-actions :product="$product" />
                             </div></header>
                             <dl class="product-card__details">
