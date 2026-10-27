@@ -1,4 +1,10 @@
-@php($detailsExpanded = ! $product || (old('_dialog') === 'product-form' && old('_edit_details') === '1'))
+@php
+    $detailsExpanded = ! $product || (old('_dialog') === 'product-form' && old('_edit_details') === '1');
+    $currentDistributor = $product?->distributors->first();
+    $initialDistributorId = old('distributor_id', old('distributor_ids.0', $currentDistributor?->id));
+    $initialDistributorName = old('distributor_name', $currentDistributor?->name ?? ($initialDistributorId ? $distributors->firstWhere('id', $initialDistributorId)?->name : ''));
+    $distributorItems = $distributors->merge($product?->distributors ?? collect())->unique('id')->sortBy('name')->map(fn ($d) => ['id' => (string) $d->id, 'name' => $d->name])->values();
+@endphp
 <x-ui.dialog name="product-form" class="product-form-dialog" :wide="true" :title="$product ? 'Edit '.$product->name : 'Tambah Produk'" :description="$product ? 'Edit jumlah stok atau detail informasi produk.' : 'Tambahkan produk baru beserta stok awalnya.'" :show="$product !== null || request()->boolean('create') || old('_dialog') === 'product-form'">
     <div x-data="{ tab: @js(! $product && old('_tab') === 'import' ? 'import' : 'manual') }" class="grid gap-5">
         @if(! $product)
@@ -21,10 +27,104 @@
             <x-ui.field name="purchase_price" label="Modal" type="number" :value="$product ? (float) $product->purchase_price : null" placeholder="0" min="0" step="0.01" onfocus="this.select()" required />
             <x-ui.field name="selling_price" label="Harga Jual" type="number" :value="$product ? (float) $product->selling_price : null" placeholder="0" min="0" step="0.01" onfocus="this.select()" required />
             <x-ui.field name="product_kind" label="Tipe Produk"><select id="product_kind" name="product_kind" class="form-input">@foreach(\App\Models\Product::KINDS as $value => $kindLabel)<option value="{{ $value }}" @selected(old('product_kind',$product?->product_kind ?? 'daily') === $value)>{{ $kindLabel }}</option>@endforeach</select></x-ui.field>
-            <x-ui.field name="distributor_ids" label="Distributor">
-                <x-ui.multiselect class="product-distributor-picker" name="distributor_ids[]" id="distributor_ids" label="Pilih Distributor" :options="$distributors->merge($product?->distributors ?? collect())->unique('id')->sortBy('name')->values()" :selected="array_slice(old('distributor_ids', $product?->distributors->modelKeys() ?? []), 0, 1)" :multiple="false" :submit-on-apply="false" :dropdown="true" icon="workshop" />
-                <input type="hidden" name="_sync_distributors" value="1">
-            </x-ui.field>
+            <div class="form-field relative product-distributor-picker" x-data="distributorAutocomplete(@js($distributorItems), @js($initialDistributorId), @js($initialDistributorName), @js(route('distributors.store')))" @click.outside="close()" @keydown.escape="close()">
+                <label for="distributor_name" class="form-field__label">Distributor</label>
+                <div class="relative">
+                    <div class="relative flex items-center">
+                        <span class="pointer-events-none absolute left-3 flex items-center text-muted">
+                            <x-ui.icon name="workshop" :size="18" />
+                        </span>
+                        <input
+                            id="distributor_name"
+                            name="distributor_name"
+                            type="text"
+                            class="form-input !pl-10 !pr-10 w-full"
+                            placeholder="Tulis atau cari nama distributor..."
+                            autocomplete="off"
+                            x-model="query"
+                            @focus="openDropdown()"
+                            @input="onInput()"
+                            @keydown.arrow-down.prevent="onArrowDown()"
+                            @keydown.arrow-up.prevent="onArrowUp()"
+                            @keydown.enter="onEnter($event)"
+                            maxlength="255"
+                        >
+                        <input type="hidden" name="distributor_id" :value="selectedId">
+                        <input type="hidden" name="_sync_distributors" value="1">
+                        <template x-if="selectedId || query.trim()">
+                            <button
+                                type="button"
+                                class="absolute right-3 flex items-center text-muted hover:text-stone-900"
+                                @click="clear()"
+                                title="Kosongkan distributor"
+                                aria-label="Kosongkan distributor"
+                            >
+                                <x-ui.icon name="close" :size="16" />
+                            </button>
+                        </template>
+                    </div>
+
+                    <div
+                        x-show="open"
+                        x-cloak
+                        x-transition.opacity
+                        class="distributor-autocomplete-menu"
+                        role="listbox"
+                        tabindex="-1"
+                    >
+                        <div class="max-h-60 overflow-y-auto py-1">
+                            <template x-for="(item, index) in filtered" :key="item.id">
+                                <button
+                                    type="button"
+                                    class="distributor-autocomplete-item"
+                                    :class="{ 'is-highlighted': highlightedIndex === index, 'is-selected': selectedId == item.id }"
+                                    @click="select(item)"
+                                    @mouseenter="highlightedIndex = index"
+                                    role="option"
+                                    :aria-selected="selectedId == item.id"
+                                >
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <x-ui.icon name="workshop" :size="16" class="text-muted shrink-0" />
+                                        <span class="truncate font-medium" x-text="item.name"></span>
+                                    </div>
+                                    <span x-show="selectedId == item.id" class="text-xs text-green-700 font-semibold" aria-hidden="true">✓</span>
+                                </button>
+                            </template>
+
+                            <template x-if="filtered.length === 0 && !canCreate">
+                                <p class="px-3 py-2 text-xs text-muted">Belum ada data distributor.</p>
+                            </template>
+
+                            <template x-if="canCreate">
+                                <div class="border-t border-stone-100 p-1">
+                                    <button
+                                        type="button"
+                                        class="distributor-autocomplete-add"
+                                        :class="{ 'is-highlighted': highlightedIndex === filtered.length }"
+                                        @click="createNew()"
+                                        :disabled="isAdding"
+                                    >
+                                        <span class="flex items-center gap-2 min-w-0">
+                                            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 font-bold text-xs">+</span>
+                                            <span class="truncate">Tambah distributor: <strong class="text-stone-900" x-text="'&ldquo;' + query.trim() + '&rdquo;'"></strong></span>
+                                        </span>
+                                        <span x-show="isAdding" class="text-xs text-muted shrink-0">Menyimpan...</span>
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <template x-if="newlyAdded">
+                    <p class="mt-1 flex items-center gap-1.5 text-xs text-green-700 font-medium">
+                        <svg class="size-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
+                        <span>Distributor baru telah didaftarkan dan terpilih.</span>
+                    </p>
+                </template>
+                @error('distributor_name')<p class="field-error">{{ $message }}</p>@enderror
+                @error('distributor_ids')<p class="field-error">{{ $message }}</p>@enderror
+            </div>
             <x-ui.field name="barcode" label="Barcode (opsional)" :value="$product?->barcode" maxlength="100" />
             @if($product)<div class="form-field"><span class="form-field__label">SKU</span><p class="py-2 text-sm text-muted">{{ $product->sku }}</p></div>@else<x-ui.field name="sku" label="SKU (opsional)" hint="Dibuat otomatis jika dikosongkan." maxlength="100" />@endif
         </fieldset>

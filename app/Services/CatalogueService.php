@@ -70,7 +70,16 @@ class CatalogueService
             if (! $creating) {
                 $product = Product::lockForUpdate()->findOrFail($product->id);
             }
-            if (array_key_exists('distributor_ids', $data)) {
+            if (array_key_exists('distributor_name', $data) && ! empty(trim((string) $data['distributor_name']))) {
+                $distributorName = trim((string) $data['distributor_name']);
+                $distributor = Distributor::whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower($distributorName)])->first()
+                    ?? Distributor::create(['name' => $distributorName, 'is_active' => true]);
+                $supplierIds = [$distributor->id];
+                $data['distributor_ids'] = $supplierIds;
+            } elseif (array_key_exists('distributor_id', $data) && ! empty($data['distributor_id'])) {
+                $supplierIds = [(int) $data['distributor_id']];
+                $data['distributor_ids'] = $supplierIds;
+            } elseif (array_key_exists('distributor_ids', $data)) {
                 $supplierIds = array_values(array_unique(array_map('intval', $data['distributor_ids'])));
                 if (count($supplierIds) > 1) {
                     throw ValidationException::withMessages(['distributor_ids' => 'Satu ID produk hanya boleh memiliki satu distributor. Buat produk terpisah untuk distributor lain.']);
@@ -79,6 +88,13 @@ class CatalogueService
                 if ($currentSupplierId && $supplierIds === []) {
                     throw ValidationException::withMessages(['distributor_ids' => 'Pilih satu distributor untuk produk ini.']);
                 }
+            } elseif (array_key_exists('distributor_name', $data) && empty(trim((string) $data['distributor_name']))) {
+                $currentSupplierId = $product?->distributors()->value('distributors.id');
+                if ($currentSupplierId) {
+                    throw ValidationException::withMessages(['distributor_name' => 'Pilih satu distributor untuk produk ini.']);
+                }
+                $supplierIds = [];
+                $data['distributor_ids'] = [];
             }
             $attributes = Arr::only($data, ['name', 'sku', 'barcode', 'purchase_price', 'selling_price', 'stock_minimum', 'product_kind', 'brand_id', 'type_id', 'color_id']);
             foreach (['brand' => Brand::class, 'type' => ProductType::class, 'color' => Color::class] as $field => $model) {
@@ -112,7 +128,7 @@ class CatalogueService
             if ($difference !== 0) {
                 $this->inventoryService->adjustStock($product, $difference, $creating ? 'initial' : 'adjustment', $creating ? 'Stok awal produk' : 'Penyesuaian stok produk', null, $userId);
             }
-            if (array_key_exists('distributor_ids', $data)) {
+            if (isset($supplierIds)) {
                 $product->distributors()->sync(collect($supplierIds)->mapWithKeys(fn (int $id): array => [$id => ['purchase_price' => $product->purchase_price, 'is_primary' => true]])->all());
             } elseif ($product->distributors()->exists()) {
                 $product->distributors()->updateExistingPivot($product->distributors()->value('distributors.id'), ['purchase_price' => $product->purchase_price]);

@@ -232,4 +232,68 @@ class CatalogueTest extends TestCase
         $this->assertMatchesRegularExpression('/<input[^>]+name="quantity"[^>]+value="25"[^>]*>/', $editContent);
         $this->assertMatchesRegularExpression('/<input[^>]+name="stock_minimum"[^>]+value="8"[^>]*>/', $editContent);
     }
+
+    public function test_product_form_renders_distributor_autocomplete_input(): void
+    {
+        $user = User::factory()->create();
+        $supplier = Distributor::factory()->create(['name' => 'Distributor Unggulan']);
+        $product = Product::factory()->withStock(5)->create();
+        $product->distributors()->attach($supplier, ['is_primary' => true, 'purchase_price' => $product->purchase_price]);
+
+        $response = $this->actingAs($user)->get(route('products.index', ['edit' => $product->id]));
+        $response->assertOk();
+        $content = $response->getContent();
+
+        // Autocomplete input is rendered instead of dropdown button
+        $this->assertStringContainsString('distributorAutocomplete(', $content);
+        $this->assertMatchesRegularExpression('/<input[^>]+id="distributor_name"[^>]+name="distributor_name"[^>]*>/', $content);
+        $this->assertStringContainsString('Distributor Unggulan', $content);
+    }
+
+    public function test_product_can_be_created_with_new_or_existing_distributor_name(): void
+    {
+        $user = User::factory()->create();
+
+        // 1. Existing distributor by name
+        $existing = Distributor::factory()->create(['name' => 'PT Makmur Motor']);
+        $this->actingAs($user)->post(route('products.store'), [
+            'name' => 'Ban Luar IRC',
+            'purchase_price' => 150000,
+            'selling_price' => 180000,
+            'quantity' => 10,
+            'stock_minimum' => 2,
+            'distributor_name' => 'PT Makmur Motor',
+        ])->assertRedirect(route('products.index'))->assertSessionHasNoErrors();
+
+        $product1 = Product::where('name', 'Ban Luar IRC')->firstOrFail();
+        $this->assertSame([$existing->id], $product1->distributors->modelKeys());
+
+        // 2. Brand new distributor by name (creates automatically)
+        $this->actingAs($user)->post(route('products.store'), [
+            'name' => 'Rantai Gold SSS',
+            'purchase_price' => 120000,
+            'selling_price' => 160000,
+            'quantity' => 5,
+            'stock_minimum' => 1,
+            'distributor_name' => 'CV Sumber Rejeki Baru',
+        ])->assertRedirect(route('products.index'))->assertSessionHasNoErrors();
+
+        $product2 = Product::where('name', 'Rantai Gold SSS')->firstOrFail();
+        $newDistributor = Distributor::where('name', 'CV Sumber Rejeki Baru')->firstOrFail();
+        $this->assertSame([$newDistributor->id], $product2->distributors->modelKeys());
+    }
+
+    public function test_distributor_store_json_returns_created_payload(): void
+    {
+        $user = User::factory()->create();
+        $response = $this->actingAs($user)->postJson(route('distributors.store'), [
+            'name' => 'Distributor Kilat Express',
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.name', 'Distributor Kilat Express');
+
+        $this->assertDatabaseHas('distributors', ['name' => 'Distributor Kilat Express']);
+    }
 }

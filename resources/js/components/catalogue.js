@@ -189,3 +189,158 @@ export function observationForm(initial, types, workshops, endpoints) {
         },
     };
 }
+
+export function distributorAutocomplete(options = [], initialId = null, initialName = '', createUrl = '') {
+    return {
+        options: Array.isArray(options) ? options.map((opt) => ({ id: String(opt.id), name: opt.name })) : [],
+        query: initialName ? String(initialName) : '',
+        selectedId: initialId ? String(initialId) : '',
+        selectedName: initialName ? String(initialName) : '',
+        open: false,
+        highlightedIndex: -1,
+        isAdding: false,
+        newlyAdded: false,
+        createUrl,
+        init() {
+            if (this.selectedId && !this.query) {
+                const match = this.options.find((opt) => opt.id === this.selectedId);
+                if (match) {
+                    this.query = match.name;
+                    this.selectedName = match.name;
+                }
+            }
+        },
+        get filtered() {
+            const q = this.query.trim().toLowerCase();
+            if (!q) return this.options.slice(0, 20);
+            return this.options.filter((opt) => opt.name.toLowerCase().includes(q)).slice(0, 20);
+        },
+        get exactMatch() {
+            const q = this.query.trim().toLowerCase();
+            if (!q) return false;
+            return this.options.some((opt) => opt.name.toLowerCase() === q);
+        },
+        get canCreate() {
+            return this.query.trim().length > 0 && !this.exactMatch;
+        },
+        openDropdown() {
+            this.open = true;
+            this.highlightedIndex = -1;
+        },
+        close() {
+            this.open = false;
+            this.highlightedIndex = -1;
+            const q = this.query.trim();
+            if (q && !this.selectedId) {
+                const match = this.options.find((opt) => opt.name.toLowerCase() === q.toLowerCase());
+                if (match) {
+                    this.selectedId = match.id;
+                    this.selectedName = match.name;
+                    this.query = match.name;
+                } else {
+                    this.selectedName = q;
+                }
+            }
+        },
+        onInput() {
+            this.open = true;
+            this.highlightedIndex = -1;
+            this.newlyAdded = false;
+            const q = this.query.trim().toLowerCase();
+            const match = this.options.find((opt) => opt.name.toLowerCase() === q);
+            if (match) {
+                this.selectedId = match.id;
+                this.selectedName = match.name;
+            } else {
+                this.selectedId = '';
+                this.selectedName = this.query.trim();
+            }
+        },
+        select(item) {
+            this.selectedId = String(item.id);
+            this.selectedName = item.name;
+            this.query = item.name;
+            this.open = false;
+            this.highlightedIndex = -1;
+            this.newlyAdded = false;
+        },
+        clear() {
+            this.query = '';
+            this.selectedId = '';
+            this.selectedName = '';
+            this.open = false;
+            this.newlyAdded = false;
+            this.highlightedIndex = -1;
+        },
+        onArrowDown() {
+            if (!this.open) {
+                this.open = true;
+                return;
+            }
+            const total = this.filtered.length + (this.canCreate ? 1 : 0);
+            if (total === 0) return;
+            this.highlightedIndex = (this.highlightedIndex + 1) % total;
+        },
+        onArrowUp() {
+            if (!this.open) {
+                this.open = true;
+                return;
+            }
+            const total = this.filtered.length + (this.canCreate ? 1 : 0);
+            if (total === 0) return;
+            this.highlightedIndex = (this.highlightedIndex - 1 + total) % total;
+        },
+        onEnter(event) {
+            if (!this.open) return;
+            const filteredCount = this.filtered.length;
+            if (this.highlightedIndex >= 0 && this.highlightedIndex < filteredCount) {
+                event.preventDefault();
+                this.select(this.filtered[this.highlightedIndex]);
+            } else if (this.canCreate && (this.highlightedIndex === filteredCount || filteredCount === 0)) {
+                event.preventDefault();
+                this.createNew();
+            } else if (filteredCount > 0 && this.highlightedIndex === -1) {
+                event.preventDefault();
+                this.select(this.filtered[0]);
+            }
+        },
+        async createNew() {
+            if (!this.canCreate || this.isAdding) return;
+            const name = this.query.trim();
+            if (!name) return;
+            this.isAdding = true;
+            try {
+                const token = document.querySelector('meta[name="csrf-token"]')?.content;
+                const response = await fetch(this.createUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        'X-CSRF-TOKEN': token,
+                    },
+                    body: JSON.stringify({ name }),
+                });
+                if (response.ok) {
+                    const result = await response.json();
+                    const newDistributor = result.data ? { id: String(result.data.id), name: result.data.name } : { id: String(Date.now()), name };
+                    this.options.unshift(newDistributor);
+                    this.select(newDistributor);
+                    this.newlyAdded = true;
+                    window.dispatchEvent(new CustomEvent('notify', {
+                        detail: { message: `Distributor "${name}" berhasil ditambahkan.`, type: 'success' },
+                    }));
+                } else {
+                    this.selectedId = '';
+                    this.selectedName = name;
+                    this.open = false;
+                }
+            } catch {
+                this.selectedId = '';
+                this.selectedName = name;
+                this.open = false;
+            } finally {
+                this.isAdding = false;
+            }
+        },
+    };
+}

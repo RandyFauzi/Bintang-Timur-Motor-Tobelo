@@ -10,6 +10,7 @@ use App\Services\CatalogueService;
 use App\Services\CsvExportService;
 use App\Services\ExcelExportService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -29,9 +30,20 @@ class DistributorController extends Controller
         ]);
     }
 
-    public function store(DistributorRequest $request): RedirectResponse
+    public function store(DistributorRequest $request): RedirectResponse|JsonResponse
     {
-        Distributor::create($request->validated());
+        $distributor = Distributor::create($request->validated());
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Distributor baru berhasil ditambahkan.',
+                'data' => [
+                    'id' => $distributor->id,
+                    'name' => $distributor->name,
+                ],
+            ], 201);
+        }
 
         return redirect()->route('distributors.index')->with('success', 'Distributor baru berhasil ditambahkan.');
     }

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { multiSelect, observationForm, appDialog } from '../../resources/js/components/catalogue.js';
+import { appDialog, distributorAutocomplete, multiSelect, observationForm } from '../../resources/js/components/catalogue.js';
 
 const options = [{ id: '1', name: 'Oli' }, { id: '2', name: 'Rem' }, { id: '3', name: 'Rantai' }];
 
@@ -261,4 +261,82 @@ test('active filter indicators reflect applied choices and display both selected
     stock.selected = ['1'];
     assert.equal(stock.active, true);
     assert.equal(stock.summary, 'Stok Menipis');
+});
+
+test('distributorAutocomplete initializes with prefilled data and allows selection', () => {
+    const list = [{ id: 10, name: 'PT Sumber Makmur' }, { id: 20, name: 'CV Jaya Abadi' }];
+    const comp = distributorAutocomplete(list, 10, 'PT Sumber Makmur', '/distributors');
+    assert.equal(comp.selectedId, '10');
+    assert.equal(comp.query, 'PT Sumber Makmur');
+    assert.equal(comp.exactMatch, true);
+    assert.equal(comp.canCreate, false);
+
+    // Filter by typing
+    comp.query = 'Jaya';
+    comp.onInput();
+    assert.equal(comp.filtered.length, 1);
+    assert.equal(comp.filtered[0].name, 'CV Jaya Abadi');
+    assert.equal(comp.exactMatch, false);
+    assert.equal(comp.canCreate, true);
+
+    // Select existing
+    comp.select(comp.filtered[0]);
+    assert.equal(comp.selectedId, '20');
+    assert.equal(comp.query, 'CV Jaya Abadi');
+    assert.equal(comp.open, false);
+
+    // Clear
+    comp.clear();
+    assert.equal(comp.query, '');
+    assert.equal(comp.selectedId, '');
+    assert.equal(comp.selectedName, '');
+});
+
+test('distributorAutocomplete can create a new distributor inline via API', async () => {
+    const previousWindow = globalThis.window;
+    const previousDocument = globalThis.document;
+    const list = [{ id: 1, name: 'Distributor Lama' }];
+    try {
+        const events = [];
+        globalThis.window = {
+            dispatchEvent: (e) => events.push(e),
+        };
+        globalThis.CustomEvent = class {
+            constructor(type, init) { this.type = type; this.detail = init?.detail; }
+        };
+        globalThis.document = {
+            querySelector: (sel) => ({ content: 'csrf-test-token' }),
+        };
+        let requestBody = null;
+        globalThis.fetch = async (url, options) => {
+            requestBody = JSON.parse(options.body);
+            return {
+                ok: true,
+                json: async () => ({
+                    success: true,
+                    data: { id: 99, name: requestBody.name },
+                }),
+            };
+        };
+
+        const comp = distributorAutocomplete(list, null, '', '/distributors');
+        comp.query = 'Distributor Baru Keren';
+        comp.onInput();
+        assert.equal(comp.canCreate, true);
+        assert.equal(comp.exactMatch, false);
+
+        await comp.createNew();
+
+        assert.equal(requestBody.name, 'Distributor Baru Keren');
+        assert.equal(comp.selectedId, '99');
+        assert.equal(comp.selectedName, 'Distributor Baru Keren');
+        assert.equal(comp.query, 'Distributor Baru Keren');
+        assert.equal(comp.newlyAdded, true);
+        assert.equal(comp.open, false);
+        assert.equal(events.length, 1);
+        assert.equal(events[0].type, 'notify');
+    } finally {
+        globalThis.window = previousWindow;
+        globalThis.document = previousDocument;
+    }
 });

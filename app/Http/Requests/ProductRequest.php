@@ -11,7 +11,11 @@ class ProductRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         if ($this->boolean('_sync_distributors') && ! $this->has('distributor_ids')) {
-            $this->merge(['distributor_ids' => []]);
+            if ($this->filled('distributor_id')) {
+                $this->merge(['distributor_ids' => [$this->integer('distributor_id')]]);
+            } elseif (! $this->filled('distributor_name')) {
+                $this->merge(['distributor_ids' => []]);
+            }
         }
     }
 
@@ -40,6 +44,8 @@ class ProductRequest extends FormRequest
             'type_id' => ['nullable', Rule::exists('product_types', 'id')->whereNull('deleted_at')],
             'color_id' => ['nullable', Rule::exists('colors', 'id')->whereNull('deleted_at')],
             'brand_name' => ['nullable', 'string', 'max:255'], 'type_name' => ['nullable', 'string', 'max:255'], 'color_name' => ['nullable', 'string', 'max:255'],
+            'distributor_name' => ['nullable', 'string', 'max:255'],
+            'distributor_id' => ['nullable', 'integer', Rule::exists('distributors', 'id')->whereNull('deleted_at')->where('is_active', true)],
             'distributor_ids' => ['sometimes', 'array', 'max:1'],
             'distributor_ids.*' => ['integer', 'distinct', Rule::exists('distributors', 'id')->whereNull('deleted_at')->where('is_active', true)],
         ];
