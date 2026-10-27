@@ -38,6 +38,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-purchase-orders', fn (User $user): bool => $user->role === 'admin');
         Gate::define('manage-invoices', fn (User $user): bool => $user->role === 'admin');
         Gate::define('manage-shipments', fn (User $user): bool => $user->role === 'admin');
+        Gate::define('view-sales-metrics', fn (User $user): bool => $user->role === 'admin');
         User::deleted(function (User $user): void {
             DB::afterCommit(fn () => app(ImageStorageService::class)->delete($user->avatar_path));
         });

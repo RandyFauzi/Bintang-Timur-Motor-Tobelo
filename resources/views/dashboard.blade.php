@@ -5,34 +5,38 @@
             <x-ui.date-range-filter :range="$range" label="Filter periode dashboard" />
         </header>
 
-        <div class="dashboard-stats">
-            <x-dashboard.stat-card title="Total Penjualan" :value="'Rp '.number_format($summary['revenue'], 0, ',', '.')" :note="'vs Rp '.number_format($previousSummary['revenue'], 0, ',', '.').' periode sebelumnya'" icon="banknote" :change="$changes['revenue'] ?? 'new'" featured />
-            <x-dashboard.stat-card title="Jumlah Transaksi" :value="number_format($summary['transactions'], 0, ',', '.')" :note="'vs '.number_format($previousSummary['transactions'], 0, ',', '.').' periode sebelumnya'" icon="wallet" :change="$changes['transactions'] ?? 'new'" />
+        <div @class(['dashboard-stats', 'dashboard-stats--compact' => ! ($canViewSales ?? true)])>
+            @can('view-sales-metrics')
+                <x-dashboard.stat-card title="Total Penjualan" :value="'Rp '.number_format($summary['revenue'], 0, ',', '.')" :note="'vs Rp '.number_format($previousSummary['revenue'], 0, ',', '.').' periode sebelumnya'" icon="banknote" :change="$changes['revenue'] ?? 'new'" featured />
+                <x-dashboard.stat-card title="Jumlah Transaksi" :value="number_format($summary['transactions'], 0, ',', '.')" :note="'vs '.number_format($previousSummary['transactions'], 0, ',', '.').' periode sebelumnya'" icon="wallet" :change="$changes['transactions'] ?? 'new'" />
+            @endcan
             <x-dashboard.stat-card title="Stok Menipis" :value="number_format($stockOverview['count'], 0, ',', '.')" note="Kondisi stok saat ini" icon="stock-box" />
             <x-dashboard.stat-card title="Retur Penjualan" value="—" note="Pencatatan retur belum tersedia" icon="wallet" />
         </div>
 
-        <div class="dashboard-charts">
-            <x-dashboard.panel title="Pemasukan" id="revenue-title" class="revenue-panel">
-                <x-slot:filter><x-ui.date-range-filter :range="$revenueRange" prefix="revenue_" label="Filter periode pemasukan" compact /></x-slot:filter>
-                <div class="revenue-chart" x-data="revenueChart(@js($revenueSeries))">
-                    <div class="revenue-chart__plot">
-                        <div class="revenue-chart__y-axis" aria-hidden="true"><template x-for="tick in ticks" :key="tick"><span x-text="compactCurrency(tick)"></span></template></div>
-                        <div class="revenue-chart__canvas-wrap">
-                            <canvas x-ref="canvas" class="revenue-chart__canvas" tabindex="0" role="img" aria-label="Grafik pemasukan per hari. Gunakan tombol panah untuk membaca tiap tanggal." @mousemove="hover($event)" @mouseleave="activeIndex = null; draw()" @focus="select(0)" @blur="activeIndex = null; draw()" @keydown.right.prevent="select((activeIndex ?? -1) + 1)" @keydown.left.prevent="select((activeIndex ?? 1) - 1)"></canvas>
-                            <div class="chart-tooltip" x-show="activeIndex !== null" x-cloak :style="'left: ' + tooltipPosition + '%'" role="status"><span x-text="activePoint?.label"></span><strong x-text="currency(activePoint?.value ?? 0)"></strong></div>
-                            @if (array_sum(array_column($revenueSeries, 'value')) === 0.0)
-                                <p class="chart-empty">Belum ada penjualan pada periode ini.</p>
-                            @endif
+        <div @class(['dashboard-charts', 'dashboard-charts--single' => ! ($canViewSales ?? true)])>
+            @can('view-sales-metrics')
+                <x-dashboard.panel title="Pemasukan" id="revenue-title" class="revenue-panel">
+                    <x-slot:filter><x-ui.date-range-filter :range="$revenueRange" prefix="revenue_" label="Filter periode pemasukan" compact /></x-slot:filter>
+                    <div class="revenue-chart" x-data="revenueChart(@js($revenueSeries))">
+                        <div class="revenue-chart__plot">
+                            <div class="revenue-chart__y-axis" aria-hidden="true"><template x-for="tick in ticks" :key="tick"><span x-text="compactCurrency(tick)"></span></template></div>
+                            <div class="revenue-chart__canvas-wrap">
+                                <canvas x-ref="canvas" class="revenue-chart__canvas" tabindex="0" role="img" aria-label="Grafik pemasukan per hari. Gunakan tombol panah untuk membaca tiap tanggal." @mousemove="hover($event)" @mouseleave="activeIndex = null; draw()" @focus="select(0)" @blur="activeIndex = null; draw()" @keydown.right.prevent="select((activeIndex ?? -1) + 1)" @keydown.left.prevent="select((activeIndex ?? 1) - 1)"></canvas>
+                                <div class="chart-tooltip" x-show="activeIndex !== null" x-cloak :style="'left: ' + tooltipPosition + '%'" role="status"><span x-text="activePoint?.label"></span><strong x-text="currency(activePoint?.value ?? 0)"></strong></div>
+                                @if (array_sum(array_column($revenueSeries, 'value')) === 0.0)
+                                    <p class="chart-empty">Belum ada penjualan pada periode ini.</p>
+                                @endif
+                            </div>
                         </div>
+                        <div class="revenue-chart__x-axis" aria-hidden="true"><template x-for="tick in dateTicks" :key="tick.date"><span :style="'left: ' + tick.position + '%'" x-text="tick.label"></span></template></div>
+                        <details class="chart-data-details">
+                            <summary>Lihat data pemasukan</summary>
+                            <div class="chart-data-details__scroll"><table class="data-table"><caption class="sr-only">Pemasukan harian periode {{ $revenueRange['label'] }}</caption><thead><tr><th scope="col">Tanggal</th><th scope="col">Pemasukan</th></tr></thead><tbody>@foreach ($revenueSeries as $point)<tr><td>{{ $point['label'] }}</td><td>Rp {{ number_format($point['value'], 0, ',', '.') }}</td></tr>@endforeach</tbody></table></div>
+                        </details>
                     </div>
-                    <div class="revenue-chart__x-axis" aria-hidden="true"><template x-for="tick in dateTicks" :key="tick.date"><span :style="'left: ' + tick.position + '%'" x-text="tick.label"></span></template></div>
-                    <details class="chart-data-details">
-                        <summary>Lihat data pemasukan</summary>
-                        <div class="chart-data-details__scroll"><table class="data-table"><caption class="sr-only">Pemasukan harian periode {{ $revenueRange['label'] }}</caption><thead><tr><th scope="col">Tanggal</th><th scope="col">Pemasukan</th></tr></thead><tbody>@foreach ($revenueSeries as $point)<tr><td>{{ $point['label'] }}</td><td>Rp {{ number_format($point['value'], 0, ',', '.') }}</td></tr>@endforeach</tbody></table></div>
-                    </details>
-                </div>
-            </x-dashboard.panel>
+                </x-dashboard.panel>
+            @endcan
 
             <x-dashboard.panel title="Jam Paling Aktif" id="activity-title" class="activity-panel">
                 <x-slot:filter><x-ui.date-range-filter :range="$activityRange" prefix="activity_" label="Filter periode jam aktif" compact /></x-slot:filter>
@@ -60,13 +64,29 @@
             <x-dashboard.panel title="Produk Terlaris" id="top-products-title" :href="route('products.index')" class="table-panel">
                 <div class="table-scroll">
                     <table class="data-table">
-                        <caption class="sr-only">Lima produk terlaris periode {{ $range['label'] }}. Pendapatan produk setelah diskon item, sebelum diskon transaksi dan pajak.</caption>
-                        <thead><tr><th scope="col" class="rank-column">#</th><th scope="col">Nama Produk</th><th scope="col">Terjual</th><th scope="col">Revenue</th></tr></thead>
+                        <caption class="sr-only">Lima produk terlaris periode {{ $range['label'] }}.@can('view-sales-metrics') Pendapatan produk setelah diskon item, sebelum diskon transaksi dan pajak.@endcan</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col" class="rank-column">#</th>
+                                <th scope="col">Nama Produk</th>
+                                <th scope="col">Terjual</th>
+                                @can('view-sales-metrics')
+                                    <th scope="col">Revenue</th>
+                                @endcan
+                            </tr>
+                        </thead>
                         <tbody>
                             @forelse ($topProducts as $product)
-                                <tr><td><span class="rank-number">{{ $loop->iteration }}</span></td><td class="product-name">{{ $product->product_name }}</td><td>{{ number_format($product->total_sold, 0, ',', '.') }}</td><td class="revenue-cell">Rp {{ number_format($product->revenue, 0, ',', '.') }}</td></tr>
+                                <tr>
+                                    <td><span class="rank-number">{{ $loop->iteration }}</span></td>
+                                    <td class="product-name">{{ $product->product_name }}</td>
+                                    <td>{{ number_format($product->total_sold, 0, ',', '.') }}</td>
+                                    @can('view-sales-metrics')
+                                        <td class="revenue-cell">Rp {{ number_format($product->revenue, 0, ',', '.') }}</td>
+                                    @endcan
+                                </tr>
                             @empty
-                                <tr><td colspan="4" class="table-empty"><p>Belum ada produk terjual.</p><a href="{{ route('pos.index') }}" class="empty-state-link">Mulai transaksi di kasir <span aria-hidden="true">→</span></a></td></tr>
+                                <tr><td colspan="{{ Gate::check('view-sales-metrics') ? 4 : 3 }}" class="table-empty"><p>Belum ada produk terjual.</p><a href="{{ route('pos.index') }}" class="empty-state-link">Mulai transaksi di kasir <span aria-hidden="true">→</span></a></td></tr>
                             @endforelse
                         </tbody>
                     </table>

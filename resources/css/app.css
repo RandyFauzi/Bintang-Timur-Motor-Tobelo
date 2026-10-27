@@ -95,6 +95,7 @@
     .dashboard { max-width: 1600px; margin-inline: auto; }
     .dashboard-header { display: flex; min-height: 42px; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 32px; }
     .dashboard-stats { display: grid; grid-template-columns: minmax(0, 2.18fr) repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .dashboard-stats--compact { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .stat-card { position: relative; display: flex; min-height: 125px; flex-direction: column; justify-content: space-between; gap: 14px; overflow: hidden; border: 1px solid #f0f1ed; border-radius: 16px; background: white; padding: 20px; box-shadow: var(--shadow-card); }
     .stat-card__title { padding-right: 24px; color: #6b7280; font-size: 14px; font-weight: 500; line-height: 1.2; }
     .stat-card__amount { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 5px; }
@@ -106,6 +107,7 @@
     .change-badge { display: inline-flex; border-radius: 999px; background: #f0f8e8; padding: 2px 8px; color: #35521b; font-size: 12px; font-weight: 500; line-height: 1.2; white-space: nowrap; }
     .change-badge--negative { background: #fef2f2; color: #912d2d; }
     .dashboard-charts { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 24px; margin-bottom: 24px; }
+    .dashboard-charts--single { grid-template-columns: minmax(0, 1fr); }
     .dashboard-panel { min-width: 0; border: 1px solid #f0f1ed; border-radius: 24px; background: white; padding: 24px; box-shadow: var(--shadow-card); }
     .dashboard-panel__header { display: flex; min-height: 35px; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
     .panel-link { display: inline-flex; min-height: 32px; align-items: center; gap: 8px; font-size: 12px; }

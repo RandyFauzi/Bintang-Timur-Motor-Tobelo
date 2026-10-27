@@ -82,6 +82,41 @@ class DashboardTest extends TestCase
         $this->assertSame(235000.0, (float) $response->viewData('topProducts')->first()->revenue);
     }
 
+    public function test_staff_cannot_see_sales_totals_transactions_and_revenue_on_dashboard(): void
+    {
+        $this->travelTo(now()->setDate(2026, 10, 15)->setTime(12, 0));
+        $admin = User::factory()->admin()->create();
+        $staff = User::factory()->staff()->create();
+
+        $sale = Sale::factory()->for($admin)->create(['grand_total' => 250000, 'sold_at' => '2026-10-15 10:00:00']);
+        $product = Product::factory()->create(['name' => 'Oli Yamalube']);
+        SaleItem::factory()->for($sale)->for($product)->create(['product_name' => 'Oli Yamalube', 'quantity' => 2, 'subtotal' => 250000]);
+
+        $staffResponse = $this->actingAs($staff)->get(route('dashboard'));
+        $staffResponse->assertOk()
+            ->assertDontSee('Total Penjualan')
+            ->assertDontSee('Jumlah Transaksi')
+            ->assertDontSee('id="revenue-title"', false)
+            ->assertDontSee('Pemasukan harian')
+            ->assertDontSee('Rp 250.000')
+            ->assertSee('Stok Menipis')
+            ->assertSee('Retur Penjualan')
+            ->assertSee('Jam Paling Aktif')
+            ->assertSee('Oli Yamalube')
+            ->assertViewHas('canViewSales', false)
+            ->assertViewHas('summary', ['revenue' => 0.0, 'transactions' => 0])
+            ->assertViewHas('revenueSeries', []);
+
+        $adminResponse = $this->actingAs($admin)->get(route('dashboard'));
+        $adminResponse->assertOk()
+            ->assertSee('Total Penjualan')
+            ->assertSee('Jumlah Transaksi')
+            ->assertSee('id="revenue-title"', false)
+            ->assertSee('Rp 250.000')
+            ->assertViewHas('canViewSales', true)
+            ->assertViewHas('summary', ['revenue' => 250000.0, 'transactions' => 1]);
+    }
+
     public function test_low_stock_includes_missing_stock_and_excludes_inactive_and_deleted_products(): void
     {
         $user = User::factory()->create();

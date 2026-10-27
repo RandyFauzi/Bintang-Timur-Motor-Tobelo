@@ -8,6 +8,7 @@ use App\Models\PurchaseOrder;
 use App\Models\Shipment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Gate;
 use Tests\TestCase;
 
 class StaffPermissionTest extends TestCase
@@ -109,5 +110,14 @@ class StaffPermissionTest extends TestCase
         $adminResponse->assertSee(route('reports.index'), false);
         $adminResponse->assertSee(route('users.index'), false);
         $adminResponse->assertSee(route('activity-logs.index'), false);
+    }
+
+    public function test_view_sales_metrics_gate_allows_admin_and_denies_staff(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $staff = User::factory()->staff()->create();
+
+        $this->assertTrue(Gate::forUser($admin)->allows('view-sales-metrics'));
+        $this->assertFalse(Gate::forUser($staff)->allows('view-sales-metrics'));
     }
 }

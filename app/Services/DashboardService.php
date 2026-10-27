@@ -15,7 +15,7 @@ class DashboardService
      * @param  array<string, string>  $filters
      * @return array{range: array, revenueRange: array, activityRange: array, summary: array, previousSummary: array, changes: array, revenueSeries: array, hourlySeries: array, topProducts: Collection, stockOverview: array}
      */
-    public function getDashboard(array $filters): array
+    public function getDashboard(array $filters, bool $canViewSales = true): array
     {
         $start = CarbonImmutable::parse($filters['start_date'] ?? now()->subDays(6)->toDateString())->startOfDay();
         $end = CarbonImmutable::parse($filters['end_date'] ?? now()->toDateString())->endOfDay();
@@ -24,8 +24,22 @@ class DashboardService
         $activityStart = CarbonImmutable::parse($filters['activity_start_date'] ?? $start)->startOfDay();
         $activityEnd = CarbonImmutable::parse($filters['activity_end_date'] ?? $end)->endOfDay();
         $days = (int) $start->diffInDays($end->startOfDay()) + 1;
-        $previousSummary = $this->salesSummary($start->subDays($days), $start->subDay()->endOfDay());
-        $summary = $this->salesSummary($start, $end);
+        $previousSummary = $canViewSales ? $this->salesSummary($start->subDays($days), $start->subDay()->endOfDay()) : ['revenue' => 0.0, 'transactions' => 0];
+        $summary = $canViewSales ? $this->salesSummary($start, $end) : ['revenue' => 0.0, 'transactions' => 0];
+
+        $topProductsQuery = SaleItem::query()
+            ->whereHas('sale', fn (Builder $query) => $query->where('status', 'completed')->whereBetween('sold_at', [$start, $end]))
+            ->select('product_id', 'product_name');
+
+        if ($canViewSales) {
+            $topProductsQuery->selectRaw('SUM(quantity) as total_sold, SUM(subtotal) as revenue')
+                ->groupBy('product_id', 'product_name')
+                ->orderByDesc('total_sold')->orderByDesc('revenue')->orderBy('product_name');
+        } else {
+            $topProductsQuery->selectRaw('SUM(quantity) as total_sold, 0 as revenue')
+                ->groupBy('product_id', 'product_name')
+                ->orderByDesc('total_sold')->orderBy('product_name');
+        }
 
         return [
             'range' => $this->dateRange($start, $end),
@@ -34,18 +48,12 @@ class DashboardService
             'summary' => $summary,
             'previousSummary' => $previousSummary,
             'changes' => [
-                'revenue' => $this->percentageChange($summary['revenue'], $previousSummary['revenue']),
-                'transactions' => $this->percentageChange($summary['transactions'], $previousSummary['transactions']),
+                'revenue' => $canViewSales ? $this->percentageChange($summary['revenue'], $previousSummary['revenue']) : null,
+                'transactions' => $canViewSales ? $this->percentageChange($summary['transactions'], $previousSummary['transactions']) : null,
             ],
-            'revenueSeries' => $this->revenueSeries($revenueStart, $revenueEnd),
+            'revenueSeries' => $canViewSales ? $this->revenueSeries($revenueStart, $revenueEnd) : [],
             'hourlySeries' => $this->hourlySeries($activityStart, $activityEnd),
-            'topProducts' => SaleItem::query()
-                ->whereHas('sale', fn (Builder $query) => $query->where('status', 'completed')->whereBetween('sold_at', [$start, $end]))
-                ->select('product_id', 'product_name')
-                ->selectRaw('SUM(quantity) as total_sold, SUM(subtotal) as revenue')
-                ->groupBy('product_id', 'product_name')
-                ->orderByDesc('total_sold')->orderByDesc('revenue')->orderBy('product_name')
-                ->limit(5)->get(),
+            'topProducts' => $topProductsQuery->limit(5)->get(),
             'stockOverview' => $this->stockOverview(),
         ];
     }
