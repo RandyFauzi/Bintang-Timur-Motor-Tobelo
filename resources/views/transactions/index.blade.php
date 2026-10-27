@@ -1,6 +1,6 @@
 <x-app-layout>
     <div class="catalogue-page history-page">
-        <header class="catalogue-heading"><div><h1>Histori Transaksi</h1><p class="mt-2 text-sm text-muted">Telusuri penjualan, rincian belanja, dan pembayaran pelanggan.</p></div><x-ui.notification-dropdown /></header>
+        <header class="catalogue-heading"><div><h1>Histori Transaksi</h1><p class="mt-2 text-sm text-muted">Telusuri penjualan, rincian belanja, dan pembayaran pelanggan.</p></div><x-ui.notification-dropdown class="hidden md:inline-flex" /></header>
         <div class="history-summary">
             <x-dashboard.stat-card title="Nilai Penjualan" :value="'Rp '.number_format($summary['revenue'],2,',','.')" note="Sesuai filter yang dipilih · Hanya transaksi selesai" icon="history-banknote" />
             <x-dashboard.stat-card title="Total Transaksi" :value="number_format($summary['transactions']).' Transaksi'" note="Sesuai filter yang dipilih" icon="stock-box" />

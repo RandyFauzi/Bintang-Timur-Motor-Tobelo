@@ -1,6 +1,6 @@
 <x-app-layout>
     <div class="catalogue-page" x-data="returnSelection(@js(old('selected', [])))">
-        <header class="catalogue-heading"><h1>Retur Produk</h1><div class="flex items-center gap-3"><a href="{{ route('returns.activity') }}" class="text-sm underline">Log Aktivitas</a><x-ui.notification-dropdown /></div></header>
+        <header class="catalogue-heading"><h1>Retur Produk</h1><div class="flex items-center gap-3"><a href="{{ route('returns.activity') }}" class="text-sm underline">Log Aktivitas</a><x-ui.notification-dropdown class="hidden md:inline-flex" /></div></header>
         <div class="catalogue-summary return-summary">
             <div class="catalogue-summary__metric"><span class="text-sm text-muted">Total Produk Retur</span><strong>{{ $summary['products'] }}</strong><span class="text-xs text-muted">Jenis produk yang diretur</span><x-ui.icon name="stock-box" /></div>
             <div class="catalogue-summary__metric"><span class="text-sm text-muted">Total Unit Retur</span><strong>{{ number_format($summary['units']) }}</strong><span class="text-xs text-muted">Total kuantitas retur</span><x-ui.icon name="return-units" /></div>

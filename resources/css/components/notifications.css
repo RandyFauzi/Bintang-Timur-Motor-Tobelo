@@ -78,5 +78,11 @@
     .notification-dropdown-footer-link:hover { text-decoration: underline; }
 
     @media(max-width:1023px) { .notification-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); } .notification-item { flex-wrap: wrap; } .notification-item__action { margin-left: 60px; } }
+    @media(max-width:767px) {
+        .catalogue-heading .notification-dropdown,
+        .dashboard-header .notification-dropdown {
+            display: none !important;
+        }
+    }
     @media(max-width:639px) { .notification-heading { flex-direction: column; align-items: start; gap: 16px; } .notification-overview { padding: 16px; } .notification-metric { padding: 14px; gap: 8px; } .notification-metric strong { font-size: 24px; } .notification-item { padding: 18px 16px; gap: 12px; } .notification-item__body { flex-basis: calc(100% - 56px); } .notification-item__action { margin-left: 56px; } .notification-filters { padding: 16px; } .notification-filters .multi-filter { flex: 1; min-width: 0; } .notification-filters .filter-trigger { width: 100%; } }
 }

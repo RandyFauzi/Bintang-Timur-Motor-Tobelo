@@ -4,7 +4,7 @@
             <h1 class="text-2xl font-semibold tracking-tight">Dashboard</h1>
             <div class="flex items-center gap-3">
                 <x-ui.date-range-filter :range="$range" label="Filter periode dashboard" />
-                <x-ui.notification-dropdown />
+                <x-ui.notification-dropdown class="hidden md:inline-flex" />
             </div>
         </header>
 

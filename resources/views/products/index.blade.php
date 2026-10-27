@@ -1,7 +1,7 @@
 <x-app-layout :stock-overview="$stockOverview">
     <div class="catalogue-page product-catalogue" x-data="productSelection(@js(old('selected', [])))" :class="{ 'has-selection': selected.length > 0 }">
         @php($pageProductIds = $products->modelKeys())
-        <header class="catalogue-heading"><h1>Stok & Produk</h1><x-ui.notification-dropdown /></header>
+        <header class="catalogue-heading"><h1>Stok & Produk</h1><x-ui.notification-dropdown class="hidden md:inline-flex" /></header>
         <div class="catalogue-summary">
             <div class="catalogue-summary__metric"><span class="text-sm text-muted">Stok Menipis</span><strong>{{ $stockOverview['count'] }}</strong><span class="text-xs text-muted">Kondisi stok saat ini</span><x-ui.icon name="stock-box" /></div>
             <div class="catalogue-summary__chart"><p class="mb-4 text-sm text-muted">Jenis Part</p><x-ui.category-bar :categories="$categories" /></div>

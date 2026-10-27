@@ -1,6 +1,6 @@
 <x-app-layout>
     <div class="catalogue-page">
-        <header class="catalogue-heading"><h1>Distributor</h1><x-ui.notification-dropdown /></header>
+        <header class="catalogue-heading"><h1>Distributor</h1><x-ui.notification-dropdown class="hidden md:inline-flex" /></header>
         <div class="catalogue-summary catalogue-summary--equal">
             <div class="catalogue-summary__metric"><span class="text-sm text-muted">Jumlah Distributor</span><strong>{{ number_format($distributorCount,0,',','.') }} Distributor</strong><span class="text-xs text-muted">Distributor aktif saat ini</span><x-ui.icon name="stock-box" /></div>
             <div class="catalogue-summary__metric"><span class="text-sm text-muted">Produk Terhubung</span><strong>{{ number_format($linkedProductCount,0,',','.') }} Produk</strong><span class="text-xs text-muted">Produk dengan mitra distributor</span><x-ui.icon name="stock-box" /></div>

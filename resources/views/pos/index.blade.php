@@ -1,6 +1,6 @@
 <x-app-layout>
     <div class="catalogue-page pos-register" x-data="posRegister(@js($catalogueProducts), @js(['scan'=>route('pos.scan'),'checkout'=>route('pos.checkout'),'nextPageUrl'=>$products->nextPageUrl()]), @js('pos-cart:'.auth()->id()))" @keydown.window="shortcut($event)">
-        <header class="catalogue-heading"><h1>Kasir / POS</h1><div class="flex items-center gap-3"><span class="text-xs text-muted">F1 Cari · F4 Keranjang</span><x-ui.notification-dropdown /></div></header>
+        <header class="catalogue-heading"><h1>Kasir / POS</h1><div class="flex items-center gap-3"><span class="text-xs text-muted">F1 Cari · F4 Keranjang</span><x-ui.notification-dropdown class="hidden md:inline-flex" /></div></header>
         <section class="catalogue-surface" aria-label="Pilih produk">
             <form method="GET" action="{{ route('pos.index') }}">
                 <div class="catalogue-toolbar">

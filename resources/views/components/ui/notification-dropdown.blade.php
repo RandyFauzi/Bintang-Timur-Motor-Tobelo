@@ -1,4 +1,4 @@
-<div class="notification-dropdown relative" x-data="notificationDropdown(@js($items), @js($total))" @keydown.escape.window="open = false" @click.outside="open = false">
+<div {{ $attributes->class(['notification-dropdown', 'relative']) }} x-data="notificationDropdown(@js($items), @js($total))" @keydown.escape.window="open = false" @click.outside="open = false">
     <button type="button"
             class="notification-bell-btn"
             @click="toggle()"
