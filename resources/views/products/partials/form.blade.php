@@ -18,8 +18,8 @@
             <x-ui.field name="brand_name" label="Merk" :value="$product?->brand?->name" list="brand-options" placeholder="Tulis atau cari merk" maxlength="255" />
             <x-ui.field name="type_name" label="Jenis Part" :value="$product?->type?->name" list="type-options" placeholder="Tulis atau cari jenis part" maxlength="255" />
             <x-ui.field name="color_name" label="Warna" :value="$product?->color?->name" list="color-options" placeholder="Tulis atau cari warna" maxlength="255" />
-            <x-ui.field name="purchase_price" label="Modal" type="number" :value="$product?->purchase_price ?? 0" min="0" step="0.01" required />
-            <x-ui.field name="selling_price" label="Harga Jual" type="number" :value="$product?->selling_price ?? 0" min="0" step="0.01" required />
+            <x-ui.field name="purchase_price" label="Modal" type="number" :value="$product ? (float) $product->purchase_price : null" placeholder="0" min="0" step="0.01" onfocus="this.select()" required />
+            <x-ui.field name="selling_price" label="Harga Jual" type="number" :value="$product ? (float) $product->selling_price : null" placeholder="0" min="0" step="0.01" onfocus="this.select()" required />
             <x-ui.field name="product_kind" label="Tipe Produk"><select id="product_kind" name="product_kind" class="form-input">@foreach(\App\Models\Product::KINDS as $value => $kindLabel)<option value="{{ $value }}" @selected(old('product_kind',$product?->product_kind ?? 'daily') === $value)>{{ $kindLabel }}</option>@endforeach</select></x-ui.field>
             <x-ui.field name="distributor_ids" label="Distributor">
                 <x-ui.multiselect class="product-distributor-picker" name="distributor_ids[]" id="distributor_ids" label="Pilih Distributor" :options="$distributors->merge($product?->distributors ?? collect())->unique('id')->sortBy('name')->values()" :selected="array_slice(old('distributor_ids', $product?->distributors->modelKeys() ?? []), 0, 1)" :multiple="false" :submit-on-apply="false" :dropdown="true" icon="workshop" />
@@ -29,8 +29,8 @@
             @if($product)<div class="form-field"><span class="form-field__label">SKU</span><p class="py-2 text-sm text-muted">{{ $product->sku }}</p></div>@else<x-ui.field name="sku" label="SKU (opsional)" hint="Dibuat otomatis jika dikosongkan." maxlength="100" />@endif
         </fieldset>
         <div class="form-grid">
-            <x-ui.field name="quantity" label="Jumlah Stok" type="number" :value="$product?->stock?->quantity ?? 0" min="0" max="100000000" required />
-            <x-ui.field name="stock_minimum" label="Stok Minimum" type="number" :value="$product?->stock_minimum ?? 0" min="0" max="100000000" required />
+            <x-ui.field name="quantity" label="Jumlah Stok" type="number" :value="$product ? $product->stock?->quantity : null" placeholder="0" min="0" max="100000000" onfocus="this.select()" required />
+            <x-ui.field name="stock_minimum" label="Stok Minimum" type="number" :value="$product ? $product->stock_minimum : null" placeholder="0" min="0" max="100000000" onfocus="this.select()" required />
         </div>
         @if($product)
             <button type="button" class="edit-link justify-self-start" @click="detailsExpanded = !detailsExpanded" :aria-expanded="detailsExpanded" aria-controls="product-edit-details">

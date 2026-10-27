@@ -32,7 +32,7 @@
                     <label class="block text-sm font-medium text-gray-900 mb-2">Harga Modal <span class="text-red-500">*</span></label>
                     <div class="relative">
                         <span class="absolute left-3 top-2.5 text-gray-500 text-sm">Rp</span>
-                        <input type="number" name="purchase_price" required min="0" class="w-full pl-9 bg-gray-50 border-transparent focus:border-[#C62828] focus:bg-white focus:ring-0 rounded-xl text-sm" placeholder="0">
+                        <input type="number" name="purchase_price" required min="0" class="w-full pl-9 bg-gray-50 border-transparent focus:border-[#C62828] focus:bg-white focus:ring-0 rounded-xl text-sm" placeholder="0" onfocus="this.select()">
                     </div>
                 </div>
 
@@ -40,18 +40,18 @@
                     <label class="block text-sm font-medium text-gray-900 mb-2">Harga Jual <span class="text-red-500">*</span></label>
                     <div class="relative">
                         <span class="absolute left-3 top-2.5 text-gray-500 text-sm">Rp</span>
-                        <input type="number" name="selling_price" required min="0" class="w-full pl-9 bg-gray-50 border-transparent focus:border-[#C62828] focus:bg-white focus:ring-0 rounded-xl text-sm" placeholder="0">
+                        <input type="number" name="selling_price" required min="0" class="w-full pl-9 bg-gray-50 border-transparent focus:border-[#C62828] focus:bg-white focus:ring-0 rounded-xl text-sm" placeholder="0" onfocus="this.select()">
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-900 mb-2">Stok Awal <span class="text-red-500">*</span></label>
-                    <input type="number" name="initial_stock" required min="0" value="0" class="w-full bg-gray-50 border-transparent focus:border-[#C62828] focus:bg-white focus:ring-0 rounded-xl text-sm">
+                    <input type="number" name="initial_stock" required min="0" class="w-full bg-gray-50 border-transparent focus:border-[#C62828] focus:bg-white focus:ring-0 rounded-xl text-sm" placeholder="0" onfocus="this.select()">
                 </div>
                 
                 <div>
                     <label class="block text-sm font-medium text-gray-900 mb-2">Batas Minimum Peringatan Stok</label>
-                    <input type="number" name="stock_minimum" required min="0" value="5" class="w-full bg-gray-50 border-transparent focus:border-[#C62828] focus:bg-white focus:ring-0 rounded-xl text-sm">
+                    <input type="number" name="stock_minimum" required min="0" class="w-full bg-gray-50 border-transparent focus:border-[#C62828] focus:bg-white focus:ring-0 rounded-xl text-sm" placeholder="0" onfocus="this.select()">
                 </div>
             </div>
 

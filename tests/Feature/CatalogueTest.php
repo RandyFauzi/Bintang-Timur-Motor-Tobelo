@@ -194,4 +194,42 @@ class CatalogueTest extends TestCase
         $this->assertSame(10, $product->stock->quantity);
         $this->assertDatabaseCount('stock_movements', 0);
     }
+
+    public function test_product_form_numeric_inputs_do_not_default_to_zero_value(): void
+    {
+        $user = User::factory()->create();
+
+        // 1. When creating a new product, numeric inputs are empty with placeholder="0" (not value="0")
+        $createPage = $this->actingAs($user)->get(route('products.index', ['create' => 1]));
+        $createPage->assertOk();
+
+        $content = $createPage->getContent();
+        // Ensure no value="0" for purchase_price, selling_price, quantity, stock_minimum in create form
+        $this->assertMatchesRegularExpression('/<input[^>]+name="purchase_price"[^>]+value=""[^>]*>/', $content);
+        $this->assertMatchesRegularExpression('/<input[^>]+name="selling_price"[^>]+value=""[^>]*>/', $content);
+        $this->assertMatchesRegularExpression('/<input[^>]+name="quantity"[^>]+value=""[^>]*>/', $content);
+        $this->assertMatchesRegularExpression('/<input[^>]+name="stock_minimum"[^>]+value=""[^>]*>/', $content);
+
+        // Ensure placeholder="0" is present
+        $this->assertMatchesRegularExpression('/<input[^>]+name="purchase_price"[^>]+placeholder="0"[^>]*>/', $content);
+        $this->assertMatchesRegularExpression('/<input[^>]+name="selling_price"[^>]+placeholder="0"[^>]*>/', $content);
+        $this->assertMatchesRegularExpression('/<input[^>]+name="quantity"[^>]+placeholder="0"[^>]*>/', $content);
+        $this->assertMatchesRegularExpression('/<input[^>]+name="stock_minimum"[^>]+placeholder="0"[^>]*>/', $content);
+
+        // 2. When editing an existing product, numeric inputs retain actual values
+        $product = Product::factory()->withStock(25)->create([
+            'purchase_price' => 75000,
+            'selling_price' => 95000,
+            'stock_minimum' => 8,
+        ]);
+
+        $editPage = $this->actingAs($user)->get(route('products.index', ['edit' => $product->id]));
+        $editPage->assertOk();
+        $editContent = $editPage->getContent();
+
+        $this->assertMatchesRegularExpression('/<input[^>]+name="purchase_price"[^>]+value="75000"[^>]*>/', $editContent);
+        $this->assertMatchesRegularExpression('/<input[^>]+name="selling_price"[^>]+value="95000"[^>]*>/', $editContent);
+        $this->assertMatchesRegularExpression('/<input[^>]+name="quantity"[^>]+value="25"[^>]*>/', $editContent);
+        $this->assertMatchesRegularExpression('/<input[^>]+name="stock_minimum"[^>]+value="8"[^>]*>/', $editContent);
+    }
 }
