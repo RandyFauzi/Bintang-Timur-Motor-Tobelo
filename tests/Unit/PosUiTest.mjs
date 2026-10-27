@@ -197,3 +197,47 @@ test('decrement reduces quantity or removes product from cart, and onProductClic
     state.onProductClick({ ...product, available: 0 });
     assert.equal(state.quantity(product.id), 0);
 });
+
+test('posRegister loadMore fetches and appends new products incrementally', async () => {
+    const savedFetch = globalThis.fetch;
+    try {
+        let fetchUrl;
+        globalThis.fetch = async (url) => {
+            fetchUrl = url;
+            return {
+                ok: true,
+                json: async () => ({
+                    products: [
+                        { id: 2, name: 'Busi', price: 25000, available: 5 },
+                        { id: 1, name: 'Oli', price: 50000.25, available: 3 },
+                    ],
+                    next_page_url: null,
+                    has_more: false,
+                    total: 2,
+                }),
+            };
+        };
+
+        const state = posRegister(
+            [{ ...product }],
+            { checkout: '/checkout', scan: '/scan', nextPageUrl: '/pos?page=2' },
+            'pos-test'
+        );
+
+        assert.equal(state.products.length, 1);
+        assert.equal(state.hasMore, true);
+        assert.equal(state.nextPageUrl, '/pos?page=2');
+
+        await state.loadMore();
+
+        assert.equal(fetchUrl, '/pos?page=2');
+        assert.equal(state.products.length, 2);
+        assert.equal(state.products[1].id, 2);
+        assert.equal(state.products[1].name, 'Busi');
+        assert.equal(state.hasMore, false);
+        assert.equal(state.nextPageUrl, null);
+        assert.equal(state.loadingMore, false);
+    } finally {
+        globalThis.fetch = savedFetch;
+    }
+});

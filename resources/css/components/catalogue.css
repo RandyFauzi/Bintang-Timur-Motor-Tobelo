@@ -356,6 +356,8 @@
             border-radius: 16px;
             box-shadow: 0 20px 25px -5px rgb(0 0 0 / 30%), 0 8px 10px -6px rgb(0 0 0 / 30%);
         }
+        .mobile-infinite-scroll { display: block; width: 100%; }
+        .catalogue-pagination { display: none; }
     }
     @media (max-width: 639px) {
         .catalogue-heading { align-items: flex-start; flex-wrap: wrap; }
@@ -429,5 +431,35 @@
     .distributor-autocomplete-add:hover,
     .distributor-autocomplete-add.is-highlighted {
         background: #dcfce7;
+    }
+
+    .mobile-infinite-scroll { display: none; }
+    .infinite-scroll-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 18px 12px;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--color-text-muted, #64748b);
+    }
+    .infinite-scroll-spinner {
+        width: 20px;
+        height: 20px;
+        border: 2.5px solid #e2e8f0;
+        border-top-color: var(--color-text, #1e293b);
+        border-radius: 50%;
+        animation: infinite-scroll-spin 0.75s linear infinite;
+        flex-shrink: 0;
+    }
+    @keyframes infinite-scroll-spin {
+        to { transform: rotate(360deg); }
+    }
+    .infinite-scroll-end {
+        padding: 16px 12px;
+        text-align: center;
+        font-size: 13px;
+        color: var(--color-text-muted, #94a3b8);
     }
 }

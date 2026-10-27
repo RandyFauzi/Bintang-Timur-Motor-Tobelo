@@ -1,5 +1,5 @@
 <x-app-layout>
-    <div class="catalogue-page pos-register" x-data="posRegister(@js($catalogueProducts), @js(['scan'=>route('pos.scan'),'checkout'=>route('pos.checkout')]), @js('pos-cart:'.auth()->id()))" @keydown.window="shortcut($event)">
+    <div class="catalogue-page pos-register" x-data="posRegister(@js($catalogueProducts), @js(['scan'=>route('pos.scan'),'checkout'=>route('pos.checkout'),'nextPageUrl'=>$products->nextPageUrl()]), @js('pos-cart:'.auth()->id()))" @keydown.window="shortcut($event)">
         <header class="catalogue-heading"><h1>Kasir / POS</h1><div class="flex items-center gap-3"><span class="text-xs text-muted">F1 Cari · F4 Keranjang</span><x-ui.notification-dropdown /></div></header>
         <section class="catalogue-surface" aria-label="Pilih produk">
             <form method="GET" action="{{ route('pos.index') }}">
@@ -44,7 +44,28 @@
                 </template>
                 @if($products->isEmpty())<div class="col-span-full"><x-ui.empty-state title="Produk tidak ditemukan" description="Ubah pencarian atau filter untuk memilih produk lainnya." /></div>@endif
             </div>
-            <x-ui.pagination :paginator="$products" />
+            <div class="pos-infinite-scroll mobile-infinite-scroll md:hidden"
+                 x-show="window.innerWidth <= 767"
+                 x-init="
+                    if (window.innerWidth <= 767 && hasMore) {
+                        const obs = new IntersectionObserver((entries) => {
+                            if (entries[0].isIntersecting && hasMore && !loadingMore && window.innerWidth <= 767) {
+                                loadMore();
+                            }
+                        }, { rootMargin: '250px' });
+                        obs.observe($refs.posSentinel);
+                    }
+                 ">
+                <div x-show="loadingMore" class="infinite-scroll-loading" aria-live="polite">
+                    <span class="infinite-scroll-spinner" aria-hidden="true"></span>
+                    <span>Memuat produk...</span>
+                </div>
+                <div x-ref="posSentinel" class="h-4 w-full" x-show="hasMore && !loadingMore" aria-hidden="true"></div>
+                <div x-show="!hasMore && products.length > 0 && @js($products->total() > 6)" class="infinite-scroll-end">
+                    Semua produk telah dimuat ({{ $products->total() }} produk)
+                </div>
+            </div>
+            <x-ui.pagination :paginator="$products" :infinite="false" />
         </section>
         @include('pos.partials.cart')
         @include('pos.partials.review')

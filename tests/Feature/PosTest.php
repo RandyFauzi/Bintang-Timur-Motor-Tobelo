@@ -111,4 +111,32 @@ class PosTest extends TestCase
         $this->assertDatabaseCount('sales', 0);
         $this->assertDatabaseCount('stock_movements', 0);
     }
+
+    public function test_pos_json_request_returns_paginated_products_for_mobile_infinite_scroll(): void
+    {
+        Product::factory()->withStock(5)->count(9)->create();
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        // Page 1
+        $response = $this->getJson(route('pos.index', ['page' => 1]))->assertOk();
+        $response->assertJsonStructure([
+            'products',
+            'next_page_url',
+            'has_more',
+            'total',
+        ]);
+
+        $this->assertCount(6, $response->json('products'));
+        $this->assertTrue($response->json('has_more'));
+        $this->assertStringContainsString('page=2', $response->json('next_page_url'));
+        $this->assertSame(9, $response->json('total'));
+
+        // Page 2
+        $responsePage2 = $this->getJson(route('pos.index', ['page' => 2]))->assertOk();
+        $this->assertCount(3, $responsePage2->json('products'));
+        $this->assertFalse($responsePage2->json('has_more'));
+        $this->assertNull($responsePage2->json('next_page_url'));
+    }
 }

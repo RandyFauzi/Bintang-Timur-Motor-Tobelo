@@ -13,10 +13,19 @@ use Illuminate\View\View;
 
 class PosController extends Controller
 {
-    public function index(CatalogueFilterRequest $request, CatalogueService $catalogue): View
+    public function index(CatalogueFilterRequest $request, CatalogueService $catalogue): View|JsonResponse
     {
         $products = $catalogue->products($request->validated())
             ->paginate((int) ($request->validated('per_page') ?? 6))->withQueryString();
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'products' => $products->getCollection()->map(fn (Product $product): array => $this->productData($product))->values(),
+                'next_page_url' => $products->nextPageUrl(),
+                'has_more' => $products->hasMorePages(),
+                'total' => $products->total(),
+            ]);
+        }
 
         return view('pos.index', array_merge($catalogue->options(), [
             'products' => $products,

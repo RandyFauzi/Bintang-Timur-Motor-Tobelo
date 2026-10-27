@@ -296,4 +296,19 @@ class CatalogueTest extends TestCase
 
         $this->assertDatabaseHas('distributors', ['name' => 'Distributor Kilat Express']);
     }
+
+    public function test_pagination_component_renders_mobile_infinite_scroll_sentinel_and_loading_indicator(): void
+    {
+        Product::factory()->count(20)->withStock(5)->create();
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('products.index', ['view' => 'cards']))->assertOk();
+
+        $response->assertSee('mobileInfiniteScroll', false)
+            ->assertSee('mobile-infinite-scroll', false)
+            ->assertSee('infinite-scroll-loading', false)
+            ->assertSee('Memuat data...')
+            ->assertSee('x-ref="sentinel"', false)
+            ->assertSee('catalogue-pagination', false);
+    }
 }

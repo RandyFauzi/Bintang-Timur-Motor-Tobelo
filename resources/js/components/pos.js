@@ -2,6 +2,9 @@ export function posRegister(products, endpoints, storageKey) {
     return {
         products, endpoints, storageKey, cart: [], busy: false, scanning: false,
         error: '', result: null, storage: null,
+        nextPageUrl: endpoints?.nextPageUrl ?? null,
+        hasMore: Boolean(endpoints?.nextPageUrl),
+        loadingMore: false,
         init() {
             try {
                 this.storage = window.sessionStorage;
@@ -154,6 +157,32 @@ export function posRegister(products, endpoints, storageKey) {
                 if (this.busy) return;
                 if (document.getElementById('pos-review').open) document.getElementById('pos-save-transaction')?.focus();
                 else this.openCart();
+            }
+        },
+        async loadMore() {
+            if (this.loadingMore || !this.hasMore || !this.nextPageUrl) return;
+            this.loadingMore = true;
+            try {
+                const response = await fetch(this.nextPageUrl, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                });
+                if (!response.ok) throw new Error('Gagal memuat produk');
+                const data = await response.json();
+                if (data.products && Array.isArray(data.products)) {
+                    const existing = new Set(this.products.map((p) => p.id));
+                    for (const p of data.products) {
+                        if (!existing.has(p.id)) {
+                            this.products.push(p);
+                            existing.add(p.id);
+                        }
+                    }
+                }
+                this.nextPageUrl = data.next_page_url ?? null;
+                this.hasMore = Boolean(this.nextPageUrl);
+            } catch (err) {
+                console.error('POS loadMore error:', err);
+            } finally {
+                this.loadingMore = false;
             }
         },
     };

@@ -1,3 +1,4 @@
+import { mobileInfiniteScroll } from './components/infinite-scroll';
 import { purchaseOrderForm, purchaseOrderReceipt, purchasePlanForm } from './components/purchase-orders';
 import { purchaseOrderNotes } from './components/purchase-order-notes';
 import Alpine from 'alpinejs';
@@ -31,6 +32,7 @@ Alpine.data('returnSelection', returnSelection);
 Alpine.data('productSelection', productSelection);
 Alpine.data('productPicker', productPicker);
 Alpine.data('posRegister', posRegister);
+Alpine.data('mobileInfiniteScroll', mobileInfiniteScroll);
 Alpine.data('transactionEditor', transactionEditor);
 
 Alpine.data('purchaseOrderForm', purchaseOrderForm);
