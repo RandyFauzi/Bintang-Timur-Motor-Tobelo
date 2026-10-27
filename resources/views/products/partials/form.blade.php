@@ -21,9 +21,134 @@
         <fieldset id="product-edit-details" class="form-grid min-w-0" x-show="detailsExpanded" :disabled="!detailsExpanded" @disabled(! $detailsExpanded) @if(! $detailsExpanded) x-cloak @endif>
             <legend class="sr-only">Detail informasi produk</legend>
             <x-ui.field name="name" label="Nama Produk" :value="$product?->name" required maxlength="255" />
-            <x-ui.field name="brand_name" label="Merk" :value="$product?->brand?->name" list="brand-options" placeholder="Tulis atau cari merk" maxlength="255" />
-            <x-ui.field name="type_name" label="Jenis Part" :value="$product?->type?->name" list="type-options" placeholder="Tulis atau cari jenis part" maxlength="255" />
-            <x-ui.field name="color_name" label="Warna" :value="$product?->color?->name" list="color-options" placeholder="Tulis atau cari warna" maxlength="255" />
+            <div class="form-field relative" x-data="customSelectAutocomplete(@js($brands->pluck('name')), @js($product?->brand?->name ?? old('brand_name', '')))" @click.outside="close()" @keydown.escape="close()">
+                <label for="brand_name" class="form-field__label">Merk</label>
+                <div class="relative flex items-center">
+                    <input
+                        id="brand_name"
+                        name="brand_name"
+                        type="text"
+                        class="form-input !pr-9 w-full"
+                        placeholder="Tulis atau cari merk..."
+                        autocomplete="off"
+                        x-ref="input"
+                        x-model="query"
+                        @focus="openDropdown()"
+                        @input="openDropdown()"
+                        @keydown.arrow-down.prevent="onArrowDown()"
+                        @keydown.arrow-up.prevent="onArrowUp()"
+                        @keydown.enter="onEnter($event)"
+                        maxlength="255"
+                    >
+                    <template x-if="query.trim()">
+                        <button type="button" class="absolute right-3 flex items-center text-muted hover:text-stone-900" @click="clear(); $refs.input.focus();" title="Kosongkan" aria-label="Kosongkan merk">
+                            <x-ui.icon name="close" :size="14" />
+                        </button>
+                    </template>
+                    <template x-if="!query.trim()">
+                        <button type="button" class="absolute right-3 flex items-center text-muted hover:text-stone-900" @click="toggle(); if(open) $refs.input.focus();" title="Pilih merk" aria-label="Buka pilihan merk" tabindex="-1">
+                            <x-ui.icon name="chevron" :size="14" class="rotate-90" />
+                        </button>
+                    </template>
+                </div>
+                <div x-show="open && filtered.length > 0" x-cloak x-transition.opacity class="system-autocomplete-menu" role="listbox" tabindex="-1">
+                    <div class="max-h-52 overflow-y-auto py-1">
+                        <template x-for="(item, index) in filtered" :key="item">
+                            <button type="button" class="system-autocomplete-item" :class="{ 'is-highlighted': highlightedIndex === index, 'is-selected': query.trim().toLowerCase() === item.toLowerCase() }" @click="select(item)" @mouseenter="highlightedIndex = index" role="option">
+                                <span class="truncate font-medium" x-text="item"></span>
+                                <span x-show="query.trim().toLowerCase() === item.toLowerCase()" class="text-xs text-green-700 font-semibold" aria-hidden="true">✓</span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+                @error('brand_name')<p class="field-error">{{ $message }}</p>@enderror
+            </div>
+
+            <div class="form-field relative" x-data="customSelectAutocomplete(@js($types->pluck('name')), @js($product?->type?->name ?? old('type_name', '')))" @click.outside="close()" @keydown.escape="close()">
+                <label for="type_name" class="form-field__label">Jenis Part</label>
+                <div class="relative flex items-center">
+                    <input
+                        id="type_name"
+                        name="type_name"
+                        type="text"
+                        class="form-input !pr-9 w-full"
+                        placeholder="Tulis atau cari jenis part..."
+                        autocomplete="off"
+                        x-ref="input"
+                        x-model="query"
+                        @focus="openDropdown()"
+                        @input="openDropdown()"
+                        @keydown.arrow-down.prevent="onArrowDown()"
+                        @keydown.arrow-up.prevent="onArrowUp()"
+                        @keydown.enter="onEnter($event)"
+                        maxlength="255"
+                    >
+                    <template x-if="query.trim()">
+                        <button type="button" class="absolute right-3 flex items-center text-muted hover:text-stone-900" @click="clear(); $refs.input.focus();" title="Kosongkan" aria-label="Kosongkan jenis part">
+                            <x-ui.icon name="close" :size="14" />
+                        </button>
+                    </template>
+                    <template x-if="!query.trim()">
+                        <button type="button" class="absolute right-3 flex items-center text-muted hover:text-stone-900" @click="toggle(); if(open) $refs.input.focus();" title="Pilih jenis part" aria-label="Buka pilihan jenis part" tabindex="-1">
+                            <x-ui.icon name="chevron" :size="14" class="rotate-90" />
+                        </button>
+                    </template>
+                </div>
+                <div x-show="open && filtered.length > 0" x-cloak x-transition.opacity class="system-autocomplete-menu" role="listbox" tabindex="-1">
+                    <div class="max-h-52 overflow-y-auto py-1">
+                        <template x-for="(item, index) in filtered" :key="item">
+                            <button type="button" class="system-autocomplete-item" :class="{ 'is-highlighted': highlightedIndex === index, 'is-selected': query.trim().toLowerCase() === item.toLowerCase() }" @click="select(item)" @mouseenter="highlightedIndex = index" role="option">
+                                <span class="truncate font-medium" x-text="item"></span>
+                                <span x-show="query.trim().toLowerCase() === item.toLowerCase()" class="text-xs text-green-700 font-semibold" aria-hidden="true">✓</span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+                @error('type_name')<p class="field-error">{{ $message }}</p>@enderror
+            </div>
+
+            <div class="form-field relative" x-data="customSelectAutocomplete(@js($colors->pluck('name')), @js($product?->color?->name ?? old('color_name', '')))" @click.outside="close()" @keydown.escape="close()">
+                <label for="color_name" class="form-field__label">Warna</label>
+                <div class="relative flex items-center">
+                    <input
+                        id="color_name"
+                        name="color_name"
+                        type="text"
+                        class="form-input !pr-9 w-full"
+                        placeholder="Tulis atau cari warna..."
+                        autocomplete="off"
+                        x-ref="input"
+                        x-model="query"
+                        @focus="openDropdown()"
+                        @input="openDropdown()"
+                        @keydown.arrow-down.prevent="onArrowDown()"
+                        @keydown.arrow-up.prevent="onArrowUp()"
+                        @keydown.enter="onEnter($event)"
+                        maxlength="255"
+                    >
+                    <template x-if="query.trim()">
+                        <button type="button" class="absolute right-3 flex items-center text-muted hover:text-stone-900" @click="clear(); $refs.input.focus();" title="Kosongkan" aria-label="Kosongkan warna">
+                            <x-ui.icon name="close" :size="14" />
+                        </button>
+                    </template>
+                    <template x-if="!query.trim()">
+                        <button type="button" class="absolute right-3 flex items-center text-muted hover:text-stone-900" @click="toggle(); if(open) $refs.input.focus();" title="Pilih warna" aria-label="Buka pilihan warna" tabindex="-1">
+                            <x-ui.icon name="chevron" :size="14" class="rotate-90" />
+                        </button>
+                    </template>
+                </div>
+                <div x-show="open && filtered.length > 0" x-cloak x-transition.opacity class="system-autocomplete-menu" role="listbox" tabindex="-1">
+                    <div class="max-h-52 overflow-y-auto py-1">
+                        <template x-for="(item, index) in filtered" :key="item">
+                            <button type="button" class="system-autocomplete-item" :class="{ 'is-highlighted': highlightedIndex === index, 'is-selected': query.trim().toLowerCase() === item.toLowerCase() }" @click="select(item)" @mouseenter="highlightedIndex = index" role="option">
+                                <span class="truncate font-medium" x-text="item"></span>
+                                <span x-show="query.trim().toLowerCase() === item.toLowerCase()" class="text-xs text-green-700 font-semibold" aria-hidden="true">✓</span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+                @error('color_name')<p class="field-error">{{ $message }}</p>@enderror
+            </div>
             <x-ui.field name="purchase_price" label="Modal" type="number" :value="$product ? (float) $product->purchase_price : null" placeholder="0" min="0" step="0.01" onfocus="this.select()" required />
             <x-ui.field name="selling_price" label="Harga Jual" type="number" :value="$product ? (float) $product->selling_price : null" placeholder="0" min="0" step="0.01" onfocus="this.select()" required />
             <x-ui.field name="product_kind" label="Tipe Produk"><select id="product_kind" name="product_kind" class="form-input">@foreach(\App\Models\Product::KINDS as $value => $kindLabel)<option value="{{ $value }}" @selected(old('product_kind',$product?->product_kind ?? 'daily') === $value)>{{ $kindLabel }}</option>@endforeach</select></x-ui.field>
@@ -137,7 +262,6 @@
                 <span x-text="detailsExpanded ? 'Tutup Detail' : 'Edit Detail'">Edit Detail</span><x-ui.icon name="chevron" :size="16" x-bind:class="{ 'rotate-90': detailsExpanded }" />
             </button>
         @endif
-        @foreach(['brand'=>'brands','type'=>'types','color'=>'colors'] as $name=>$collection)<datalist id="{{ $name }}-options">@foreach($$collection as $option)<option value="{{ $option->name }}">@endforeach</datalist>@endforeach
         <footer class="dialog-actions"><button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button><button type="submit" class="ui-button" :disabled="submitting" x-text="submitting ? 'Menyimpan…' : 'Simpan'">Simpan</button></footer>
     </form>
         </div>

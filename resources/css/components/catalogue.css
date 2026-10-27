@@ -380,7 +380,8 @@
     @media (prefers-reduced-motion: reduce) {
         .ui-dialog:has(form):not(.pos-cart-sheet)[open] { animation: none; }
     }
-    .distributor-autocomplete-menu {
+    .distributor-autocomplete-menu,
+    .system-autocomplete-menu {
         position: absolute;
         top: calc(100% + 4px);
         left: 0;
@@ -392,7 +393,8 @@
         box-shadow: 0 6px 18px rgb(0 0 0 / 12%);
         overflow: hidden;
     }
-    .distributor-autocomplete-item {
+    .distributor-autocomplete-item,
+    .system-autocomplete-item {
         display: flex;
         width: 100%;
         min-height: 40px;
@@ -406,10 +408,13 @@
         transition: background .12s;
     }
     .distributor-autocomplete-item:hover,
-    .distributor-autocomplete-item.is-highlighted {
+    .distributor-autocomplete-item.is-highlighted,
+    .system-autocomplete-item:hover,
+    .system-autocomplete-item.is-highlighted {
         background: var(--color-page);
     }
-    .distributor-autocomplete-item.is-selected {
+    .distributor-autocomplete-item.is-selected,
+    .system-autocomplete-item.is-selected {
         background: #f0f1ed;
         font-weight: 600;
     }

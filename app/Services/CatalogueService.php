@@ -59,7 +59,12 @@ class CatalogueService
     /** @return array<string, mixed> */
     public function options(): array
     {
-        return ['brands' => Brand::where('is_active', true)->orderBy('name')->get(), 'types' => ProductType::where('is_active', true)->orderBy('name')->get(), 'colors' => Color::where('is_active', true)->orderBy('name')->get(), 'distributors' => Distributor::where('is_active', true)->orderBy('name')->get()];
+        return [
+            'brands' => Brand::where('is_active', true)->where('name', 'not like', '[DEMO]%')->orderBy('name')->get(),
+            'types' => ProductType::where('is_active', true)->where('name', 'not like', '[DEMO]%')->orderBy('name')->get(),
+            'colors' => Color::where('is_active', true)->where('name', 'not like', '[DEMO]%')->orderBy('name')->get(),
+            'distributors' => Distributor::where('is_active', true)->orderBy('name')->get(),
+        ];
     }
 
     /** @param array<string, mixed> $data */

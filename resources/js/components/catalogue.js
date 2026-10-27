@@ -344,3 +344,77 @@ export function distributorAutocomplete(options = [], initialId = null, initialN
         },
     };
 }
+
+export function customSelectAutocomplete(options = [], initialValue = '') {
+    return {
+        query: typeof initialValue === 'string' ? initialValue : '',
+        options: Array.isArray(options) ? options.map((opt) => (typeof opt === 'string' ? opt : (opt?.name ?? String(opt)))) : [],
+        open: false,
+        highlightedIndex: -1,
+
+        get filtered() {
+            const q = this.query.trim().toLowerCase();
+            if (!q) return this.options.slice(0, 30);
+            return this.options.filter((opt) => opt.toLowerCase().includes(q)).slice(0, 30);
+        },
+
+        openDropdown() {
+            this.open = true;
+            this.highlightedIndex = -1;
+        },
+
+        close() {
+            this.open = false;
+            this.highlightedIndex = -1;
+        },
+
+        toggle() {
+            this.open = !this.open;
+            this.highlightedIndex = -1;
+        },
+
+        select(name) {
+            this.query = name;
+            this.open = false;
+            this.highlightedIndex = -1;
+        },
+
+        clear() {
+            this.query = '';
+            this.open = false;
+            this.highlightedIndex = -1;
+        },
+
+        onArrowDown() {
+            if (!this.open) {
+                this.open = true;
+                return;
+            }
+            const count = this.filtered.length;
+            if (count === 0) return;
+            this.highlightedIndex = (this.highlightedIndex + 1) % count;
+        },
+
+        onArrowUp() {
+            if (!this.open) {
+                this.open = true;
+                return;
+            }
+            const count = this.filtered.length;
+            if (count === 0) return;
+            this.highlightedIndex = (this.highlightedIndex - 1 + count) % count;
+        },
+
+        onEnter(event) {
+            if (!this.open) return;
+            const items = this.filtered;
+            if (this.highlightedIndex >= 0 && this.highlightedIndex < items.length) {
+                event.preventDefault();
+                this.select(items[this.highlightedIndex]);
+            } else if (items.length > 0 && this.highlightedIndex === -1 && this.query.trim()) {
+                event.preventDefault();
+                this.select(items[0]);
+            }
+        },
+    };
+}

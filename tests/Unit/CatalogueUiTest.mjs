@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { appDialog, distributorAutocomplete, multiSelect, observationForm } from '../../resources/js/components/catalogue.js';
+import { appDialog, customSelectAutocomplete, distributorAutocomplete, multiSelect, observationForm } from '../../resources/js/components/catalogue.js';
 
 const options = [{ id: '1', name: 'Oli' }, { id: '2', name: 'Rem' }, { id: '3', name: 'Rantai' }];
 
@@ -339,4 +339,26 @@ test('distributorAutocomplete can create a new distributor inline via API', asyn
         globalThis.window = previousWindow;
         globalThis.document = previousDocument;
     }
+});
+
+test('customSelectAutocomplete filters options, selects items, and toggles dropdown', () => {
+    const comp = customSelectAutocomplete(['Aksesoris', 'Ban Motor', 'Body', 'CVT'], 'Ban');
+    assert.equal(comp.query, 'Ban');
+    assert.deepEqual(comp.filtered, ['Ban Motor']);
+
+    comp.openDropdown();
+    assert.equal(comp.open, true);
+
+    comp.select('Aksesoris');
+    assert.equal(comp.query, 'Aksesoris');
+    assert.equal(comp.open, false);
+
+    comp.clear();
+    assert.equal(comp.query, '');
+    assert.equal(comp.filtered.length, 4);
+
+    comp.toggle();
+    assert.equal(comp.open, true);
+    comp.toggle();
+    assert.equal(comp.open, false);
 });
