@@ -7,6 +7,7 @@ export function mobileInfiniteScroll(config = {}) {
         hasMore: Boolean(config.nextPageUrl),
         isMobile: false,
         observer: null,
+        scrollHandler: null,
 
         init() {
             this.checkMobile();
@@ -24,14 +25,20 @@ export function mobileInfiniteScroll(config = {}) {
         },
 
         checkMobile() {
-            this.isMobile = typeof window !== 'undefined' && (window.innerWidth <= 767);
+            this.isMobile = typeof window !== 'undefined' && (
+                window.innerWidth <= 767 ||
+                (typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 767.98px)').matches)
+            );
         },
 
         findContainer(root) {
             if (!root) return null;
 
             // 1. Grid / Card / Feed container
-            const grid = root.querySelector('.catalogue-card-grid, .notification-list, .observation-list, .distributor-list');
+            const grid = root.matches?.('.catalogue-card-grid, .notification-list, .observation-list, .distributor-list')
+                ? root
+                : root.querySelector?.('.catalogue-card-grid, .notification-list, .observation-list, .distributor-list');
+
             if (grid) {
                 return {
                     container: grid,
@@ -41,7 +48,10 @@ export function mobileInfiniteScroll(config = {}) {
             }
 
             // 2. Table tbody container
-            const tbody = root.querySelector('.catalogue-table tbody, .procurement-table tbody, .return-table tbody, table tbody');
+            const tbody = root.matches?.('tbody')
+                ? root
+                : root.querySelector?.('.catalogue-table tbody, .procurement-table tbody, .return-table tbody, table tbody');
+
             if (tbody) {
                 return {
                     container: tbody,
@@ -54,33 +64,50 @@ export function mobileInfiniteScroll(config = {}) {
         },
 
         setupObserver() {
-            if (typeof window === 'undefined' || typeof IntersectionObserver === 'undefined') return;
+            if (typeof window === 'undefined') return;
 
-            const attach = () => {
-                const sentinel = this.$refs?.sentinel;
-                if (!sentinel) return;
+            // 1. IntersectionObserver
+            if (typeof IntersectionObserver !== 'undefined') {
+                const attach = () => {
+                    const sentinel = this.$refs?.sentinel;
+                    if (!sentinel) return;
 
-                if (this.observer) {
-                    this.observer.disconnect();
+                    if (this.observer) {
+                        this.observer.disconnect();
+                    }
+
+                    this.observer = new IntersectionObserver((entries) => {
+                        const entry = entries[0];
+                        if (entry && entry.isIntersecting && this.isMobile && this.hasMore && !this.loading) {
+                            this.loadMore();
+                        }
+                    }, {
+                        rootMargin: '400px 0px',
+                        threshold: 0,
+                    });
+
+                    this.observer.observe(sentinel);
+                };
+
+                if (this.$nextTick) {
+                    this.$nextTick(attach);
+                } else {
+                    attach();
                 }
+            }
 
-                this.observer = new IntersectionObserver((entries) => {
-                    const entry = entries[0];
-                    if (entry && entry.isIntersecting && this.isMobile && this.hasMore && !this.loading) {
+            // 2. Scroll listener fallback for mobile
+            if (!this.scrollHandler) {
+                this.scrollHandler = () => {
+                    if (!this.isMobile || !this.hasMore || this.loading) return;
+                    const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+                    const innerHeight = window.innerHeight || document.documentElement.clientHeight;
+                    const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
+                    if (scrollY + innerHeight >= scrollHeight - 400) {
                         this.loadMore();
                     }
-                }, {
-                    rootMargin: '250px',
-                    threshold: 0.05,
-                });
-
-                this.observer.observe(sentinel);
-            };
-
-            if (this.$nextTick) {
-                this.$nextTick(attach);
-            } else {
-                attach();
+                };
+                window.addEventListener('scroll', this.scrollHandler, { passive: true });
             }
         },
 
@@ -131,8 +158,19 @@ export function mobileInfiniteScroll(config = {}) {
                 this.nextPageUrl = nextLink ? nextLink.getAttribute('href') : null;
                 this.hasMore = Boolean(this.nextPageUrl);
 
-                if (!this.hasMore && this.observer) {
-                    this.observer.disconnect();
+                if (!this.hasMore) {
+                    if (this.observer) {
+                        this.observer.disconnect();
+                        this.observer = null;
+                    }
+                    if (this.scrollHandler) {
+                        window.removeEventListener('scroll', this.scrollHandler);
+                        this.scrollHandler = null;
+                    }
+                } else {
+                    this.$nextTick?.(() => {
+                        this.setupObserver();
+                    });
                 }
             } catch (err) {
                 console.error('Mobile infinite scroll error:', err);
@@ -144,6 +182,11 @@ export function mobileInfiniteScroll(config = {}) {
         destroy() {
             if (this.observer) {
                 this.observer.disconnect();
+                this.observer = null;
+            }
+            if (this.scrollHandler) {
+                window.removeEventListener('scroll', this.scrollHandler);
+                this.scrollHandler = null;
             }
         },
     };

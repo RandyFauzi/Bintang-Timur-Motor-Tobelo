@@ -18,7 +18,14 @@
             </div>
 
             {{-- Sentinel element for IntersectionObserver --}}
-            <div x-ref="sentinel" class="h-4 w-full" x-show="hasMore && !loading" aria-hidden="true"></div>
+            <div x-ref="sentinel" class="h-8 w-full" x-show="hasMore" aria-hidden="true"></div>
+
+            {{-- Fallback tap-to-load if observer didn't trigger --}}
+            <div x-show="hasMore && !loading" class="text-center py-2">
+                <button type="button" @click="loadMore()" class="text-xs text-muted hover:text-stone-900 underline font-medium py-1 px-3">
+                    Muat lebih banyak
+                </button>
+            </div>
 
             {{-- End of data / All loaded --}}
             <div x-show="!hasMore && @js($paginator->total() > $paginator->perPage())" class="infinite-scroll-end">
