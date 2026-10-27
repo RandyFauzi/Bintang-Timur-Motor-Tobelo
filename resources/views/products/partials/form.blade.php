@@ -21,16 +21,25 @@
         <fieldset id="product-edit-details" class="form-grid min-w-0" x-show="detailsExpanded" :disabled="!detailsExpanded" @disabled(! $detailsExpanded) @if(! $detailsExpanded) x-cloak @endif>
             <legend class="sr-only">Detail informasi produk</legend>
             <x-ui.field name="name" label="Nama Produk" :value="$product?->name" required maxlength="255" />
-            <div class="form-field relative" x-data="customSelectAutocomplete(@js($brands->pluck('name')), @js($product?->brand?->name ?? old('brand_name', '')))" @click.outside="close()" @keydown.escape="close()">
+            <div class="form-field relative" :class="{ 'z-30': open, 'z-10': !open }" x-data="customSelectAutocomplete(@js($brands->pluck('name')), @js($product?->brand?->name ?? old('brand_name', '')))" @click.outside="close()" @keydown.escape="close()">
                 <label for="brand_name" class="form-field__label">Merk</label>
                 <div class="relative flex items-center">
                     <input
                         id="brand_name"
                         name="brand_name"
                         type="text"
-                        class="form-input !pr-9 w-full"
+                        class="form-input !pr-16 w-full"
                         placeholder="Tulis atau cari merk..."
                         autocomplete="off"
+                        autocorrect="off"
+                        autocapitalize="off"
+                        spellcheck="false"
+                        role="combobox"
+                        aria-autocomplete="list"
+                        :aria-expanded="open.toString()"
+                        aria-haspopup="listbox"
+                        aria-controls="brand_name_menu"
+                        :aria-activedescendant="highlightedIndex >= 0 ? 'brand_name_opt_' + highlightedIndex : null"
                         x-ref="input"
                         x-model="query"
                         @focus="openDropdown()"
@@ -38,42 +47,85 @@
                         @keydown.arrow-down.prevent="onArrowDown()"
                         @keydown.arrow-up.prevent="onArrowUp()"
                         @keydown.enter="onEnter($event)"
+                        @keydown.tab="close()"
                         maxlength="255"
                     >
-                    <template x-if="query.trim()">
-                        <button type="button" class="absolute right-3 flex items-center text-muted hover:text-stone-900" @click="clear(); $refs.input.focus();" title="Kosongkan" aria-label="Kosongkan merk">
-                            <x-ui.icon name="close" :size="14" />
+                    <div class="absolute right-2 flex items-center gap-0.5">
+                        <button
+                            type="button"
+                            x-show="query.trim()"
+                            x-cloak
+                            class="flex items-center justify-center w-6 h-6 rounded text-muted hover:text-stone-900 hover:bg-stone-100 transition-colors"
+                            @click="clear()"
+                            title="Kosongkan merk"
+                            aria-label="Kosongkan merk"
+                        >
+                            <x-ui.icon name="close" :size="13" />
                         </button>
-                    </template>
-                    <template x-if="!query.trim()">
-                        <button type="button" class="absolute right-3 flex items-center text-muted hover:text-stone-900" @click="toggle(); if(open) $refs.input.focus();" title="Pilih merk" aria-label="Buka pilihan merk" tabindex="-1">
-                            <x-ui.icon name="chevron" :size="14" class="rotate-90" />
+                        <button
+                            type="button"
+                            class="flex items-center justify-center w-7 h-7 rounded text-muted hover:text-stone-900 hover:bg-stone-100 transition-colors"
+                            @click="toggle()"
+                            title="Buka pilihan merk"
+                            aria-label="Buka pilihan merk"
+                            tabindex="-1"
+                        >
+                            <x-ui.icon name="chevron" :size="13" class="transition-transform duration-200" x-bind:class="{ '-rotate-90': open, 'rotate-90': !open }" />
                         </button>
-                    </template>
+                    </div>
                 </div>
-                <div x-show="open && filtered.length > 0" x-cloak x-transition.opacity class="system-autocomplete-menu" role="listbox" tabindex="-1">
-                    <div class="max-h-52 overflow-y-auto py-1">
+                <div x-show="open" x-cloak x-transition.opacity id="brand_name_menu" class="system-autocomplete-menu" role="listbox" aria-label="Pilihan merk" tabindex="-1">
+                    <div x-ref="menuList" class="max-h-52 overflow-y-auto py-1">
                         <template x-for="(item, index) in filtered" :key="item">
-                            <button type="button" class="system-autocomplete-item" :class="{ 'is-highlighted': highlightedIndex === index, 'is-selected': query.trim().toLowerCase() === item.toLowerCase() }" @click="select(item)" @mouseenter="highlightedIndex = index" role="option">
+                            <button
+                                type="button"
+                                class="system-autocomplete-item"
+                                :class="{ 'is-highlighted': highlightedIndex === index, 'is-selected': query.trim().toLowerCase() === item.toLowerCase() }"
+                                @click="select(item)"
+                                @mouseenter="highlightedIndex = index"
+                                role="option"
+                                :id="'brand_name_opt_' + index"
+                                :aria-selected="query.trim().toLowerCase() === item.toLowerCase()"
+                            >
                                 <span class="truncate font-medium" x-text="item"></span>
                                 <span x-show="query.trim().toLowerCase() === item.toLowerCase()" class="text-xs text-green-700 font-semibold" aria-hidden="true">✓</span>
                             </button>
                         </template>
+                        <div x-show="filtered.length === 0 && query.trim()" class="px-3 py-3 text-center text-xs text-muted">
+                            <p>Tidak ada merk terdaftar yang cocok.</p>
+                            <p class="mt-1 font-medium text-stone-800">"<span x-text="query.trim()"></span>" akan disimpan sebagai merk baru.</p>
+                        </div>
+                        <div x-show="options.length === 0 && !query.trim()" class="px-3 py-3 text-center text-xs text-muted">
+                            Belum ada daftar merk. Ketik nama merk baru di atas.
+                        </div>
+                    </div>
+                    <div x-show="isCustomNewValue && filtered.length > 0" class="px-3 py-2 border-t border-stone-100 bg-stone-50/80 text-xs text-stone-600 flex items-center justify-between">
+                        <span>Merk baru: <strong class="text-stone-900" x-text="query.trim()"></strong></span>
+                        <span class="text-[11px] text-muted">Tersimpan otomatis</span>
                     </div>
                 </div>
                 @error('brand_name')<p class="field-error">{{ $message }}</p>@enderror
             </div>
 
-            <div class="form-field relative" x-data="customSelectAutocomplete(@js($types->pluck('name')), @js($product?->type?->name ?? old('type_name', '')))" @click.outside="close()" @keydown.escape="close()">
+            <div class="form-field relative" :class="{ 'z-30': open, 'z-10': !open }" x-data="customSelectAutocomplete(@js($types->pluck('name')), @js($product?->type?->name ?? old('type_name', '')))" @click.outside="close()" @keydown.escape="close()">
                 <label for="type_name" class="form-field__label">Jenis Part</label>
                 <div class="relative flex items-center">
                     <input
                         id="type_name"
                         name="type_name"
                         type="text"
-                        class="form-input !pr-9 w-full"
+                        class="form-input !pr-16 w-full"
                         placeholder="Tulis atau cari jenis part..."
                         autocomplete="off"
+                        autocorrect="off"
+                        autocapitalize="off"
+                        spellcheck="false"
+                        role="combobox"
+                        aria-autocomplete="list"
+                        :aria-expanded="open.toString()"
+                        aria-haspopup="listbox"
+                        aria-controls="type_name_menu"
+                        :aria-activedescendant="highlightedIndex >= 0 ? 'type_name_opt_' + highlightedIndex : null"
                         x-ref="input"
                         x-model="query"
                         @focus="openDropdown()"
@@ -81,42 +133,85 @@
                         @keydown.arrow-down.prevent="onArrowDown()"
                         @keydown.arrow-up.prevent="onArrowUp()"
                         @keydown.enter="onEnter($event)"
+                        @keydown.tab="close()"
                         maxlength="255"
                     >
-                    <template x-if="query.trim()">
-                        <button type="button" class="absolute right-3 flex items-center text-muted hover:text-stone-900" @click="clear(); $refs.input.focus();" title="Kosongkan" aria-label="Kosongkan jenis part">
-                            <x-ui.icon name="close" :size="14" />
+                    <div class="absolute right-2 flex items-center gap-0.5">
+                        <button
+                            type="button"
+                            x-show="query.trim()"
+                            x-cloak
+                            class="flex items-center justify-center w-6 h-6 rounded text-muted hover:text-stone-900 hover:bg-stone-100 transition-colors"
+                            @click="clear()"
+                            title="Kosongkan jenis part"
+                            aria-label="Kosongkan jenis part"
+                        >
+                            <x-ui.icon name="close" :size="13" />
                         </button>
-                    </template>
-                    <template x-if="!query.trim()">
-                        <button type="button" class="absolute right-3 flex items-center text-muted hover:text-stone-900" @click="toggle(); if(open) $refs.input.focus();" title="Pilih jenis part" aria-label="Buka pilihan jenis part" tabindex="-1">
-                            <x-ui.icon name="chevron" :size="14" class="rotate-90" />
+                        <button
+                            type="button"
+                            class="flex items-center justify-center w-7 h-7 rounded text-muted hover:text-stone-900 hover:bg-stone-100 transition-colors"
+                            @click="toggle()"
+                            title="Buka pilihan jenis part"
+                            aria-label="Buka pilihan jenis part"
+                            tabindex="-1"
+                        >
+                            <x-ui.icon name="chevron" :size="13" class="transition-transform duration-200" x-bind:class="{ '-rotate-90': open, 'rotate-90': !open }" />
                         </button>
-                    </template>
+                    </div>
                 </div>
-                <div x-show="open && filtered.length > 0" x-cloak x-transition.opacity class="system-autocomplete-menu" role="listbox" tabindex="-1">
-                    <div class="max-h-52 overflow-y-auto py-1">
+                <div x-show="open" x-cloak x-transition.opacity id="type_name_menu" class="system-autocomplete-menu" role="listbox" aria-label="Pilihan jenis part" tabindex="-1">
+                    <div x-ref="menuList" class="max-h-52 overflow-y-auto py-1">
                         <template x-for="(item, index) in filtered" :key="item">
-                            <button type="button" class="system-autocomplete-item" :class="{ 'is-highlighted': highlightedIndex === index, 'is-selected': query.trim().toLowerCase() === item.toLowerCase() }" @click="select(item)" @mouseenter="highlightedIndex = index" role="option">
+                            <button
+                                type="button"
+                                class="system-autocomplete-item"
+                                :class="{ 'is-highlighted': highlightedIndex === index, 'is-selected': query.trim().toLowerCase() === item.toLowerCase() }"
+                                @click="select(item)"
+                                @mouseenter="highlightedIndex = index"
+                                role="option"
+                                :id="'type_name_opt_' + index"
+                                :aria-selected="query.trim().toLowerCase() === item.toLowerCase()"
+                            >
                                 <span class="truncate font-medium" x-text="item"></span>
                                 <span x-show="query.trim().toLowerCase() === item.toLowerCase()" class="text-xs text-green-700 font-semibold" aria-hidden="true">✓</span>
                             </button>
                         </template>
+                        <div x-show="filtered.length === 0 && query.trim()" class="px-3 py-3 text-center text-xs text-muted">
+                            <p>Tidak ada jenis part terdaftar yang cocok.</p>
+                            <p class="mt-1 font-medium text-stone-800">"<span x-text="query.trim()"></span>" akan disimpan sebagai jenis baru.</p>
+                        </div>
+                        <div x-show="options.length === 0 && !query.trim()" class="px-3 py-3 text-center text-xs text-muted">
+                            Belum ada daftar jenis part. Ketik nama jenis baru di atas.
+                        </div>
+                    </div>
+                    <div x-show="isCustomNewValue && filtered.length > 0" class="px-3 py-2 border-t border-stone-100 bg-stone-50/80 text-xs text-stone-600 flex items-center justify-between">
+                        <span>Jenis baru: <strong class="text-stone-900" x-text="query.trim()"></strong></span>
+                        <span class="text-[11px] text-muted">Tersimpan otomatis</span>
                     </div>
                 </div>
                 @error('type_name')<p class="field-error">{{ $message }}</p>@enderror
             </div>
 
-            <div class="form-field relative" x-data="customSelectAutocomplete(@js($colors->pluck('name')), @js($product?->color?->name ?? old('color_name', '')))" @click.outside="close()" @keydown.escape="close()">
+            <div class="form-field relative" :class="{ 'z-30': open, 'z-10': !open }" x-data="customSelectAutocomplete(@js($colors->pluck('name')), @js($product?->color?->name ?? old('color_name', '')))" @click.outside="close()" @keydown.escape="close()">
                 <label for="color_name" class="form-field__label">Warna</label>
                 <div class="relative flex items-center">
                     <input
                         id="color_name"
                         name="color_name"
                         type="text"
-                        class="form-input !pr-9 w-full"
+                        class="form-input !pr-16 w-full"
                         placeholder="Tulis atau cari warna..."
                         autocomplete="off"
+                        autocorrect="off"
+                        autocapitalize="off"
+                        spellcheck="false"
+                        role="combobox"
+                        aria-autocomplete="list"
+                        :aria-expanded="open.toString()"
+                        aria-haspopup="listbox"
+                        aria-controls="color_name_menu"
+                        :aria-activedescendant="highlightedIndex >= 0 ? 'color_name_opt_' + highlightedIndex : null"
                         x-ref="input"
                         x-model="query"
                         @focus="openDropdown()"
@@ -124,27 +219,61 @@
                         @keydown.arrow-down.prevent="onArrowDown()"
                         @keydown.arrow-up.prevent="onArrowUp()"
                         @keydown.enter="onEnter($event)"
+                        @keydown.tab="close()"
                         maxlength="255"
                     >
-                    <template x-if="query.trim()">
-                        <button type="button" class="absolute right-3 flex items-center text-muted hover:text-stone-900" @click="clear(); $refs.input.focus();" title="Kosongkan" aria-label="Kosongkan warna">
-                            <x-ui.icon name="close" :size="14" />
+                    <div class="absolute right-2 flex items-center gap-0.5">
+                        <button
+                            type="button"
+                            x-show="query.trim()"
+                            x-cloak
+                            class="flex items-center justify-center w-6 h-6 rounded text-muted hover:text-stone-900 hover:bg-stone-100 transition-colors"
+                            @click="clear()"
+                            title="Kosongkan warna"
+                            aria-label="Kosongkan warna"
+                        >
+                            <x-ui.icon name="close" :size="13" />
                         </button>
-                    </template>
-                    <template x-if="!query.trim()">
-                        <button type="button" class="absolute right-3 flex items-center text-muted hover:text-stone-900" @click="toggle(); if(open) $refs.input.focus();" title="Pilih warna" aria-label="Buka pilihan warna" tabindex="-1">
-                            <x-ui.icon name="chevron" :size="14" class="rotate-90" />
+                        <button
+                            type="button"
+                            class="flex items-center justify-center w-7 h-7 rounded text-muted hover:text-stone-900 hover:bg-stone-100 transition-colors"
+                            @click="toggle()"
+                            title="Buka pilihan warna"
+                            aria-label="Buka pilihan warna"
+                            tabindex="-1"
+                        >
+                            <x-ui.icon name="chevron" :size="13" class="transition-transform duration-200" x-bind:class="{ '-rotate-90': open, 'rotate-90': !open }" />
                         </button>
-                    </template>
+                    </div>
                 </div>
-                <div x-show="open && filtered.length > 0" x-cloak x-transition.opacity class="system-autocomplete-menu" role="listbox" tabindex="-1">
-                    <div class="max-h-52 overflow-y-auto py-1">
+                <div x-show="open" x-cloak x-transition.opacity id="color_name_menu" class="system-autocomplete-menu" role="listbox" aria-label="Pilihan warna" tabindex="-1">
+                    <div x-ref="menuList" class="max-h-52 overflow-y-auto py-1">
                         <template x-for="(item, index) in filtered" :key="item">
-                            <button type="button" class="system-autocomplete-item" :class="{ 'is-highlighted': highlightedIndex === index, 'is-selected': query.trim().toLowerCase() === item.toLowerCase() }" @click="select(item)" @mouseenter="highlightedIndex = index" role="option">
+                            <button
+                                type="button"
+                                class="system-autocomplete-item"
+                                :class="{ 'is-highlighted': highlightedIndex === index, 'is-selected': query.trim().toLowerCase() === item.toLowerCase() }"
+                                @click="select(item)"
+                                @mouseenter="highlightedIndex = index"
+                                role="option"
+                                :id="'color_name_opt_' + index"
+                                :aria-selected="query.trim().toLowerCase() === item.toLowerCase()"
+                            >
                                 <span class="truncate font-medium" x-text="item"></span>
                                 <span x-show="query.trim().toLowerCase() === item.toLowerCase()" class="text-xs text-green-700 font-semibold" aria-hidden="true">✓</span>
                             </button>
                         </template>
+                        <div x-show="filtered.length === 0 && query.trim()" class="px-3 py-3 text-center text-xs text-muted">
+                            <p>Tidak ada warna terdaftar yang cocok.</p>
+                            <p class="mt-1 font-medium text-stone-800">"<span x-text="query.trim()"></span>" akan disimpan sebagai warna baru.</p>
+                        </div>
+                        <div x-show="options.length === 0 && !query.trim()" class="px-3 py-3 text-center text-xs text-muted">
+                            Belum ada daftar warna. Ketik nama warna baru di atas.
+                        </div>
+                    </div>
+                    <div x-show="isCustomNewValue && filtered.length > 0" class="px-3 py-2 border-t border-stone-100 bg-stone-50/80 text-xs text-stone-600 flex items-center justify-between">
+                        <span>Warna baru: <strong class="text-stone-900" x-text="query.trim()"></strong></span>
+                        <span class="text-[11px] text-muted">Tersimpan otomatis</span>
                     </div>
                 </div>
                 @error('color_name')<p class="field-error">{{ $message }}</p>@enderror

@@ -346,16 +346,32 @@ export function distributorAutocomplete(options = [], initialId = null, initialN
 }
 
 export function customSelectAutocomplete(options = [], initialValue = '') {
+    const rawOptions = Array.isArray(options) ? options : [];
+    const cleanOptions = Array.from(new Set(
+        rawOptions
+            .map((opt) => (typeof opt === 'string' ? opt : (opt?.name ?? String(opt ?? ''))).trim())
+            .filter(Boolean)
+    ));
+
     return {
         query: typeof initialValue === 'string' ? initialValue : '',
-        options: Array.isArray(options) ? options.map((opt) => (typeof opt === 'string' ? opt : (opt?.name ?? String(opt)))) : [],
+        options: cleanOptions,
         open: false,
         highlightedIndex: -1,
 
         get filtered() {
             const q = this.query.trim().toLowerCase();
-            if (!q) return this.options.slice(0, 30);
-            return this.options.filter((opt) => opt.toLowerCase().includes(q)).slice(0, 30);
+            if (!q) return this.options.slice(0, 40);
+            return this.options.filter((opt) => opt.toLowerCase().includes(q)).slice(0, 40);
+        },
+
+        get hasExactMatch() {
+            const q = this.query.trim().toLowerCase();
+            return this.options.some((opt) => opt.toLowerCase() === q);
+        },
+
+        get isCustomNewValue() {
+            return this.query.trim().length > 0 && !this.hasExactMatch;
         },
 
         openDropdown() {
@@ -371,38 +387,65 @@ export function customSelectAutocomplete(options = [], initialValue = '') {
         toggle() {
             this.open = !this.open;
             this.highlightedIndex = -1;
+            if (this.open) {
+                this.$nextTick?.(() => {
+                    this.$refs?.input?.focus();
+                });
+            }
         },
 
         select(name) {
             this.query = name;
             this.open = false;
             this.highlightedIndex = -1;
+            this.$nextTick?.(() => {
+                this.$refs?.input?.focus();
+            });
         },
 
         clear() {
             this.query = '';
-            this.open = false;
+            this.open = true;
             this.highlightedIndex = -1;
+            this.$nextTick?.(() => {
+                this.$refs?.input?.focus();
+            });
+        },
+
+        scrollToHighlighted() {
+            this.$nextTick?.(() => {
+                const list = this.$refs?.menuList;
+                const item = list?.children?.[this.highlightedIndex];
+                if (item && typeof item.scrollIntoView === 'function') {
+                    item.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                }
+            });
         },
 
         onArrowDown() {
             if (!this.open) {
                 this.open = true;
+                this.highlightedIndex = 0;
+                this.scrollToHighlighted();
                 return;
             }
             const count = this.filtered.length;
             if (count === 0) return;
             this.highlightedIndex = (this.highlightedIndex + 1) % count;
+            this.scrollToHighlighted();
         },
 
         onArrowUp() {
             if (!this.open) {
                 this.open = true;
+                this.highlightedIndex = this.filtered.length - 1;
+                this.scrollToHighlighted();
                 return;
             }
             const count = this.filtered.length;
             if (count === 0) return;
             this.highlightedIndex = (this.highlightedIndex - 1 + count) % count;
+            this.scrollToHighlighted();
         },
 
         onEnter(event) {
@@ -411,9 +454,8 @@ export function customSelectAutocomplete(options = [], initialValue = '') {
             if (this.highlightedIndex >= 0 && this.highlightedIndex < items.length) {
                 event.preventDefault();
                 this.select(items[this.highlightedIndex]);
-            } else if (items.length > 0 && this.highlightedIndex === -1 && this.query.trim()) {
-                event.preventDefault();
-                this.select(items[0]);
+            } else {
+                this.close();
             }
         },
     };

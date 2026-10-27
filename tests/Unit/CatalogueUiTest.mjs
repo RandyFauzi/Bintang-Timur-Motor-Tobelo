@@ -342,9 +342,12 @@ test('distributorAutocomplete can create a new distributor inline via API', asyn
 });
 
 test('customSelectAutocomplete filters options, selects items, and toggles dropdown', () => {
-    const comp = customSelectAutocomplete(['Aksesoris', 'Ban Motor', 'Body', 'CVT'], 'Ban');
+    const comp = customSelectAutocomplete(['Aksesoris', 'Ban Motor', 'Body', 'CVT', 'Aksesoris', '   '], 'Ban');
     assert.equal(comp.query, 'Ban');
     assert.deepEqual(comp.filtered, ['Ban Motor']);
+    assert.equal(comp.options.length, 4);
+    assert.equal(comp.hasExactMatch, false);
+    assert.equal(comp.isCustomNewValue, true);
 
     comp.openDropdown();
     assert.equal(comp.open, true);
@@ -352,13 +355,30 @@ test('customSelectAutocomplete filters options, selects items, and toggles dropd
     comp.select('Aksesoris');
     assert.equal(comp.query, 'Aksesoris');
     assert.equal(comp.open, false);
+    assert.equal(comp.hasExactMatch, true);
+    assert.equal(comp.isCustomNewValue, false);
 
     comp.clear();
     assert.equal(comp.query, '');
+    assert.equal(comp.open, true);
     assert.equal(comp.filtered.length, 4);
 
     comp.toggle();
-    assert.equal(comp.open, true);
+    assert.equal(comp.open, false);
     comp.toggle();
+    assert.equal(comp.open, true);
+
+    // Keyboard navigation
+    comp.onArrowDown();
+    assert.equal(comp.highlightedIndex, 0);
+    comp.onArrowDown();
+    assert.equal(comp.highlightedIndex, 1);
+    comp.onArrowUp();
+    assert.equal(comp.highlightedIndex, 0);
+
+    let prevented = false;
+    comp.onEnter({ preventDefault: () => { prevented = true; } });
+    assert.equal(prevented, true);
+    assert.equal(comp.query, 'Aksesoris');
     assert.equal(comp.open, false);
 });
