@@ -69,6 +69,7 @@ class StaffPermissionTest extends TestCase
         $this->get(route('transactions.products'))->assertForbidden();
         $this->get(route('transactions.show', $sale))->assertForbidden();
         $this->patch(route('transactions.update', $sale), [])->assertForbidden();
+        $this->post(route('transactions.cancel', $sale), ['reason' => 'Salah barang'])->assertForbidden();
     }
 
     public function test_staff_can_access_allowed_modules(): void

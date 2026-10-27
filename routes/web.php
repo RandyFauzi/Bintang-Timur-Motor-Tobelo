@@ -85,6 +85,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/transactions/export', [TransactionHistoryController::class, 'export'])->name('transactions.export');
         Route::get('/transactions/products', [TransactionHistoryController::class, 'products'])->name('transactions.products');
         Route::patch('/transactions/{sale}', [TransactionHistoryController::class, 'update'])->whereUuid('sale')->name('transactions.update');
+        Route::post('/transactions/{sale}/cancel', [TransactionHistoryController::class, 'cancel'])->middleware('can:cancel-transactions')->whereUuid('sale')->name('transactions.cancel');
         Route::get('/transactions/{sale}', [TransactionHistoryController::class, 'show'])->whereUuid('sale')->name('transactions.show');
     });
 

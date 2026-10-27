@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CancelTransactionRequest;
 use App\Http\Requests\CatalogueFilterRequest;
 use App\Http\Requests\SaleCorrectionRequest;
 use App\Http\Requests\TransactionHistoryRequest;
@@ -12,6 +13,7 @@ use App\Models\User;
 use App\Services\CatalogueService;
 use App\Services\CsvExportService;
 use App\Services\ExcelExportService;
+use App\Services\SaleCancellationService;
 use App\Services\SaleCorrectionService;
 use App\Services\TransactionHistoryService;
 use Illuminate\Http\JsonResponse;
@@ -55,6 +57,18 @@ class TransactionHistoryController extends Controller
         $corrections->update($sale, $request->validated(), $request->user());
 
         return redirect()->route('transactions.index', ['invoice' => $sale->id])->with('success', 'Transaksi berhasil dikoreksi dan stok disesuaikan.');
+    }
+
+    public function cancel(CancelTransactionRequest $request, Sale $sale, SaleCancellationService $cancellationService): RedirectResponse
+    {
+        $cancellationService->cancel($sale, $request->validated('reason'), $request->user());
+
+        $referer = $request->header('Referer');
+        if ($referer && str_contains($referer, route('transactions.show', $sale, false))) {
+            return redirect()->route('transactions.show', $sale)->with('success', "Transaksi #{$sale->invoice_number} berhasil dibatalkan dan stok produk telah dikembalikan.");
+        }
+
+        return redirect()->route('transactions.index', ['invoice' => $sale->id])->with('success', "Transaksi #{$sale->invoice_number} berhasil dibatalkan dan stok produk telah dikembalikan.");
     }
 
     public function products(CatalogueFilterRequest $request, CatalogueService $catalogue): JsonResponse

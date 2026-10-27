@@ -204,4 +204,103 @@ class TransactionHistoryTest extends TestCase
         $this->assertDatabaseCount('sale_items', 1);
         $this->assertDatabaseCount('stock_movements', 1);
     }
+
+    public function test_admin_can_cancel_completed_transaction_with_stock_reversal_and_audit_trail(): void
+    {
+        $admin = User::factory()->create();
+        $product = Product::factory()->withStock(10)->create(['selling_price' => 50000, 'name' => 'Kampas Rem']);
+
+        $this->actingAs($admin)->postJson(route('pos.checkout'), [
+            'items' => [['product_id' => $product->id, 'quantity' => 3]],
+            'paid_amount' => 150000,
+            'payment_method' => 'cash',
+        ])->assertOk();
+
+        $sale = Sale::query()->sole();
+        $this->assertDatabaseHas('product_stocks', ['product_id' => $product->id, 'quantity' => 7]);
+
+        $response = $this->actingAs($admin)->post(route('transactions.cancel', $sale), [
+            'reason' => 'Pelanggan salah memilih barang',
+        ]);
+
+        $response->assertRedirect(route('transactions.index', ['invoice' => $sale->id]));
+        $response->assertSessionHas('success');
+
+        $sale->refresh();
+        $this->assertSame('cancelled', $sale->status);
+        $this->assertSame($admin->id, $sale->cancelled_by);
+        $this->assertNotNull($sale->cancelled_at);
+        $this->assertSame('Pelanggan salah memilih barang', $sale->cancellation_reason);
+
+        // Stock reversed back to 10
+        $this->assertDatabaseHas('product_stocks', ['product_id' => $product->id, 'quantity' => 10]);
+
+        // Stock movement recorded
+        $this->assertDatabaseHas('stock_movements', [
+            'product_id' => $product->id,
+            'type' => 'sale_cancellation',
+            'quantity' => 3,
+            'stock_before' => 7,
+            'stock_after' => 10,
+        ]);
+
+        // Sale correction audit trail recorded
+        $this->assertDatabaseHas('sale_corrections', [
+            'sale_id' => $sale->id,
+            'user_id' => $admin->id,
+            'actor_name' => $admin->name,
+            'note' => 'Pembatalan transaksi: Pelanggan salah memilih barang',
+        ]);
+
+        // Viewing the invoice now shows the cancellation notice
+        $this->get(route('transactions.show', $sale))
+            ->assertOk()
+            ->assertSee('Transaksi Dibatalkan')
+            ->assertSee('Pelanggan salah memilih barang')
+            ->assertSee($admin->name);
+    }
+
+    public function test_cannot_cancel_already_cancelled_transaction(): void
+    {
+        $admin = User::factory()->create();
+        $product = Product::factory()->withStock(10)->create();
+        $sale = Sale::factory()->cancelled()->create();
+        SaleItem::factory()->for($sale)->create(['product_id' => $product->id, 'quantity' => 2]);
+
+        $this->actingAs($admin)->post(route('transactions.cancel', $sale), [
+            'reason' => 'Coba batalkan lagi',
+        ])->assertSessionHasErrors('status');
+
+        $this->assertDatabaseHas('product_stocks', ['product_id' => $product->id, 'quantity' => 10]);
+    }
+
+    public function test_cancellation_reason_is_required_and_validated(): void
+    {
+        $admin = User::factory()->create();
+        $sale = Sale::factory()->create();
+
+        $this->actingAs($admin)->post(route('transactions.cancel', $sale), [
+            'reason' => '',
+        ])->assertSessionHasErrors('reason');
+
+        $this->actingAs($admin)->post(route('transactions.cancel', $sale), [
+            'reason' => 'ab',
+        ])->assertSessionHasErrors('reason');
+
+        $sale->refresh();
+        $this->assertSame('completed', $sale->status);
+    }
+
+    public function test_staff_cannot_cancel_transaction(): void
+    {
+        $staff = User::factory()->staff()->create();
+        $sale = Sale::factory()->create();
+
+        $this->actingAs($staff)->post(route('transactions.cancel', $sale), [
+            'reason' => 'Staff mencoba membatalkan',
+        ])->assertForbidden();
+
+        $sale->refresh();
+        $this->assertSame('completed', $sale->status);
+    }
 }

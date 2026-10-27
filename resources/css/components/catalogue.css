@@ -150,6 +150,9 @@
     .ui-button.ui-button--plain:hover { background: var(--color-page); }
     .ui-button.ui-button--cancel { background: transparent; color: var(--color-danger); }
     .ui-button.ui-button--cancel:hover { background: #fef2f2; }
+    .ui-button.ui-button--danger { background: var(--color-danger); color: #fff; }
+    .ui-button.ui-button--danger:hover { background: #7c2424; }
+    .ui-button.ui-button--danger:disabled { opacity: 0.5; cursor: not-allowed; }
     .view-switch { display: flex; align-items: center; gap: 4px; border-radius: 12px; background: #ececec; padding: 4px; }
     .view-switch__option { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 10px; }
     .view-switch__option.is-active { background: white; }
