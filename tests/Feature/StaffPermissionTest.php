@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Distributor;
 use App\Models\DistributorInvoice;
 use App\Models\PurchaseOrder;
+use App\Models\Sale;
 use App\Models\Shipment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,13 +16,14 @@ class StaffPermissionTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_staff_cannot_access_laporan_po_invoice_pengiriman_user_management_and_activity_logs(): void
+    public function test_staff_cannot_access_laporan_po_invoice_pengiriman_user_management_activity_logs_and_histori_transaksi(): void
     {
         $staff = User::factory()->staff()->create();
         $otherUser = User::factory()->create();
         $order = PurchaseOrder::factory()->create();
         $invoice = DistributorInvoice::factory()->create();
         $shipment = Shipment::factory()->create();
+        $sale = Sale::factory()->create();
 
         $this->actingAs($staff);
 
@@ -60,12 +62,19 @@ class StaffPermissionTest extends TestCase
         $this->delete(route('users.destroy', $otherUser))->assertForbidden();
         $this->get(route('activity-logs.index'))->assertForbidden();
         $this->get(route('activity-logs.export'))->assertForbidden();
+
+        // 8. Histori Transaksi
+        $this->get(route('transactions.index'))->assertForbidden();
+        $this->get(route('transactions.export'))->assertForbidden();
+        $this->get(route('transactions.products'))->assertForbidden();
+        $this->get(route('transactions.show', $sale))->assertForbidden();
+        $this->patch(route('transactions.update', $sale), [])->assertForbidden();
     }
 
     public function test_staff_can_access_allowed_modules(): void
     {
         $staff = User::factory()->staff()->create();
-        $distributor = Distributor::factory()->create();
+        Distributor::factory()->create();
 
         $this->actingAs($staff);
 
@@ -74,7 +83,6 @@ class StaffPermissionTest extends TestCase
         $this->get(route('products.index'))->assertOk();
         $this->get(route('distributors.index'))->assertOk();
         $this->get(route('returns.index'))->assertOk();
-        $this->get(route('transactions.index'))->assertOk();
         $this->get(route('notifications.index'))->assertOk();
         $this->get(route('profile.edit'))->assertOk();
     }
@@ -90,9 +98,9 @@ class StaffPermissionTest extends TestCase
         $response->assertSee(route('products.index'), false);
         $response->assertSee(route('distributors.index'), false);
         $response->assertSee(route('returns.index'), false);
-        $response->assertSee(route('transactions.index'), false);
 
         // Restricted modules must NOT be in staff sidebar
+        $response->assertDontSee(route('transactions.index'), false);
         $response->assertDontSee(route('purchase-orders.index'), false);
         $response->assertDontSee(route('shipments.index'), false);
         $response->assertDontSee(route('distributor-invoices.index'), false);
@@ -103,6 +111,7 @@ class StaffPermissionTest extends TestCase
 
         // Admin sidebar shows everything
         $adminResponse = $this->actingAs($admin)->get(route('dashboard'))->assertOk();
+        $adminResponse->assertSee(route('transactions.index'), false);
         $adminResponse->assertSee(route('purchase-orders.index'), false);
         $adminResponse->assertSee(route('shipments.index'), false);
         $adminResponse->assertSee(route('distributor-invoices.index'), false);
@@ -119,5 +128,14 @@ class StaffPermissionTest extends TestCase
 
         $this->assertTrue(Gate::forUser($admin)->allows('view-sales-metrics'));
         $this->assertFalse(Gate::forUser($staff)->allows('view-sales-metrics'));
+    }
+
+    public function test_view_transactions_gate_allows_admin_and_denies_staff(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $staff = User::factory()->staff()->create();
+
+        $this->assertTrue(Gate::forUser($admin)->allows('view-transactions'));
+        $this->assertFalse(Gate::forUser($staff)->allows('view-transactions'));
     }
 }

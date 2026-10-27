@@ -38,6 +38,20 @@ class TransactionHistoryTest extends TestCase
         }
     }
 
+    public function test_staff_cannot_access_transaction_history_pages_or_endpoints(): void
+    {
+        $staff = User::factory()->staff()->create();
+        $sale = Sale::factory()->create();
+
+        $this->actingAs($staff);
+
+        $this->get(route('transactions.index'))->assertForbidden();
+        $this->get(route('transactions.show', $sale))->assertForbidden();
+        $this->get(route('transactions.export'))->assertForbidden();
+        $this->get(route('transactions.products'))->assertForbidden();
+        $this->patch(route('transactions.update', $sale), [])->assertForbidden();
+    }
+
     public function test_history_includes_all_dates_and_excludes_cancelled_sales_from_revenue(): void
     {
         Sale::factory()->create(['sold_at' => '2020-01-01 00:00:00', 'grand_total' => 120000.50]);

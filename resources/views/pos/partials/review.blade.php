@@ -18,6 +18,8 @@
         <x-ui.icon name="success" :size="42" />
         <dl class="grid grid-cols-2 gap-4 text-sm"><dt>Total Transaksi</dt><dd class="text-right font-medium" x-text="money(result?.total)"></dd><dt>Nomor Invoice</dt><dd class="break-all text-right font-medium" x-text="result?.invoice"></dd><dt>Tanggal Transaksi</dt><dd class="text-right" x-text="result?.sold_at"></dd></dl>
         <button type="button" @click="newTransaction()" class="ui-button w-full">Transaksi Baru</button>
-        <a :href="result?.detail_url || @js(route('transactions.index'))" class="ui-button ui-button--secondary w-full">Lihat Histori Transaksi</a>
+        @can('view-transactions')
+            <a :href="result?.detail_url || @js(route('transactions.index'))" class="ui-button ui-button--secondary w-full">Lihat Histori Transaksi</a>
+        @endcan
     </div>
 </x-ui.dialog>

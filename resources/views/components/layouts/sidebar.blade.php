@@ -54,6 +54,7 @@
                     if ($route === 'shipments.index' && !auth()->user()?->can('manage-shipments')) return false;
                     if ($route === 'distributor-invoices.index' && !auth()->user()?->can('manage-invoices')) return false;
                     if (($route === 'reports.finance' || $route === 'reports.index') && !auth()->user()?->can('view-reports')) return false;
+                    if ($route === 'transactions.index' && !auth()->user()?->can('view-transactions')) return false;
                     return true;
                 });
             @endphp
