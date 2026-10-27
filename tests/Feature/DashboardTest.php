@@ -188,6 +188,23 @@ class DashboardTest extends TestCase
         $this->get($response->viewData('products')->nextPageUrl())->assertOk()->assertViewHas('products', fn ($products) => $products->count() === 1);
     }
 
+    public function test_dashboard_displays_notification_bell_dropdown_and_removes_sidebar_bulky_notification(): void
+    {
+        $user = User::factory()->create();
+        Product::factory()->create(['name' => 'Kampas Rem Depan']);
+
+        $response = $this->actingAs($user)->get(route('dashboard'));
+
+        $response->assertOk();
+        $response->assertSee('notification-bell-btn', false);
+        $response->assertSee('Panel notifikasi', false);
+        $response->assertSee('Kampas Rem Depan', false);
+        $response->assertSee('Stok produk sudah habis', false);
+        $response->assertSee('Lihat Semua Notifikasi', false);
+        $response->assertDontSee('stock-notification--minimized', false);
+        $response->assertDontSee('Notifikasi sebelumnya', false);
+    }
+
     #[DataProvider('invalidDateFilters')]
     public function test_invalid_dates_return_a_clear_validation_error(array $filters, string $field, string $message): void
     {

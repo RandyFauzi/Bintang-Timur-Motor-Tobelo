@@ -1,7 +1,7 @@
 import { purchaseOrderForm, purchaseOrderReceipt, purchasePlanForm } from './components/purchase-orders';
 import { purchaseOrderNotes } from './components/purchase-order-notes';
 import Alpine from 'alpinejs';
-import { notificationCenter } from './components/notifications';
+import { notificationCenter, notificationDropdown } from './components/notifications';
 import { shipmentForm, shippingVoyage } from './components/shipments';
 import { productSelection } from './components/product-selection';
 import { appShell, dateRangeFilter, stockNotifications, toast } from './components/ui';
@@ -18,6 +18,7 @@ Alpine.data('appShell', appShell);
 Alpine.data('dateRangeFilter', dateRangeFilter);
 Alpine.data('stockNotifications', stockNotifications);
 Alpine.data('notificationCenter', notificationCenter);
+Alpine.data('notificationDropdown', notificationDropdown);
 Alpine.data('shipmentForm', shipmentForm);
 Alpine.data('shippingVoyage', shippingVoyage);
 Alpine.data('toast', toast);

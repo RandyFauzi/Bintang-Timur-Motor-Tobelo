@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-DwCGteaS.css",
+    "file": "assets/app-C1GUxETb.css",
     "name": "app",
     "names": [
       "app.css"
@@ -38,6 +38,10 @@
   "resources/images/icons/barcode.svg": {
     "file": "assets/barcode-7DIgdlGH.svg",
     "src": "resources/images/icons/barcode.svg"
+  },
+  "resources/images/icons/bell.svg": {
+    "file": "assets/bell-D_fP0tZg.svg",
+    "src": "resources/images/icons/bell.svg"
   },
   "resources/images/icons/box.svg": {
     "file": "assets/box-CThVdKNa.svg",
@@ -256,7 +260,7 @@
     "src": "resources/images/maps/indonesia-coast.svg"
   },
   "resources/js/app.js": {
-    "file": "assets/app-BTfWmsbb.js",
+    "file": "assets/app-BuKWe_t7.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true

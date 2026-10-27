@@ -27,3 +27,54 @@ export function notificationCenter(endpoint, counts, total) {
         destroy() { window.clearInterval(this.timer); this.controller?.abort(); },
     };
 }
+
+export function notificationDropdown(initialItems = [], totalCount = 0) {
+    return {
+        open: false,
+        items: initialItems,
+        total: totalCount,
+        readKeys: [],
+        get unreadCount() {
+            return this.items.filter((item) => !this.readKeys.includes(item.key)).length;
+        },
+        init() {
+            try {
+                const stored = localStorage.getItem('read_notification_keys');
+                this.readKeys = stored ? JSON.parse(stored) : [];
+            } catch {
+                this.readKeys = [];
+            }
+        },
+        isUnread(key) {
+            return !this.readKeys.includes(key);
+        },
+        markAsRead(key) {
+            if (!this.readKeys.includes(key)) {
+                this.readKeys.push(key);
+                this.persistReadKeys();
+            }
+        },
+        markAllAsRead() {
+            this.items.forEach((item) => {
+                if (!this.readKeys.includes(item.key)) {
+                    this.readKeys.push(item.key);
+                }
+            });
+            this.persistReadKeys();
+        },
+        persistReadKeys() {
+            try {
+                if (this.readKeys.length > 200) {
+                    this.readKeys = this.readKeys.slice(-200);
+                }
+                localStorage.setItem('read_notification_keys', JSON.stringify(this.readKeys));
+            } catch {}
+        },
+        toggle() {
+            this.open = !this.open;
+        },
+        close() {
+            this.open = false;
+        },
+    };
+}

@@ -2,7 +2,10 @@
     <div class="dashboard">
         <header class="dashboard-header">
             <h1 class="text-2xl font-semibold tracking-tight">Dashboard</h1>
-            <x-ui.date-range-filter :range="$range" label="Filter periode dashboard" />
+            <div class="flex items-center gap-3">
+                <x-ui.date-range-filter :range="$range" label="Filter periode dashboard" />
+                <x-ui.notification-dropdown />
+            </div>
         </header>
 
         <div @class(['dashboard-stats', 'dashboard-stats--compact' => ! ($canViewSales ?? true)])>

@@ -17,7 +17,10 @@
             <header class="mobile-header" :inert="isMobile && mobileMenuOpen">
                 <button type="button" x-ref="menuTrigger" class="mobile-menu-trigger" @click="openMobileMenu()" :aria-expanded="mobileMenuOpen" aria-controls="app-sidebar" aria-label="Buka navigasi"><span aria-hidden="true">☰</span></button>
                 <a href="{{ route('dashboard') }}" class="text-sm font-medium">{{ \App\Models\BusinessSetting::current()->business_name }}</a>
-                <x-ui.business-logo :size="24" />
+                <div class="flex items-center gap-2">
+                    <x-ui.notification-dropdown />
+                    <x-ui.business-logo :size="24" />
+                </div>
             </header>
             <main id="main-content" class="app-main" tabindex="-1" :inert="isMobile && mobileMenuOpen">
                 @if ($errors->any())
