@@ -13,7 +13,15 @@
             <div @class(['distributor-list','catalogue-card-grid'=>request('view') === 'cards'])>
                 @forelse($distributors as $distributor)
                     <article class="distributor-card">
-                        <header><h2>{{ $distributor->name }}</h2><a href="{{ request()->fullUrlWithQuery(['edit'=>$distributor->id,'create'=>null]) }}" aria-label="Edit {{ $distributor->name }}"><x-ui.icon name="edit" :size="18" /></a></header>
+                        <header>
+                            <h2>{{ $distributor->name }}</h2>
+                            <div class="flex items-center gap-1">
+                                <a href="{{ request()->fullUrlWithQuery(['edit'=>$distributor->id,'create'=>null]) }}" aria-label="Edit {{ $distributor->name }}"><x-ui.icon name="edit" :size="18" /></a>
+                                <button type="button" class="text-muted hover:text-red-600 transition-colors p-1" aria-label="Hapus {{ $distributor->name }}" @click="$dispatch('open-delete-distributor', { id: {{ $distributor->id }}, name: '{{ addslashes($distributor->name) }}' })">
+                                    <x-ui.icon name="trash" :size="18" />
+                                </button>
+                            </div>
+                        </header>
                         <div class="distributor-card__content">
                             <div class="category-legend">@forelse($categoryCounts[$distributor->id] ?? [] as $category)<span class="category-chip"><i style="--category-color: var(--chart-{{ ($types->pluck('name')->search($category->name) ?: 0) % 6 }})"></i>{{ $category->name }} <span>{{ $category->value }}</span></span>@empty<span class="text-xs text-muted">Belum ada produk terhubung.</span>@endforelse</div>
                             <a href="{{ route('products.index',['distributor_ids'=>[$distributor->id]]) }}" class="distributor-total"><strong>{{ $distributor->products_count }}</strong> Total Produk</a>
@@ -37,7 +45,25 @@
                     <div class="form-grid__full"><x-ui.field name="address" label="Alamat" :value="$editing?->address" maxlength="2000" /></div>
                     <div class="form-grid__full"><x-ui.field name="notes" label="Catatan" :value="$editing?->notes" maxlength="2000" /></div>
                 </div>
-                <footer class="dialog-actions"><button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button><button type="submit" class="ui-button" :disabled="submitting" x-text="submitting ? 'Menyimpan…' : 'Simpan'">Simpan</button></footer>
+                <footer class="dialog-actions">
+                    @if($editing)
+                        <button type="button" class="ui-button ui-button--danger mr-auto" @click="$el.closest('dialog').close(); $dispatch('open-delete-distributor', { id: {{ $editing->id }}, name: '{{ addslashes($editing->name) }}' })">
+                            <x-ui.icon name="trash" :size="16" /> Hapus Distributor
+                        </button>
+                    @endif
+                    <button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button>
+                    <button type="submit" class="ui-button" :disabled="submitting" x-text="submitting ? 'Menyimpan…' : 'Simpan'">Simpan</button>
+                </footer>
+            </form>
+        </x-ui.dialog>
+        <x-ui.dialog name="delete-distributor" title="Hapus Distributor" description="Distributor akan dinonaktifkan dan dihapus dari daftar aktif. Riwayat pengadaan dan harga tetap tersimpan.">
+            <form method="POST" class="dialog-form" x-data="{ distributorName: '', deleteUrl: '' }" :action="deleteUrl" @open-delete-distributor.window="distributorName = $event.detail.name; deleteUrl = '{{ url('distributors') }}/' + $event.detail.id; $dispatch('open-dialog', { id: 'delete-distributor' })" @submit="submitting = true">
+                @csrf @method('DELETE')
+                <p class="text-sm">Hapus distributor <strong x-text="distributorName"></strong>?</p>
+                <footer class="dialog-actions">
+                    <button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button>
+                    <button type="submit" class="ui-button ui-button--danger" :disabled="submitting || !deleteUrl" x-text="submitting ? 'Menghapus…' : 'Ya, Hapus Distributor'">Ya, Hapus Distributor</button>
+                </footer>
             </form>
         </x-ui.dialog>
     </div>

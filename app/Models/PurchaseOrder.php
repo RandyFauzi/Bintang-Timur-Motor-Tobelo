@@ -30,6 +30,11 @@ class PurchaseOrder extends Model
         return $this->belongsTo(PurchasePlan::class);
     }
 
+    public function distributor(): BelongsTo
+    {
+        return $this->belongsTo(Distributor::class)->withTrashed();
+    }
+
     public function scopeWithReceiptStatus(Builder $query, string $status, string $relation = 'items'): void
     {
         if ($status === 'pending') {

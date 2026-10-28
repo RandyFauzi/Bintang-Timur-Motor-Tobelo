@@ -74,6 +74,18 @@ class ShipmentService
         });
     }
 
+    public function delete(Shipment $shipment, ?int $version = null): void
+    {
+        DB::transaction(function () use ($shipment, $version): void {
+            $shipment = Shipment::lockForUpdate()->findOrFail($shipment->id);
+            if ($version !== null && $shipment->version !== $version) {
+                throw ValidationException::withMessages(['shipment' => 'Data pengiriman sudah berubah. Muat ulang halaman sebelum melanjutkan.']);
+            }
+            $shipment->distributorInvoices()->update(['shipment_id' => null]);
+            $shipment->delete();
+        });
+    }
+
     private function assertEditable(Shipment $shipment, int $version): void
     {
         if ($shipment->delivered_at || $shipment->version !== $version) {

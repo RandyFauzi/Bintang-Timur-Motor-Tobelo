@@ -96,6 +96,18 @@ class DistributorInvoiceService
         });
     }
 
+    public function delete(DistributorInvoice $invoice, ?int $version = null): void
+    {
+        DB::transaction(function () use ($invoice, $version): void {
+            $invoice = DistributorInvoice::lockForUpdate()->findOrFail($invoice->id);
+            if ($version !== null) {
+                $this->assertVersion($invoice, $version);
+            }
+            $invoice->payments()->delete();
+            $invoice->delete();
+        });
+    }
+
     public function assertVersion(DistributorInvoice $invoice, int $version): void
     {
         if ($invoice->version !== $version) {

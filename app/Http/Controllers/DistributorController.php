@@ -12,6 +12,8 @@ use App\Services\ExcelExportService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -53,6 +55,23 @@ class DistributorController extends Controller
         $distributor->update($request->validated());
 
         return redirect()->route('distributors.index')->with('success', 'Distributor berhasil diperbarui.');
+    }
+
+    public function destroy(Distributor $distributor): RedirectResponse
+    {
+        if ($distributor->purchaseOrders()->whereNull('archived_at')->whereHas('items', fn ($q) => $q->whereNull('actual_quantity'))->exists()) {
+            throw ValidationException::withMessages([
+                'distributor' => 'Distributor '.$distributor->name.' tidak dapat dihapus karena masih memiliki pengadaan barang yang sedang berjalan. Selesaikan pemeriksaan atau arsipkan pengadaan terlebih dahulu.',
+            ]);
+        }
+
+        DB::transaction(function () use ($distributor): void {
+            $distributor->is_active = false;
+            $distributor->save();
+            $distributor->delete();
+        });
+
+        return redirect()->route('distributors.index')->with('success', 'Distributor '.$distributor->name.' berhasil dihapus.');
     }
 
     public function export(CatalogueFilterRequest $request, CatalogueService $catalogue, CsvExportService $csv, ExcelExportService $excel): StreamedResponse

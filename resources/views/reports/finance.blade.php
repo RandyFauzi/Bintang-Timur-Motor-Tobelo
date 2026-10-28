@@ -21,12 +21,13 @@
                 <x-slot:filter><button type="button" class="panel-link" @click="$dispatch('open-dialog', { id: 'expense-form' })">Catat Pengeluaran <x-ui.icon name="chevron" :size="14" /></button></x-slot:filter>
                 <p class="mb-4 text-xs text-muted">Lima catatan terbaru dalam periode yang dipilih.</p>
                 <div class="table-scroll"><table class="data-table finance-table"><caption class="sr-only">Pengeluaran operasional terbaru</caption>
-                    <thead><tr><th scope="col">Kategori &amp; Keterangan</th><th scope="col">Tanggal</th><th scope="col" class="text-right">Nominal</th></tr></thead>
+                    <thead><tr><th scope="col">Kategori &amp; Keterangan</th><th scope="col">Tanggal</th><th scope="col" class="text-right">Nominal</th><th scope="col" class="text-center w-12">Aksi</th></tr></thead>
                     <tbody>@forelse($recentExpenses as $expense)<tr>
                         <td><span class="font-medium">{{ $expense->category }}</span><span class="mt-1 block text-xs text-muted finance-description">{{ $expense->description ?: 'Tanpa keterangan' }}</span></td>
                         <td class="whitespace-nowrap">{{ $expense->expense_date->locale('id')->translatedFormat('d M Y') }}</td>
                         <td class="whitespace-nowrap text-right font-medium text-danger">Rp {{ number_format($expense->amount,0,',','.') }}</td>
-                    </tr>@empty<tr><td colspan="3"><x-ui.empty-state title="Belum ada pengeluaran" description="Catat pengeluaran operasional atau pilih periode lain." /></td></tr>@endforelse</tbody>
+                        <td class="whitespace-nowrap text-center"><button type="button" class="text-muted hover:text-red-600 transition-colors p-1" title="Hapus Pengeluaran" aria-label="Hapus pengeluaran {{ $expense->category }}" @click="$dispatch('open-delete-expense', { id: {{ $expense->id }}, category: '{{ addslashes($expense->category) }}', amount: 'Rp {{ number_format($expense->amount,0,',','.') }}' })"><x-ui.icon name="trash" :size="16" /></button></td>
+                    </tr>@empty<tr><td colspan="4"><x-ui.empty-state title="Belum ada pengeluaran" description="Catat pengeluaran operasional atau pilih periode lain." /></td></tr>@endforelse</tbody>
                 </table></div>
             </x-dashboard.panel>
             <x-dashboard.panel title="10 Produk Terlaris" id="finance-products-title">
@@ -47,6 +48,16 @@
                 <x-ui.field name="amount" label="Nominal (Rp)" type="number" min="1" max="9999999999999.99" step="0.01" placeholder="Contoh: 150000" required />
                 <x-ui.field name="description" label="Keterangan (Opsional)"><textarea id="description" name="description" class="form-input" rows="3" maxlength="2000" aria-describedby="description-help" placeholder="Contoh: Pembayaran listrik bengkel">{{ old('description') }}</textarea></x-ui.field>
                 <footer class="dialog-actions"><button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batal</button><button type="submit" class="ui-button" :disabled="submitting" x-text="submitting ? 'Menyimpan…' : 'Simpan Pengeluaran'">Simpan Pengeluaran</button></footer>
+            </form>
+        </x-ui.dialog>
+        <x-ui.dialog name="delete-expense" title="Hapus Catatan Pengeluaran" description="Catatan pengeluaran operasional ini akan dihapus dari laporan keuangan.">
+            <form method="POST" class="dialog-form" x-data="{ expenseCat: '', expenseAmount: '', deleteUrl: '' }" :action="deleteUrl" @open-delete-expense.window="expenseCat = $event.detail.category; expenseAmount = $event.detail.amount; deleteUrl = '{{ url('reports/expenses') }}/' + $event.detail.id; $dispatch('open-dialog', { id: 'delete-expense' })" @submit="submitting = true">
+                @csrf @method('DELETE')
+                <p class="text-sm">Hapus pengeluaran <strong x-text="expenseCat"></strong> sebesar <strong x-text="expenseAmount"></strong>?</p>
+                <footer class="dialog-actions">
+                    <button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button>
+                    <button type="submit" class="ui-button ui-button--danger" :disabled="submitting || !deleteUrl" x-text="submitting ? 'Menghapus…' : 'Ya, Hapus Pengeluaran'">Ya, Hapus Pengeluaran</button>
+                </footer>
             </form>
         </x-ui.dialog>
     </div>

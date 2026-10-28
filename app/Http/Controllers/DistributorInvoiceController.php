@@ -10,6 +10,7 @@ use App\Models\Shipment;
 use App\Services\DistributorInvoiceService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -82,5 +83,14 @@ class DistributorInvoiceController extends Controller
         $billing->pay($distributorInvoice, $request->validated(), $request->user());
 
         return redirect()->route('distributor-invoices.show', $distributorInvoice)->with('success', 'Pembayaran berhasil dicatat. Sisa tagihan diperbarui otomatis.');
+    }
+
+    public function destroy(Request $request, DistributorInvoice $distributorInvoice, DistributorInvoiceService $billing): RedirectResponse
+    {
+        $reference = $distributorInvoice->reference;
+        $version = $request->filled('version') ? $request->integer('version') : null;
+        $billing->delete($distributorInvoice, $version);
+
+        return redirect()->route('distributor-invoices.index')->with('success', 'Tagihan '.$reference.' berhasil dihapus.');
     }
 }

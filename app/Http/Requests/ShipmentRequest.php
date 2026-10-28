@@ -31,6 +31,9 @@ class ShipmentRequest extends FormRequest
         if ($this->routeIs('shipments.arrive')) {
             return $version;
         }
+        if ($this->routeIs('shipments.destroy')) {
+            return ['version' => ['nullable', 'integer', 'min:1']];
+        }
 
         return [
             'reference' => ['nullable', 'string', 'max:100', Rule::unique('shipments')->ignore($this->route('shipment'))],

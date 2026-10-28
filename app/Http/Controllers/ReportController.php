@@ -73,4 +73,11 @@ class ReportController extends Controller
 
         return redirect()->back()->with('success', 'Catatan pengeluaran berhasil ditambahkan.');
     }
+
+    public function destroyExpense(Expense $expense): RedirectResponse
+    {
+        $expense->delete();
+
+        return redirect()->back()->with('success', 'Catatan pengeluaran berhasil dihapus.');
+    }
 }

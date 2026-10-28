@@ -33,7 +33,13 @@
             @empty<p class="text-sm text-muted">Belum ada faktur terhubung. Pilih kargo ini dari menu Edit Faktur & Tempo pada detail tagihan.</p>@endforelse
         </div>
     </section>
-    @if(!$selected->delivered_at)
-        <footer class="shipping-detail__actions"><a href="{{ route('shipments.index', ['shipment'=>$selected->id,'edit'=>$selected->id]) }}" class="ui-button ui-button--secondary">Edit Pengiriman</a><button type="button" class="ui-button" :disabled="state.status === 'scheduled' || state.status === 'delivered'" @click="$dispatch('open-dialog',{id:'shipment-arrive'})">Konfirmasi Sudah Sampai</button></footer>
-    @endif
+    <footer class="shipping-detail__actions">
+        <button type="button" class="ui-button ui-button--danger mr-auto" @click="$dispatch('open-dialog', { id: 'shipment-delete' })">
+            <x-ui.icon name="trash" :size="16" /> Hapus Pengiriman
+        </button>
+        @if(!$selected->delivered_at)
+            <a href="{{ route('shipments.index', ['shipment'=>$selected->id,'edit'=>$selected->id]) }}" class="ui-button ui-button--secondary">Edit Pengiriman</a>
+            <button type="button" class="ui-button" :disabled="state.status === 'scheduled' || state.status === 'delivered'" @click="$dispatch('open-dialog',{id:'shipment-arrive'})">Konfirmasi Sudah Sampai</button>
+        @endif
+    </footer>
 </article>

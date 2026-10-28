@@ -40,8 +40,10 @@ Route::middleware('auth')->group(function () {
         Route::post('shipments', [ShipmentController::class, 'store'])->name('shipments.store');
         Route::patch('shipments/{shipment}', [ShipmentController::class, 'update'])->name('shipments.update');
         Route::patch('shipments/{shipment}/arrive', [ShipmentController::class, 'arrive'])->name('shipments.arrive');
+        Route::delete('shipments/{shipment}', [ShipmentController::class, 'destroy'])->name('shipments.destroy');
         Route::post('shipping-services', [ShippingServiceController::class, 'store'])->name('shipping-services.store');
         Route::patch('shipping-services/{shippingService}', [ShippingServiceController::class, 'update'])->name('shipping-services.update');
+        Route::delete('shipping-services/{shippingService}', [ShippingServiceController::class, 'destroy'])->name('shipping-services.destroy');
     });
     Route::get('shipments/notifications', [ShipmentController::class, 'notifications'])->name('shipments.notifications');
 
@@ -50,6 +52,7 @@ Route::middleware('auth')->group(function () {
         Route::get('distributor-invoices/{distributorInvoice}', [DistributorInvoiceController::class, 'show'])->name('distributor-invoices.show');
         Route::patch('distributor-invoices/{distributorInvoice}', [DistributorInvoiceController::class, 'update'])->name('distributor-invoices.update');
         Route::post('distributor-invoices/{distributorInvoice}/payments', [DistributorInvoiceController::class, 'pay'])->name('distributor-invoices.pay');
+        Route::delete('distributor-invoices/{distributorInvoice}', [DistributorInvoiceController::class, 'destroy'])->name('distributor-invoices.destroy');
     });
 
     Route::middleware('can:manage-purchase-orders')->group(function () {
@@ -106,9 +109,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/reports/finance', [ReportController::class, 'finance'])->name('reports.finance');
         Route::post('/reports/observations', [CompetitorObservationController::class, 'store'])->name('reports.observations.store');
         Route::patch('/reports/observations/{observation}', [CompetitorObservationController::class, 'update'])->name('reports.observations.update');
+        Route::delete('/reports/observations/{observation}', [CompetitorObservationController::class, 'destroy'])->name('reports.observations.destroy');
         Route::post('/reports/workshops', [ReportLookupController::class, 'workshops'])->name('reports.workshops.store');
         Route::post('/reports/work-types', [ReportLookupController::class, 'workTypes'])->name('reports.work-types.store');
         Route::post('/reports/expenses', [ReportController::class, 'storeExpense'])->name('reports.expenses.store');
+        Route::delete('/reports/expenses/{expense}', [ReportController::class, 'destroyExpense'])->name('reports.expenses.destroy');
     });
 
     Route::middleware('can:view-activity-logs')->group(function () {
@@ -126,7 +131,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::get('/distributors/export', [DistributorController::class, 'export'])->name('distributors.export');
-    Route::resource('distributors', DistributorController::class)->only(['index', 'store', 'update']);
+    Route::resource('distributors', DistributorController::class)->only(['index', 'store', 'update', 'destroy']);
 
     // Profiles
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

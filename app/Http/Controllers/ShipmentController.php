@@ -65,6 +65,15 @@ class ShipmentController extends Controller
         return redirect()->route('shipments.index', ['shipment' => $shipment->id])->with('success', 'Cargo dikonfirmasi sudah sampai.');
     }
 
+    public function destroy(ShipmentRequest $request, Shipment $shipment, ShipmentService $tracking): RedirectResponse
+    {
+        $reference = $shipment->reference;
+        $version = $request->filled('version') ? $request->integer('version') : null;
+        $tracking->delete($shipment, $version);
+
+        return redirect()->route('shipments.index')->with('success', 'Pengiriman cargo '.$reference.' berhasil dihapus.');
+    }
+
     public function notifications(ShipmentRequest $request, ShipmentService $tracking, DashboardService $dashboard, DistributorInvoiceService $billing): JsonResponse
     {
         $user = $request->user();

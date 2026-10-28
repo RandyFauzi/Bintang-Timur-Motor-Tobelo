@@ -22,4 +22,12 @@ class CompetitorObservationController extends Controller
 
         return redirect()->route('reports.index')->with('success', 'Pengamatan berhasil diperbarui.');
     }
+
+    public function destroy(CompetitorObservation $observation): RedirectResponse
+    {
+        $observation->workTypes()->detach();
+        $observation->delete();
+
+        return redirect()->route('reports.index')->with('success', 'Catatan pengamatan berhasil dihapus.');
+    }
 }

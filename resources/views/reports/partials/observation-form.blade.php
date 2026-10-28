@@ -27,7 +27,15 @@
             </template>
             <div class="work-total"><span>Total Pengerjaan</span><strong x-text="total"></strong></div>
         </section>
-        <footer class="dialog-actions"><button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button><button type="submit" class="ui-button" :disabled="submitting || form.items.length === 0" x-text="submitting ? 'Menyimpan…' : 'Simpan Pengerjaan'">Simpan Pengerjaan</button></footer>
+        <footer class="dialog-actions">
+            @if($editing)
+                <button type="button" class="ui-button ui-button--danger mr-auto" @click="$el.closest('dialog').close(); $dispatch('open-delete-observation', { id: {{ $editing->id }}, name: '{{ addslashes($editing->workshop->name) }}', date: '{{ $editing->observed_on->format('d/m/Y') }}' })">
+                    <x-ui.icon name="trash" :size="16" /> Hapus Pengamatan
+                </button>
+            @endif
+            <button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button>
+            <button type="submit" class="ui-button" :disabled="submitting || form.items.length === 0" x-text="submitting ? 'Menyimpan…' : 'Simpan Pengerjaan'">Simpan Pengerjaan</button>
+        </footer>
     </form>
 </x-ui.dialog>
 <x-ui.dialog name="report-lookup" title="Tambah Data Baru" description="Buat satu atau lebih nama tanpa meninggalkan pengamatan.">

@@ -58,7 +58,7 @@
             @if(request('view') === 'cards')
                 <div class="catalogue-card-grid">
                     @forelse($observations as $observation)<article class="observation-card">
-                        <header><h2>{{ $observation->workshop->name }}</h2><a href="{{ request()->fullUrlWithQuery(['edit'=>$observation->id,'create'=>null]) }}" aria-label="Edit pengamatan {{ $observation->workshop->name }}"><x-ui.icon name="edit" :size="18" /></a></header>
+                        <header><h2>{{ $observation->workshop->name }}</h2><div class="flex items-center gap-1"><a href="{{ request()->fullUrlWithQuery(['edit'=>$observation->id,'create'=>null]) }}" aria-label="Edit pengamatan {{ $observation->workshop->name }}"><x-ui.icon name="edit" :size="18" /></a><button type="button" class="text-muted hover:text-red-600 transition-colors p-1" aria-label="Hapus pengamatan {{ $observation->workshop->name }}" @click="$dispatch('open-delete-observation', { id: {{ $observation->id }}, name: '{{ addslashes($observation->workshop->name) }}', date: '{{ $observation->observed_on->format('d/m/Y') }}' })"><x-ui.icon name="trash" :size="18" /></button></div></header>
                         <p class="mt-2 text-sm text-muted">{{ $observation->observed_on->locale('id')->translatedFormat('d M Y') }} · {{ sprintf('%02d.00',$observation->observed_hour) }}</p>
                         <div class="my-5 flex flex-wrap gap-2">@foreach($observation->workTypes as $type)<span class="neutral-badge">{{ $type->name }} ({{ $type->pivot->quantity }})</span>@endforeach</div>
                         <p class="text-sm"><strong>{{ $observation->workTypes->sum('pivot.quantity') }}</strong> pengerjaan</p>
@@ -66,11 +66,21 @@
                 </div>
             @else
                 <div class="catalogue-table-scroll"><table class="catalogue-table"><caption class="sr-only">Laporan pengamatan pengerjaan bengkel</caption><thead><tr>@foreach(['Tanggal','Bengkel','Jam','Jumlah','Jenis Pengerjaan','Aksi'] as $heading)<th scope="col">{{ $heading }}</th>@endforeach</tr></thead>
-                    <tbody>@forelse($observations as $observation)<tr><td class="whitespace-nowrap">{{ $observation->observed_on->locale('id')->translatedFormat('d M Y') }}</td><td>{{ $observation->workshop->name }}</td><td class="whitespace-nowrap"><span class="neutral-badge">Jam {{ sprintf('%02d',$observation->observed_hour) }}</span></td><td>{{ $observation->workTypes->sum('pivot.quantity') }}</td><td><div class="flex flex-wrap gap-1">@foreach($observation->workTypes as $type)<span class="neutral-badge">{{ $type->name }} ({{ $type->pivot->quantity }})</span>@endforeach</div></td><td><a href="{{ request()->fullUrlWithQuery(['edit'=>$observation->id,'create'=>null]) }}" class="edit-link">Edit <x-ui.icon name="edit" :size="16" /></a></td></tr>@empty<tr><td colspan="6"><x-ui.empty-state title="Belum ada pengamatan" description="Catat pengerjaan bengkel atau ubah pilihan filter." /></td></tr>@endforelse</tbody>
+                    <tbody>@forelse($observations as $observation)<tr><td class="whitespace-nowrap">{{ $observation->observed_on->locale('id')->translatedFormat('d M Y') }}</td><td>{{ $observation->workshop->name }}</td><td class="whitespace-nowrap"><span class="neutral-badge">Jam {{ sprintf('%02d',$observation->observed_hour) }}</span></td><td>{{ $observation->workTypes->sum('pivot.quantity') }}</td><td><div class="flex flex-wrap gap-1">@foreach($observation->workTypes as $type)<span class="neutral-badge">{{ $type->name }} ({{ $type->pivot->quantity }})</span>@endforeach</div></td><td><div class="flex items-center gap-2"><a href="{{ request()->fullUrlWithQuery(['edit'=>$observation->id,'create'=>null]) }}" class="edit-link">Edit <x-ui.icon name="edit" :size="16" /></a><button type="button" class="text-muted hover:text-red-600 transition-colors p-1" title="Hapus Pengamatan" aria-label="Hapus pengamatan {{ $observation->workshop->name }}" @click="$dispatch('open-delete-observation', { id: {{ $observation->id }}, name: '{{ addslashes($observation->workshop->name) }}', date: '{{ $observation->observed_on->format('d/m/Y') }}' })"><x-ui.icon name="trash" :size="16" /></button></div></td></tr>@empty<tr><td colspan="6"><x-ui.empty-state title="Belum ada pengamatan" description="Catat pengerjaan bengkel atau ubah pilihan filter." /></td></tr>@endforelse</tbody>
                 </table></div>
             @endif
             <x-ui.pagination :paginator="$observations" />
         </section>
         @include('reports.partials.observation-form')
+        <x-ui.dialog name="delete-observation" title="Hapus Pengamatan Pengerjaan" description="Catatan observasi kompetitor ini akan dihapus dari sistem.">
+            <form method="POST" class="dialog-form" x-data="{ obsName: '', obsDate: '', deleteUrl: '' }" :action="deleteUrl" @open-delete-observation.window="obsName = $event.detail.name; obsDate = $event.detail.date; deleteUrl = '{{ url('reports/observations') }}/' + $event.detail.id; $dispatch('open-dialog', { id: 'delete-observation' })" @submit="submitting = true">
+                @csrf @method('DELETE')
+                <p class="text-sm">Hapus pengamatan di <strong x-text="obsName"></strong> tanggal <span x-text="obsDate"></span>?</p>
+                <footer class="dialog-actions">
+                    <button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button>
+                    <button type="submit" class="ui-button ui-button--danger" :disabled="submitting || !deleteUrl" x-text="submitting ? 'Menghapus…' : 'Ya, Hapus Pengamatan'">Ya, Hapus Pengamatan</button>
+                </footer>
+            </form>
+        </x-ui.dialog>
     </div>
 </x-app-layout>
