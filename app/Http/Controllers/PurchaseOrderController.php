@@ -6,13 +6,11 @@ use App\Http\Requests\DistributorRequest;
 use App\Http\Requests\PurchaseOrderReceiptRequest;
 use App\Http\Requests\PurchaseOrderRequest;
 use App\Models\Distributor;
-use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\PurchasePlan;
 use App\Services\DistributorInvoiceService;
 use App\Services\PurchaseOrderDeletionService;
-use App\Services\SupplierProductService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -136,11 +134,10 @@ class PurchaseOrderController extends Controller
         return view('purchase-orders.create', ['distributors' => Distributor::where('is_active', true)->orderBy('name')->get(), 'requestId' => (string) Str::uuid(), 'initialItems' => $initialItems, 'selectedDistributor' => is_scalar(old('distributor_id')) ? old('distributor_id') : $request->integer('distributor_id')]);
     }
 
-    public function store(PurchaseOrderRequest $request, DistributorInvoiceService $billing, SupplierProductService $supplierProducts): RedirectResponse
+    public function store(PurchaseOrderRequest $request, DistributorInvoiceService $billing): RedirectResponse
     {
         $data = $request->validated();
-        $supplierProducts->ensureSchemaReady();
-        $order = DB::transaction(function () use ($data, $billing, $supplierProducts): PurchaseOrder {
+        $order = DB::transaction(function () use ($data, $billing): PurchaseOrder {
             $distributor = Distributor::lockForUpdate()->findOrFail($data['distributor_id']);
             $existing = PurchaseOrder::where('request_id', $data['request_id'])->first();
             if ($existing) {
@@ -166,9 +163,14 @@ class PurchaseOrderController extends Controller
 
             $order = PurchaseOrder::create(collect($data)->except(['items', 'due_on', 'payment_term_months'])->all() + ['reference' => 'PO-'.now()->format('Ymd').'-'.Str::upper(Str::random(8)), 'distributor_name' => $distributor->name]);
             foreach ($data['items'] as $item) {
-                $product = ! empty($item['sku']) ? Product::where('sku', $item['sku'])->first() : null;
-                $supplierProduct = $product ? $supplierProducts->forDistributor($product, $distributor, (float) $item['unit_price']) : null;
-                $order->items()->create(array_replace($item, ['product_id' => $supplierProduct?->id, 'sku' => $item['sku'] ?? '']));
+                $order->items()->create([
+                    'product_name' => $item['product_name'],
+                    'sku' => $item['sku'] ?? '',
+                    'unit' => $item['unit'] ?? 'pcs',
+                    'quantity' => (int) $item['quantity'],
+                    'unit_price' => (float) $item['unit_price'],
+                    'product_id' => null,
+                ]);
             }
 
             $billing->createForOrder($order, $data['due_on'] ?? null, (int) ($data['payment_term_months'] ?? 3));

@@ -8,14 +8,16 @@
         ]],
         ['label' => 'Manajemen Produk', 'items' => [
             ['label' => 'Stok & Produk', 'icon' => 'box', 'route' => 'products.index', 'active' => 'products.*'],
-            ['label' => 'Pengadaan', 'icon' => 'cart', 'route' => 'purchase-orders.index', 'active' => 'purchase-orders.*'],
-            ['label' => 'Distributor', 'icon' => 'buildings', 'route' => 'distributors.index', 'active' => 'distributors.*'],
-            ['label' => 'Pelacak Pengiriman', 'icon' => 'ship', 'route' => 'shipments.index', 'active' => 'shipments.*'],
             ['label' => 'Retur Produk', 'icon' => 'return', 'route' => 'returns.index', 'active' => 'returns.*'],
             ['label' => 'Histori Transaksi', 'icon' => 'history', 'route' => 'transactions.index', 'active' => 'transactions.*'],
         ]],
-        ['label' => 'Laporan & Analisa', 'items' => [
+        ['label' => 'Pengadaan & Logistik', 'items' => [
+            ['label' => 'Pengadaan', 'icon' => 'cart', 'route' => 'purchase-orders.index', 'active' => 'purchase-orders.*'],
+            ['label' => 'Pelacak Pengiriman', 'icon' => 'ship', 'route' => 'shipments.index', 'active' => 'shipments.*'],
             ['label' => 'Tagihan Distributor', 'icon' => 'sidebar-invoice', 'route' => 'distributor-invoices.index', 'active' => 'distributor-invoices.*'],
+            ['label' => 'Distributor', 'icon' => 'buildings', 'route' => 'distributors.index', 'active' => 'distributors.*'],
+        ]],
+        ['label' => 'Laporan & Analisa', 'items' => [
             ['label' => 'Laporan', 'icon' => 'report', 'route' => 'reports.finance', 'active' => 'reports.finance'],
             ['label' => 'Riset Kompetitor', 'icon' => 'chart', 'route' => 'reports.index', 'active' => 'reports.index', 'create' => true],
         ]],
