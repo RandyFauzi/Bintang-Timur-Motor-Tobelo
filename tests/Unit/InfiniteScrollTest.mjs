@@ -108,3 +108,64 @@ test('mobileInfiniteScroll loadMore loads next page and updates state', async ()
         Object.assign(globalThis, saved);
     }
 });
+
+test('mobileInfiniteScroll loadMore also loads on desktop viewports', async () => {
+    const saved = { window: globalThis.window, document: globalThis.document, fetch: globalThis.fetch, DOMParser: globalThis.DOMParser };
+    try {
+        globalThis.window = { innerWidth: 1280, addEventListener: () => {}, Alpine: { initTree: () => {} } };
+
+        const appended = [];
+        const mockContainer = {
+            appendChild: (node) => appended.push(node),
+        };
+
+        const docNextContainer = {
+            querySelectorAll: () => [{ id: 'table-row-2', cloneNode: () => ({ id: 'table-row-2' }) }],
+        };
+
+        const mockDoc = {
+            querySelector: (sel) => {
+                if (sel.includes('catalogue-table tbody') || sel.includes('table tbody')) return docNextContainer;
+                if (sel.includes('pagination-links')) return { getAttribute: () => '/products?page=3' };
+                return null;
+            },
+        };
+
+        globalThis.DOMParser = class {
+            parseFromString() {
+                return mockDoc;
+            }
+        };
+
+        globalThis.fetch = async () => ({
+            ok: true,
+            text: async () => '<html>...</html>',
+        });
+
+        globalThis.document = {
+            body: {
+                querySelector: (sel) => (sel.includes('catalogue-table tbody') || sel.includes('table tbody') ? mockContainer : null),
+            },
+            importNode: (node) => node,
+        };
+
+        const scroller = mobileInfiniteScroll({
+            nextPageUrl: '/products?page=2',
+            total: 50,
+            perPage: 25,
+        });
+        scroller.checkMobile();
+        assert.equal(scroller.isMobile, false);
+        scroller.$el = { closest: () => null };
+
+        assert.equal(scroller.hasMore, true);
+        await scroller.loadMore();
+
+        assert.equal(appended.length, 1);
+        assert.equal(scroller.nextPageUrl, '/products?page=3');
+        assert.equal(scroller.hasMore, true);
+        assert.equal(scroller.loading, false);
+    } finally {
+        Object.assign(globalThis, saved);
+    }
+});

@@ -12,14 +12,10 @@ export function mobileInfiniteScroll(config = {}) {
         init() {
             this.checkMobile();
             window.addEventListener('resize', () => {
-                const was = this.isMobile;
                 this.checkMobile();
-                if (!was && this.isMobile && this.hasMore) {
-                    this.setupObserver();
-                }
             });
 
-            if (this.isMobile && this.hasMore) {
+            if (this.hasMore) {
                 this.setupObserver();
             }
         },
@@ -78,7 +74,7 @@ export function mobileInfiniteScroll(config = {}) {
 
                     this.observer = new IntersectionObserver((entries) => {
                         const entry = entries[0];
-                        if (entry && entry.isIntersecting && this.isMobile && this.hasMore && !this.loading) {
+                        if (entry && entry.isIntersecting && this.hasMore && !this.loading) {
                             this.loadMore();
                         }
                     }, {
@@ -99,7 +95,7 @@ export function mobileInfiniteScroll(config = {}) {
             // 2. Scroll listener fallback for mobile
             if (!this.scrollHandler) {
                 this.scrollHandler = () => {
-                    if (!this.isMobile || !this.hasMore || this.loading) return;
+                    if (!this.hasMore || this.loading) return;
                     const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
                     const innerHeight = window.innerHeight || document.documentElement.clientHeight;
                     const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
@@ -112,7 +108,7 @@ export function mobileInfiniteScroll(config = {}) {
         },
 
         async loadMore() {
-            if (this.loading || !this.hasMore || !this.nextPageUrl || !this.isMobile) return;
+            if (this.loading || !this.hasMore || !this.nextPageUrl) return;
 
             this.loading = true;
 

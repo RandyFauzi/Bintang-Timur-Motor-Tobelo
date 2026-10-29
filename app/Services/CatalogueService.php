@@ -60,9 +60,21 @@ class CatalogueService
     public function options(): array
     {
         return [
-            'brands' => Brand::where('is_active', true)->where('name', 'not like', '[DEMO]%')->orderBy('name')->get(),
-            'types' => ProductType::where('is_active', true)->where('name', 'not like', '[DEMO]%')->orderBy('name')->get(),
-            'colors' => Color::where('is_active', true)->where('name', 'not like', '[DEMO]%')->orderBy('name')->get(),
+            'brands' => Brand::where('is_active', true)
+                ->where('name', 'not like', '[DEMO]%')
+                ->whereHas('products', fn (Builder $relatedQuery) => $relatedQuery->where('is_active', true))
+                ->orderBy('name')
+                ->get(),
+            'types' => ProductType::where('is_active', true)
+                ->where('name', 'not like', '[DEMO]%')
+                ->whereHas('products', fn (Builder $relatedQuery) => $relatedQuery->where('is_active', true))
+                ->orderBy('name')
+                ->get(),
+            'colors' => Color::where('is_active', true)
+                ->where('name', 'not like', '[DEMO]%')
+                ->whereHas('products', fn (Builder $relatedQuery) => $relatedQuery->where('is_active', true))
+                ->orderBy('name')
+                ->get(),
             'distributors' => Distributor::where('is_active', true)->orderBy('name')->get(),
         ];
     }
@@ -179,7 +191,13 @@ class CatalogueService
     /** @return array<int, array{name: string, value: int}> */
     public function categories(): array
     {
-        return ProductType::query()->withCount(['products' => fn (Builder $relatedQuery) => $relatedQuery->where('is_active', true)])->orderBy('name')->get()->map(fn (ProductType $type): array => ['name' => $type->name, 'value' => $type->products_count])->all();
+        return ProductType::query()
+            ->whereHas('products', fn (Builder $relatedQuery) => $relatedQuery->where('is_active', true))
+            ->withCount(['products' => fn (Builder $relatedQuery) => $relatedQuery->where('is_active', true)])
+            ->orderBy('name')
+            ->get()
+            ->map(fn (ProductType $type): array => ['name' => $type->name, 'value' => $type->products_count])
+            ->all();
     }
 
     /** @param array<string, mixed> $filters */

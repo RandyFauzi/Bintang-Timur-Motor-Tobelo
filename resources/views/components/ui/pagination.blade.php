@@ -10,7 +10,7 @@
      @endif>
 
     @if($infinite)
-        <div class="mobile-infinite-scroll md:hidden" x-show="isMobile">
+        <div class="mobile-infinite-scroll">
             {{-- Loading Indicator --}}
             <div x-show="loading" class="infinite-scroll-loading" aria-live="polite">
                 <span class="infinite-scroll-spinner" aria-hidden="true"></span>
@@ -34,7 +34,7 @@
         </div>
     @endif
 
-    <footer class="catalogue-pagination">
+    <footer class="catalogue-pagination" @if($infinite) :class="{ 'hidden': hasMore || loading }" @endif>
         <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2 text-xs text-muted">
             <x-ui.query-fields :except="['page','per_page','edit','create']" />
             <label for="per-page">Tampilkan</label><select id="per-page" name="per_page" class="pagination-select" onchange="this.form.requestSubmit()">@foreach([5,6,10,12,15,25,50] as $size)<option value="{{ $size }}" @selected($paginator->perPage() == $size)>{{ $size }}</option>@endforeach</select>

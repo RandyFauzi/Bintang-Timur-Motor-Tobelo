@@ -2,11 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Models\Brand;
+use App\Models\Color;
 use App\Models\Distributor;
 use App\Models\Product;
 use App\Models\ProductReturn;
+use App\Models\ProductType;
 use App\Models\StockMovement;
 use App\Models\User;
+use App\Services\CatalogueService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -310,5 +314,69 @@ class CatalogueTest extends TestCase
             ->assertSee('Memuat data...')
             ->assertSee('x-ref="sentinel"', false)
             ->assertSee('catalogue-pagination', false);
+    }
+
+    public function test_catalogue_filter_options_and_categories_exclude_unused_types_and_brands(): void
+    {
+        $activeType = ProductType::create(['name' => 'Mesin', 'slug' => 'mesin', 'is_active' => true]);
+        $emptyType = ProductType::create(['name' => 'Ban Motor', 'slug' => 'ban-motor', 'is_active' => true]);
+
+        $activeBrand = Brand::create(['name' => 'Yamaha', 'slug' => 'yamaha', 'is_active' => true]);
+        $emptyBrand = Brand::create(['name' => 'Aspira', 'slug' => 'aspira', 'is_active' => true]);
+
+        $product = Product::factory()->withStock(10)->create([
+            'type_id' => $activeType->id,
+            'brand_id' => $activeBrand->id,
+            'is_active' => true,
+        ]);
+
+        $catalogue = app(CatalogueService::class);
+        $options = $catalogue->options();
+
+        $this->assertTrue($options['types']->contains('id', $activeType->id));
+        $this->assertFalse($options['types']->contains('id', $emptyType->id));
+
+        $this->assertTrue($options['brands']->contains('id', $activeBrand->id));
+        $this->assertFalse($options['brands']->contains('id', $emptyBrand->id));
+
+        $categories = collect($catalogue->categories());
+        $this->assertTrue($categories->pluck('name')->contains('Mesin'));
+        $this->assertFalse($categories->pluck('name')->contains('Ban Motor'));
+
+        // When product is deleted, activeType and activeBrand also disappear from filter options
+        $catalogue->deleteProduct($product);
+        $optionsAfter = $catalogue->options();
+        $this->assertFalse($optionsAfter['types']->contains('id', $activeType->id));
+        $this->assertFalse($optionsAfter['brands']->contains('id', $activeBrand->id));
+    }
+
+    public function test_product_table_and_cards_do_not_render_empty_dash_when_product_has_no_color(): void
+    {
+        $user = User::factory()->create();
+        $productWithoutColor = Product::factory()->withStock(5)->create([
+            'name' => 'Karburator Shogun 125',
+            'color_id' => null,
+            'is_active' => true,
+        ]);
+
+        $color = Color::create(['name' => 'Hitam Mengkilap', 'is_active' => true]);
+        $productWithColor = Product::factory()->withStock(5)->create([
+            'name' => 'Spull assy FIZ-R',
+            'color_id' => $color->id,
+            'is_active' => true,
+        ]);
+
+        // Table view (list)
+        $responseTable = $this->actingAs($user)->get(route('products.index', ['view' => 'list']))->assertOk();
+        $responseTable->assertSee('Karburator Shogun 125')
+            ->assertSee('Spull assy FIZ-R')
+            ->assertSee('Hitam Mengkilap')
+            ->assertDontSee('<span class="mt-1 block text-muted">–</span>', false);
+
+        // Cards view
+        $responseCards = $this->actingAs($user)->get(route('products.index', ['view' => 'cards']))->assertOk();
+        $responseCards->assertSee('Karburator Shogun 125')
+            ->assertSee('Hitam Mengkilap')
+            ->assertDontSee('<p class="mt-2 text-sm text-muted">–</p>', false);
     }
 }

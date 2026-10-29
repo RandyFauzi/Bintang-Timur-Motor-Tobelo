@@ -36,7 +36,7 @@
                 <div class="catalogue-card-grid">
                     @forelse($products as $product)
                         <article class="product-card" :class="{ 'is-selected': has({{ $product->id }}) }">
-                            <header><div><h2><label class="flex min-h-11 cursor-pointer items-start gap-2"><input type="checkbox" class="mt-1 shrink-0 rounded" :checked="has({{ $product->id }})" @change="toggle({{ $product->id }}, $event.target.checked)" aria-label="Pilih {{ $product->name }}"><span class="min-w-0">{{ $product->name }}</span></label></h2><p class="mt-2 text-sm text-muted">{{ $product->color?->name ?? '–' }}</p></div><div class="product-card__actions">
+                            <header><div><h2><label class="flex min-h-11 cursor-pointer items-start gap-2"><input type="checkbox" class="mt-1 shrink-0 rounded" :checked="has({{ $product->id }})" @change="toggle({{ $product->id }}, $event.target.checked)" aria-label="Pilih {{ $product->name }}"><span class="min-w-0">{{ $product->name }}</span></label></h2>@if($product->color?->name)<p class="mt-2 text-sm text-muted">{{ $product->color->name }}</p>@endif</div><div class="product-card__actions">
                                 <x-ui.product-actions :product="$product" />
                             </div></header>
                             <dl class="product-card__details">
@@ -59,7 +59,7 @@
                     <thead><tr><th scope="col"><input type="checkbox" class="rounded" :checked="pageSelected(@js($pageProductIds))" x-effect="$el.indeterminate = @js($pageProductIds).some(id => has(id)) && !pageSelected(@js($pageProductIds))" @change="togglePage(@js($pageProductIds), $event.target.checked)" aria-label="Pilih semua produk pada halaman ini"></th>@foreach(['Info Produk','Modal','Harga Jual','Tipe Produk','Merk','Jenis Part','Distributor','Stok','Aksi'] as $heading)<th scope="col">{{ $heading }}</th>@endforeach</tr></thead>
                     <tbody>@forelse($products as $product)<tr>
                         <td><input type="checkbox" class="rounded" :checked="has({{ $product->id }})" @change="toggle({{ $product->id }}, $event.target.checked)" aria-label="Pilih {{ $product->name }}"></td>
-                        <td><span class="font-medium">{{ $product->name }}</span><span class="mt-1 block text-muted">{{ $product->color?->name ?? '–' }}</span></td>
+                        <td><span class="font-medium">{{ $product->name }}</span>@if($product->color?->name)<span class="mt-1 block text-muted">{{ $product->color->name }}</span>@endif</td>
                         <td class="whitespace-nowrap">Rp {{ number_format($product->purchase_price,0,',','.') }}</td><td class="whitespace-nowrap">Rp {{ number_format($product->selling_price,0,',','.') }}</td>
                         <td>{{ \App\Models\Product::KINDS[$product->product_kind] ?? '–' }}</td><td><span class="neutral-badge">{{ $product->brand?->name ?? '–' }}</span></td>
                         <td>{{ $product->type?->name ?? '–' }}</td><td>{{ $product->distributors->pluck('name')->join(', ') ?: '–' }}</td>

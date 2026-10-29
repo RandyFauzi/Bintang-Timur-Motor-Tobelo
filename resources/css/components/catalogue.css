@@ -438,8 +438,9 @@
         background: #dcfce7;
     }
 
-    @media (min-width: 768px) {
-        .mobile-infinite-scroll { display: none !important; }
+    .mobile-infinite-scroll {
+        display: block;
+        width: 100%;
     }
     .infinite-scroll-loading {
         display: flex;
