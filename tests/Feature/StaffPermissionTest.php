@@ -27,12 +27,9 @@ class StaffPermissionTest extends TestCase
 
         $this->actingAs($staff);
 
-        // 1. Laporan
+        // 1. Laporan Keuangan
         $this->get(route('reports.finance'))->assertForbidden();
-        $this->get(route('reports.index'))->assertForbidden();
-        $this->get(route('reports.export'))->assertForbidden();
         $this->post(route('reports.expenses.store'), [])->assertForbidden();
-        $this->post(route('reports.observations.store'), [])->assertForbidden();
 
         // 2. PO (Purchase Orders & Plans)
         $this->get(route('purchase-orders.index'))->assertForbidden();
@@ -84,6 +81,7 @@ class StaffPermissionTest extends TestCase
         $this->get(route('products.index'))->assertOk();
         $this->get(route('distributors.index'))->assertOk();
         $this->get(route('returns.index'))->assertOk();
+        $this->get(route('reports.index'))->assertOk();
         $this->get(route('notifications.index'))->assertOk();
         $this->get(route('profile.edit'))->assertOk();
     }
@@ -99,6 +97,7 @@ class StaffPermissionTest extends TestCase
         $response->assertSee(route('products.index'), false);
         $response->assertSee(route('distributors.index'), false);
         $response->assertSee(route('returns.index'), false);
+        $response->assertSee(route('reports.index'), false);
 
         // Restricted modules must NOT be in staff sidebar
         $response->assertDontSee(route('transactions.index'), false);
@@ -106,7 +105,6 @@ class StaffPermissionTest extends TestCase
         $response->assertDontSee(route('shipments.index'), false);
         $response->assertDontSee(route('distributor-invoices.index'), false);
         $response->assertDontSee(route('reports.finance'), false);
-        $response->assertDontSee(route('reports.index'), false);
         $response->assertDontSee(route('users.index'), false);
         $response->assertDontSee(route('activity-logs.index'), false);
 

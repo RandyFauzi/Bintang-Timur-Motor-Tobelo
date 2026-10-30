@@ -102,19 +102,21 @@ Route::middleware('auth')->group(function () {
     Route::patch('/returns/{productReturn}', [ProductReturnController::class, 'update'])->whereUuid('productReturn')->name('returns.update');
     Route::delete('/returns/{productReturn}', [ProductReturnController::class, 'destroy'])->whereUuid('productReturn')->name('returns.destroy');
 
-    // Reports & Finance
+    // Reports (Finance - Admin Only)
     Route::middleware('can:view-reports')->group(function () {
-        Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
-        Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
         Route::get('/reports/finance', [ReportController::class, 'finance'])->name('reports.finance');
-        Route::post('/reports/observations', [CompetitorObservationController::class, 'store'])->name('reports.observations.store');
-        Route::patch('/reports/observations/{observation}', [CompetitorObservationController::class, 'update'])->name('reports.observations.update');
-        Route::delete('/reports/observations/{observation}', [CompetitorObservationController::class, 'destroy'])->name('reports.observations.destroy');
-        Route::post('/reports/workshops', [ReportLookupController::class, 'workshops'])->name('reports.workshops.store');
-        Route::post('/reports/work-types', [ReportLookupController::class, 'workTypes'])->name('reports.work-types.store');
         Route::post('/reports/expenses', [ReportController::class, 'storeExpense'])->name('reports.expenses.store');
         Route::delete('/reports/expenses/{expense}', [ReportController::class, 'destroyExpense'])->name('reports.expenses.destroy');
     });
+
+    // Competitor Research (Observasi Kompetitor)
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
+    Route::post('/reports/observations', [CompetitorObservationController::class, 'store'])->name('reports.observations.store');
+    Route::patch('/reports/observations/{observation}', [CompetitorObservationController::class, 'update'])->name('reports.observations.update');
+    Route::delete('/reports/observations/{observation}', [CompetitorObservationController::class, 'destroy'])->name('reports.observations.destroy');
+    Route::post('/reports/workshops', [ReportLookupController::class, 'workshops'])->name('reports.workshops.store');
+    Route::post('/reports/work-types', [ReportLookupController::class, 'workTypes'])->name('reports.work-types.store');
 
     Route::middleware('can:view-activity-logs')->group(function () {
         Route::get('/activity-logs/export', [ActivityLogController::class, 'export'])->name('activity-logs.export');

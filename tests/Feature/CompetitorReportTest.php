@@ -129,4 +129,41 @@ class CompetitorReportTest extends TestCase
             'workshop_start_date' => '2025-01-01', 'workshop_end_date' => '2026-10-15',
         ]))->assertUnprocessable()->assertJsonValidationErrors(['type_end_date', 'workshop_end_date']);
     }
+
+    public function test_staff_users_can_access_competitor_reports_and_create_observations(): void
+    {
+        $staff = User::factory()->staff()->create();
+        $workshop = Workshop::factory()->create();
+        $type = WorkType::factory()->create();
+
+        $this->actingAs($staff)->get(route('reports.index'))
+            ->assertOk()
+            ->assertSee('Riset Kompetitor')
+            ->assertDontSee('Lihat laporan keuangan');
+
+        $payload = [
+            'workshop_id' => $workshop->id,
+            'observed_on' => now()->toDateString(),
+            'observed_hour' => 11,
+            'items' => [
+                ['work_type_id' => $type->id, 'quantity' => 4],
+            ],
+        ];
+
+        $this->actingAs($staff)->post(route('reports.observations.store'), $payload)
+            ->assertRedirect(route('reports.index'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('competitor_observations', [
+            'created_by' => $staff->id,
+            'workshop_id' => $workshop->id,
+        ]);
+    }
+
+    public function test_staff_users_cannot_access_financial_reports(): void
+    {
+        $staff = User::factory()->staff()->create();
+
+        $this->actingAs($staff)->get(route('reports.finance'))->assertForbidden();
+    }
 }
