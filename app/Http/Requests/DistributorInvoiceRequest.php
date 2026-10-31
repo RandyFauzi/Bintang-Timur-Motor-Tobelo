@@ -23,10 +23,14 @@ class DistributorInvoiceRequest extends FormRequest
     public function rules(): array
     {
         if ($this->isMethod('PATCH')) {
+            $invoice = $this->route('distributorInvoice');
+            $minDate = $invoice?->purchaseOrder?->ordered_on?->toDateString() ?? $invoice?->invoiced_on?->toDateString();
+
             return [
                 'version' => ['required', 'integer', 'min:1'],
-                'due_on' => ['required', 'date_format:Y-m-d', 'after_or_equal:'.$this->route('distributorInvoice')->purchaseOrder->ordered_on->toDateString()],
+                'due_on' => array_values(array_filter(['required', 'date_format:Y-m-d', $minDate ? 'after_or_equal:'.$minDate : null])),
                 'invoiced_on' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:due_on'],
+                'total' => ['nullable', 'numeric', 'min:0.01', 'max:90000000000000'],
                 'shipment_id' => ['nullable', 'integer', Rule::exists('shipments', 'id')],
                 'supplier_reference' => ['nullable', 'string', 'max:255'],
                 'notes' => ['nullable', 'string', 'max:2000'],

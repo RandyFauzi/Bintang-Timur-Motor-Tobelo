@@ -49,6 +49,9 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('can:manage-invoices')->group(function () {
         Route::get('distributor-invoices', [DistributorInvoiceController::class, 'index'])->name('distributor-invoices.index');
+        Route::get('distributor-invoices/import/template', [DistributorInvoiceController::class, 'template'])->name('distributor-invoices.import.template');
+        Route::post('distributor-invoices/import', [DistributorInvoiceController::class, 'import'])->middleware('throttle:10,1')->name('distributor-invoices.import');
+        Route::post('distributor-invoices', [DistributorInvoiceController::class, 'store'])->name('distributor-invoices.store');
         Route::get('distributor-invoices/{distributorInvoice}', [DistributorInvoiceController::class, 'show'])->name('distributor-invoices.show');
         Route::patch('distributor-invoices/{distributorInvoice}', [DistributorInvoiceController::class, 'update'])->name('distributor-invoices.update');
         Route::post('distributor-invoices/{distributorInvoice}/payments', [DistributorInvoiceController::class, 'pay'])->name('distributor-invoices.pay');

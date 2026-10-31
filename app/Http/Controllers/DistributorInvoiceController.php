@@ -4,16 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\DistributorInvoiceRequest;
 use App\Http\Requests\DistributorPaymentRequest;
+use App\Http\Requests\ImportDistributorInvoiceRequest;
+use App\Http\Requests\StoreDistributorInvoiceRequest;
 use App\Models\Distributor;
 use App\Models\DistributorInvoice;
 use App\Models\Shipment;
+use App\Services\DistributorInvoiceImportService;
 use App\Services\DistributorInvoiceService;
+use App\Services\ExcelExportService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DistributorInvoiceController extends Controller
 {
@@ -23,10 +28,16 @@ class DistributorInvoiceController extends Controller
         $base = DistributorInvoice::query();
         if (! empty($filters['search'])) {
             $term = '%'.$filters['search'].'%';
-            $base->where(fn (Builder $q): Builder => $q->where('reference', 'like', $term)->orWhere('supplier_reference', 'like', $term)->orWhereHas('purchaseOrder', fn (Builder $q): Builder => $q->where('distributor_name', 'like', $term)->orWhere('reference', 'like', $term)));
+            $base->where(fn (Builder $q): Builder => $q->where('reference', 'like', $term)
+                ->orWhere('supplier_reference', 'like', $term)
+                ->orWhereHas('purchaseOrder', fn (Builder $q): Builder => $q->where('distributor_name', 'like', $term)->orWhere('reference', 'like', $term))
+                ->orWhereHas('distributor', fn (Builder $q): Builder => $q->where('name', 'like', $term))
+            );
         }
         if (! empty($filters['distributor_id'])) {
-            $base->whereHas('purchaseOrder', fn (Builder $q): Builder => $q->where('distributor_id', $filters['distributor_id']));
+            $base->where(fn (Builder $q): Builder => $q->where('distributor_id', $filters['distributor_id'])
+                ->orWhereHas('purchaseOrder', fn (Builder $q): Builder => $q->where('distributor_id', $filters['distributor_id']))
+            );
         }
         $today = DistributorInvoice::today();
         $summary = ['total' => (int) (clone $base)->sum('total_cents'), 'paid' => (int) (clone $base)->sum('paid_cents'), 'outstanding' => (int) (clone $base)->sum(DB::raw('total_cents - paid_cents')), 'overdue' => (int) (clone $base)->outstanding()->whereDate('due_on', '<=', $today->toDateString())->sum(DB::raw('total_cents - paid_cents'))];
@@ -63,12 +74,49 @@ class DistributorInvoiceController extends Controller
             $base->needsReminder()->whereDate('due_on', '>=', $today->toDateString());
         }
 
-        return view('distributor-invoices.index', ['invoices' => $base->with(['purchaseOrder', 'shipment'])->orderByRaw('paid_cents >= total_cents')->orderBy('due_on')->orderBy('id')->paginate(15)->withQueryString(), 'distributors' => Distributor::orderBy('name')->get(), 'summary' => $summary]);
+        return view('distributor-invoices.index', [
+            'invoices' => $base->with(['purchaseOrder', 'distributor', 'shipment'])->orderByRaw('paid_cents >= total_cents')->orderBy('due_on')->orderBy('id')->paginate(15)->withQueryString(),
+            'distributors' => Distributor::orderBy('name')->get(),
+            'shipments' => Shipment::orderByDesc('id')->get(['id', 'reference', 'cargo_name', 'delivered_at']),
+            'summary' => $summary,
+        ]);
+    }
+
+    public function store(StoreDistributorInvoiceRequest $request, DistributorInvoiceService $billing): RedirectResponse
+    {
+        $invoice = $billing->createManual($request->validated());
+
+        return redirect()->route('distributor-invoices.index')
+            ->with('success', 'Tagihan manual '.$invoice->reference.' berhasil ditambahkan.');
+    }
+
+    public function template(ExcelExportService $excel): StreamedResponse
+    {
+        return $excel->download(
+            'template-import-tagihan-distributor.xlsx',
+            'TEMPLATE IMPORT TAGIHAN DISTRIBUTOR',
+            DistributorInvoiceImportService::HEADERS,
+            [],
+            'Petunjuk: Kolom Distributor, Jatuh Tempo, dan Total Tagihan wajib diisi. Nomor invoice otomatis jika dikosongkan.',
+            forImport: true
+        );
+    }
+
+    public function import(ImportDistributorInvoiceRequest $request, DistributorInvoiceImportService $importer): RedirectResponse
+    {
+        $count = $importer->import($request->file('file'));
+
+        return redirect()->route('distributor-invoices.index')
+            ->with('success', $count.' tagihan distributor berhasil diimpor.');
     }
 
     public function show(DistributorInvoice $distributorInvoice): View
     {
-        return view('distributor-invoices.show', ['invoice' => $distributorInvoice->load(['purchaseOrder.items', 'payments.creator', 'shipment.receiver']), 'requestId' => (string) Str::uuid(), 'shipments' => Shipment::orderByDesc('id')->get(['id', 'reference', 'cargo_name', 'delivered_at'])]);
+        return view('distributor-invoices.show', [
+            'invoice' => $distributorInvoice->load(['purchaseOrder.items', 'distributor', 'payments.creator', 'shipment.receiver']),
+            'requestId' => (string) Str::uuid(),
+            'shipments' => Shipment::orderByDesc('id')->get(['id', 'reference', 'cargo_name', 'delivered_at']),
+        ]);
     }
 
     public function update(DistributorInvoiceRequest $request, DistributorInvoice $distributorInvoice, DistributorInvoiceService $billing): RedirectResponse

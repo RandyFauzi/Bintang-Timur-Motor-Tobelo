@@ -17,11 +17,11 @@ class DistributorInvoice extends Model
 
     public const REMINDER_DAYS = 7;
 
-    protected $fillable = ['purchase_order_id', 'reference', 'due_on', 'total_cents', 'supplier_reference', 'notes', 'invoiced_on', 'shipment_id', 'discrepancy_notes', 'claim_amount_cents'];
+    protected $fillable = ['distributor_id', 'purchase_order_id', 'reference', 'due_on', 'total_cents', 'supplier_reference', 'notes', 'invoiced_on', 'shipment_id', 'discrepancy_notes', 'claim_amount_cents'];
 
     protected function casts(): array
     {
-        return ['invoiced_on' => 'immutable_date', 'claim_amount_cents' => 'integer', 'shipment_id' => 'integer', 'due_on' => 'immutable_date', 'total_cents' => 'integer', 'paid_cents' => 'integer', 'version' => 'integer'];
+        return ['distributor_id' => 'integer', 'invoiced_on' => 'immutable_date', 'claim_amount_cents' => 'integer', 'shipment_id' => 'integer', 'due_on' => 'immutable_date', 'total_cents' => 'integer', 'paid_cents' => 'integer', 'version' => 'integer'];
     }
 
     public static function today(): CarbonImmutable
@@ -29,9 +29,24 @@ class DistributorInvoice extends Model
         return CarbonImmutable::now(config('shipping.timezone'))->startOfDay();
     }
 
+    public function distributor(): BelongsTo
+    {
+        return $this->belongsTo(Distributor::class);
+    }
+
     public function purchaseOrder(): BelongsTo
     {
         return $this->belongsTo(PurchaseOrder::class);
+    }
+
+    public function getDistributorNameAttribute(): string
+    {
+        return $this->distributor?->name ?? $this->purchaseOrder?->distributor_name ?? 'Tanpa Distributor';
+    }
+
+    public function isManual(): bool
+    {
+        return $this->purchase_order_id === null;
     }
 
     public function shipment(): BelongsTo

@@ -1,30 +1,151 @@
 <x-app-layout>
 <div class="catalogue-page procurement-detail-page grid gap-5">
-    @if($invoice->purchaseOrder->purchase_plan_id)<a class="plan-back" href="{{ route('purchase-plans.show', $invoice->purchaseOrder->purchase_plan_id) }}">← Kelola rencana & nota distributor</a>@endif
-    <header class="catalogue-heading !mb-0 !block"><a class="text-sm text-muted underline" href="{{ route('distributor-invoices.index') }}">Kembali ke tagihan distributor</a><div class="mt-3 flex flex-wrap items-center justify-between gap-3"><div><h1>{{ $invoice->reference }}</h1><p class="mt-2 text-sm text-muted">{{ $invoice->purchaseOrder->distributor_name }} · PO {{ $invoice->purchaseOrder->ordered_on->format('d/m/Y') }}</p></div><x-ui.invoice-status :status="$invoice->billingStatus()" /></div></header>
+    @if($invoice->purchaseOrder?->purchase_plan_id)<a class="plan-back" href="{{ route('purchase-plans.show', $invoice->purchaseOrder->purchase_plan_id) }}">← Kelola rencana & nota distributor</a>@endif
+    <header class="catalogue-heading !mb-0 !block">
+        <a class="text-sm text-muted underline" href="{{ route('distributor-invoices.index') }}">Kembali ke tagihan distributor</a>
+        <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h1>{{ $invoice->reference }}</h1>
+                <p class="mt-2 text-sm text-muted">{{ $invoice->distributor_name }} @if($invoice->purchaseOrder) · PO {{ $invoice->purchaseOrder->ordered_on->format('d/m/Y') }} @else · Tagihan Manual @endif</p>
+            </div>
+            <x-ui.invoice-status :status="$invoice->billingStatus()" />
+        </div>
+    </header>
     <div class="grid gap-4 sm:grid-cols-3">
         @foreach(['total_cents'=>'Total Tagihan','paid_cents'=>'Sudah Dibayarkan','remaining'=>'Sisa Tagihan'] as $key=>$label)<section class="catalogue-surface p-5"><p class="text-sm text-muted">{{ $label }}</p><p class="mt-3 text-xl font-semibold">Rp {{ number_format(($key === 'remaining' ? $invoice->remainingCents() : $invoice->$key)/100,2,',','.') }}</p></section>@endforeach
     </div>
-    <section class="catalogue-surface p-5"><div class="flex flex-wrap items-start justify-between gap-4"><div><h2 class="text-lg font-medium">Jatuh Tempo {{ $invoice->due_on->format('d/m/Y') }}</h2><p class="mt-2 text-sm text-muted">{{ $invoice->timingLabel() }} · Pengingat H-7, H-3, hari H, dan jatuh tempo mengikuti waktu Tobelo (WIT).</p>@if($invoice->supplier_reference)<p class="mt-2 text-sm">Nomor nota distributor: {{ $invoice->supplier_reference }}</p>@endif @if($invoice->notes)<p class="mt-2 break-words text-sm">{{ $invoice->notes }}</p>@endif</div><div class="flex flex-wrap items-center gap-2"><a class="ui-button ui-button--secondary" href="{{ route('purchase-orders.show',$invoice->purchaseOrder) }}">Lihat PO</a><button type="button" class="ui-button ui-button--secondary" @click="$dispatch('open-dialog',{id:'invoice-edit'})"><x-ui.icon name="edit" :size="16" />Edit Faktur & Tempo</button>@if($invoice->remainingCents() > 0)<button type="button" class="ui-button !bg-emerald-700 hover:!bg-emerald-800 !text-white font-medium shadow-sm" @click="$dispatch('open-dialog',{id:'invoice-payment'})"><x-ui.icon name="wallet" :size="16" />Catat Pembayaran</button>@endif<button type="button" class="ui-button ui-button--danger" @click="$dispatch('open-dialog',{id:'invoice-delete'})"><x-ui.icon name="trash" :size="16" />Hapus Tagihan</button></div></div></section>
-    <section class="catalogue-surface grid gap-5 p-5 sm:grid-cols-2">
-        <div><p class="text-sm text-muted">Tanggal Faktur Distributor</p><p class="mt-2 font-medium">{{ $invoice->invoiced_on?->format('d/m/Y') ?? 'Belum diisi sesuai dokumen distributor' }}</p><p class="mt-1 text-xs text-muted">Terpisah dari tanggal PO dan tanggal barang masuk.</p></div>
-        <div><p class="text-sm text-muted">Tanggal Masuk Toko (otomatis)</p><p class="mt-2 font-medium">{{ $invoice->receivedAt() ? $invoice->receivedAt()->format('d/m/Y H:i').' WIT' : '-' }}</p>@if(!$invoice->receivedAt())<p class="mt-1 text-sm">{{ $invoice->shipment ? 'Menunggu konfirmasi barang tiba' : 'Belum terhubung ke kargo' }}</p>@endif</div>
-        <div class="sm:col-span-2"><p class="text-sm text-muted">Kargo Kapal</p>@if($invoice->shipment)<a class="mt-2 inline-block font-medium underline underline-offset-4" href="{{ route('shipments.index',['shipment'=>$invoice->shipment_id]) }}#shipment-detail">{{ $invoice->shipment->reference }} - {{ $invoice->shipment->cargo_name }}</a>@if($invoice->receivedAt())<p class="mt-2 text-xs text-muted">Dikonfirmasi oleh {{ $invoice->shipment->receiver?->name ?? 'Pengguna yang sudah dihapus' }}. Tanggal mengikuti approval di Pelacak Pengiriman.</p>@endif @else<p class="mt-2 text-sm">Hubungkan cargo melalui finalisasi pengiriman pada pengadaan, atau Edit Faktur & Tempo untuk PO lama. Tanggal masuk tidak dapat diinput manual.</p>@endif</div>
-        @if($invoice->billingStatus() === 'overdue')<p class="text-sm text-danger sm:col-span-2">{{ $invoice->timingLabel() }}. Status pembayaran: {{ \App\Models\DistributorInvoice::STATUSES[$invoice->status()] }}.</p>@endif
+    <section class="catalogue-surface p-5">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+                <h2 class="text-lg font-medium">Jatuh Tempo {{ $invoice->due_on->format('d/m/Y') }}</h2>
+                <p class="mt-2 text-sm text-muted">{{ $invoice->timingLabel() }} · Pengingat H-7, H-3, hari H, dan jatuh tempo mengikuti waktu Tobelo (WIT).</p>
+                @if($invoice->supplier_reference)<p class="mt-2 text-sm">Nomor nota distributor: {{ $invoice->supplier_reference }}</p>@endif
+                @if($invoice->notes)<p class="mt-2 break-words text-sm">{{ $invoice->notes }}</p>@endif
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                @if($invoice->purchaseOrder)
+                    <a class="ui-button ui-button--secondary" href="{{ route('purchase-orders.show',$invoice->purchaseOrder) }}">Lihat PO</a>
+                @endif
+                <button type="button" class="ui-button ui-button--secondary" @click="$dispatch('open-dialog',{id:'invoice-edit'})">
+                    <x-ui.icon name="edit" :size="16" />Edit Faktur & Tempo
+                </button>
+                @if($invoice->remainingCents() > 0)
+                    <button type="button" class="ui-button !bg-emerald-700 hover:!bg-emerald-800 !text-white font-medium shadow-sm" @click="$dispatch('open-dialog',{id:'invoice-payment'})">
+                        <x-ui.icon name="wallet" :size="16" />Catat Pembayaran
+                    </button>
+                @endif
+                <button type="button" class="ui-button ui-button--danger" @click="$dispatch('open-dialog',{id:'invoice-delete'})">
+                    <x-ui.icon name="trash" :size="16" />Hapus Tagihan
+                </button>
+            </div>
+        </div>
     </section>
-    <section class="catalogue-surface p-5"><div class="flex flex-wrap items-center justify-between gap-3"><h2 class="text-lg font-medium">Retur, Barang Kurang & Selisih Fisik</h2><button type="button" class="ui-button ui-button--secondary" @click="$dispatch('open-dialog',{id:'invoice-edit'})">Edit Keterangan</button></div><p class="mt-3 whitespace-pre-line break-words text-sm">{{ $invoice->discrepancy_notes ?: 'Belum ada keterangan retur, kerusakan, atau selisih barang.' }}</p><p class="mt-4 font-medium">Nilai Klaim Dicatat: Rp {{ number_format($invoice->claim_amount_cents/100,2,',','.') }}</p><p class="mt-2 text-xs text-muted">Nilai klaim adalah catatan pengajuan ke distributor dan belum mengurangi total faktur maupun sisa utang.</p></section>
-    <section class="catalogue-surface p-5"><h2 class="text-lg font-medium">Rincian Tagihan</h2><p class="mt-2 text-sm text-muted">{{ $invoice->purchaseOrder->supplier_note_total_cents !== null ? 'Total tagihan mengikuti nominal nota yang divalidasi. Subtotal PO di bawah adalah referensi perencanaan.' : 'Nilai tagihan mengikuti jumlah pada nota yang divalidasi dan harga satuan PO.' }} Hasil pemeriksaan barang datang tersedia di detail PO.</p><div class="mt-4 overflow-x-auto"><table class="w-full text-left text-sm"><thead class="border-y bg-gray-50"><tr>@foreach(['Barang / Kode Distributor','Jumlah','Subtotal'] as $label)<th class="p-3 font-medium">{{ $label }}</th>@endforeach</tr></thead><tbody>@foreach($invoice->purchaseOrder->items as $item)<tr class="border-b"><td class="p-3"><p class="font-medium">{{ $item->product_name }}</p><p class="text-xs text-muted">{{ $item->sku }}</p></td><td class="whitespace-nowrap p-3">{{ $item->invoice_quantity ?? $item->quantity }} {{ $item->unit }}</td><td class="whitespace-nowrap p-3">Rp {{ number_format(($item->invoice_quantity ?? $item->quantity)*$item->unit_price,2,',','.') }}</td></tr>@endforeach</tbody></table></div></section>
-    <section class="catalogue-surface p-5"><h2 class="text-lg font-medium">Riwayat Pembayaran</h2><p class="mt-2 text-sm text-muted">Catat pembayaran yang sudah dilakukan. Setiap pembayaran mengurangi sisa tagihan secara otomatis.</p><div class="mt-4 overflow-x-auto"><table class="w-full text-left text-sm"><thead class="border-y bg-gray-50"><tr>@foreach(['Tanggal','Nominal','Metode','Referensi / Catatan','Dicatat Oleh'] as $label)<th class="whitespace-nowrap p-3 font-medium">{{ $label }}</th>@endforeach</tr></thead><tbody>@forelse($invoice->payments->sortByDesc('id') as $payment)<tr class="border-b"><td class="p-3">{{ $payment->paid_on->format('d/m/Y') }}</td><td class="whitespace-nowrap p-3 font-medium">Rp {{ number_format($payment->amount_cents/100,2,',','.') }}</td><td class="p-3">{{ \App\Models\DistributorPayment::METHODS[$payment->method] }}</td><td class="max-w-xs break-words p-3">{{ $payment->reference ?? '—' }}@if($payment->notes)<p class="mt-1 text-xs text-muted">{{ $payment->notes }}</p>@endif</td><td class="p-3">{{ $payment->creator?->name ?? 'Pengguna dihapus' }}</td></tr>@empty<tr><td colspan="5" class="p-6 text-center text-muted">Belum ada pembayaran yang dicatat.</td></tr>@endforelse</tbody></table></div></section>
+    <section class="catalogue-surface grid gap-5 p-5 sm:grid-cols-2">
+        <div>
+            <p class="text-sm text-muted">Tanggal Faktur Distributor</p>
+            <p class="mt-2 font-medium">{{ $invoice->invoiced_on?->format('d/m/Y') ?? 'Belum diisi sesuai dokumen distributor' }}</p>
+            <p class="mt-1 text-xs text-muted">Terpisah dari tanggal PO dan tanggal barang masuk.</p>
+        </div>
+        <div>
+            <p class="text-sm text-muted">Tanggal Masuk Toko (otomatis)</p>
+            <p class="mt-2 font-medium">{{ $invoice->receivedAt() ? $invoice->receivedAt()->format('d/m/Y H:i').' WIT' : '-' }}</p>
+            @if(!$invoice->receivedAt())
+                <p class="mt-1 text-sm">{{ $invoice->shipment ? 'Menunggu konfirmasi barang tiba' : 'Belum terhubung ke kargo' }}</p>
+            @endif
+        </div>
+        <div class="sm:col-span-2">
+            <p class="text-sm text-muted">Kargo Kapal</p>
+            @if($invoice->shipment)
+                <a class="mt-2 inline-block font-medium underline underline-offset-4" href="{{ route('shipments.index',['shipment'=>$invoice->shipment_id]) }}#shipment-detail">{{ $invoice->shipment->reference }} - {{ $invoice->shipment->cargo_name }}</a>
+                @if($invoice->receivedAt())
+                    <p class="mt-2 text-xs text-muted">Dikonfirmasi oleh {{ $invoice->shipment->receiver?->name ?? 'Pengguna yang sudah dihapus' }}. Tanggal mengikuti approval di Pelacak Pengiriman.</p>
+                @endif
+            @else
+                <p class="mt-2 text-sm">Hubungkan cargo melalui Edit Faktur & Tempo jika barang dikirim via ekspedisi laut/darat.</p>
+            @endif
+        </div>
+        @if($invoice->billingStatus() === 'overdue')
+            <p class="text-sm text-danger sm:col-span-2">{{ $invoice->timingLabel() }}. Status pembayaran: {{ \App\Models\DistributorInvoice::STATUSES[$invoice->status()] }}.</p>
+        @endif
+    </section>
+    <section class="catalogue-surface p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <h2 class="text-lg font-medium">Retur, Barang Kurang & Selisih Fisik</h2>
+            <button type="button" class="ui-button ui-button--secondary" @click="$dispatch('open-dialog',{id:'invoice-edit'})">Edit Keterangan</button>
+        </div>
+        <p class="mt-3 whitespace-pre-line break-words text-sm">{{ $invoice->discrepancy_notes ?: 'Belum ada keterangan retur, kerusakan, atau selisih barang.' }}</p>
+        <p class="mt-4 font-medium">Nilai Klaim Dicatat: Rp {{ number_format($invoice->claim_amount_cents/100,2,',','.') }}</p>
+        <p class="mt-2 text-xs text-muted">Nilai klaim adalah catatan pengajuan ke distributor dan belum mengurangi total faktur maupun sisa utang.</p>
+    </section>
+    @if($invoice->purchaseOrder && $invoice->purchaseOrder->items->isNotEmpty())
+        <section class="catalogue-surface p-5">
+            <h2 class="text-lg font-medium">Rincian Tagihan</h2>
+            <p class="mt-2 text-sm text-muted">{{ $invoice->purchaseOrder->supplier_note_total_cents !== null ? 'Total tagihan mengikuti nominal nota yang divalidasi. Subtotal PO di bawah adalah referensi perencanaan.' : 'Nilai tagihan mengikuti jumlah pada nota yang divalidasi dan harga satuan PO.' }} Hasil pemeriksaan barang datang tersedia di detail PO.</p>
+            <div class="mt-4 overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="border-y bg-gray-50">
+                        <tr>@foreach(['Barang / Kode Distributor','Jumlah','Subtotal'] as $label)<th class="p-3 font-medium">{{ $label }}</th>@endforeach</tr>
+                    </thead>
+                    <tbody>
+                        @foreach($invoice->purchaseOrder->items as $item)
+                            <tr class="border-b">
+                                <td class="p-3"><p class="font-medium">{{ $item->product_name }}</p><p class="text-xs text-muted">{{ $item->sku }}</p></td>
+                                <td class="whitespace-nowrap p-3">{{ $item->invoice_quantity ?? $item->quantity }} {{ $item->unit }}</td>
+                                <td class="whitespace-nowrap p-3">Rp {{ number_format(($item->invoice_quantity ?? $item->quantity)*$item->unit_price,2,',','.') }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    @else
+        <section class="catalogue-surface p-5">
+            <h2 class="text-lg font-medium">Rincian Tagihan</h2>
+            <p class="mt-2 text-sm text-muted">Tagihan ini dicatat secara manual tanpa rincian item PO. Total tagihan saat ini adalah Rp {{ number_format($invoice->total_cents/100,2,',','.') }}.</p>
+        </section>
+    @endif
+    <section class="catalogue-surface p-5">
+        <h2 class="text-lg font-medium">Riwayat Pembayaran</h2>
+        <p class="mt-2 text-sm text-muted">Catat pembayaran yang sudah dilakukan. Setiap pembayaran mengurangi sisa tagihan secara otomatis.</p>
+        <div class="mt-4 overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="border-y bg-gray-50">
+                    <tr>@foreach(['Tanggal','Nominal','Metode','Referensi / Catatan','Dicatat Oleh'] as $label)<th class="whitespace-nowrap p-3 font-medium">{{ $label }}</th>@endforeach</tr>
+                </thead>
+                <tbody>
+                    @forelse($invoice->payments->sortByDesc('id') as $payment)
+                        <tr class="border-b">
+                            <td class="p-3">{{ $payment->paid_on->format('d/m/Y') }}</td>
+                            <td class="whitespace-nowrap p-3 font-medium">Rp {{ number_format($payment->amount_cents/100,2,',','.') }}</td>
+                            <td class="p-3">{{ \App\Models\DistributorPayment::METHODS[$payment->method] }}</td>
+                            <td class="max-w-xs break-words p-3">{{ $payment->reference ?? '—' }}@if($payment->notes)<p class="mt-1 text-xs text-muted">{{ $payment->notes }}</p>@endif</td>
+                            <td class="p-3">{{ $payment->creator?->name ?? 'Pengguna dihapus' }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="5" class="p-6 text-center text-muted">Belum ada pembayaran yang dicatat.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </section>
     <x-ui.dialog name="invoice-edit" title="Edit Faktur, Kargo & Tempo" description="Tanggal masuk otomatis mengikuti approval kargo yang dipilih." :show="request()->boolean('edit') || old('_dialog') === 'invoice-edit'" wide>
         <form method="POST" action="{{ route('distributor-invoices.update',$invoice) }}" class="dialog-form" @submit="submitting=true">
             @csrf @method('PATCH')
             <input type="hidden" name="_dialog" value="invoice-edit"><input type="hidden" name="version" value="{{ $invoice->version }}">
             <div class="form-grid">
-                <x-ui.field name="invoiced_on" label="Tanggal Faktur Distributor" type="date" :value="$invoice->invoiced_on?->toDateString()" hint="Isi tanggal resmi pada dokumen faktur, bukan tanggal PO." :readonly="$invoice->purchaseOrder->note_issued" />
-                <x-ui.field name="due_on" label="Jatuh Tempo" type="date" :value="$invoice->due_on->toDateString()" :min="$invoice->purchaseOrder->ordered_on->toDateString()" required />
-                <x-ui.field name="supplier_reference" label="Nomor Nota Distributor (opsional)" :value="$invoice->supplier_reference" maxlength="255" :readonly="$invoice->purchaseOrder->note_issued" />
+                @if($invoice->isManual())
+                    <x-ui.field name="total" label="Total Tagihan (Rp)" type="number" min="0.01" max="90000000000000" step="0.01" :value="number_format($invoice->total_cents/100,2,'.','')" hint="Minimal Rp {{ number_format($invoice->paid_cents/100,2,',','.') }} (tidak boleh kurang dari yang sudah dibayar)." required />
+                @endif
+                <x-ui.field name="invoiced_on" label="Tanggal Faktur Distributor" type="date" :value="$invoice->invoiced_on?->toDateString()" hint="Isi tanggal resmi pada dokumen faktur, bukan tanggal PO." :readonly="$invoice->purchaseOrder?->note_issued ?? false" />
+                <x-ui.field name="due_on" label="Jatuh Tempo" type="date" :value="$invoice->due_on->toDateString()" :min="$invoice->purchaseOrder ? $invoice->purchaseOrder->ordered_on->toDateString() : ($invoice->invoiced_on ? $invoice->invoiced_on->toDateString() : null)" required />
+                <x-ui.field name="supplier_reference" label="Nomor Nota Distributor (opsional)" :value="$invoice->supplier_reference" maxlength="255" :readonly="$invoice->purchaseOrder?->note_issued ?? false" />
                 <x-ui.field name="shipment_id" label="Kargo Kapal" hint="Satu kargo dapat memuat beberapa faktur. Tanggal masuk mengikuti konfirmasi Sudah Sampai.">
-                    <select id="shipment_id" name="shipment_id" class="form-input" @disabled($invoice->purchaseOrder->note_issued)><option value="">Belum terhubung ke kargo</option>@foreach($shipments as $shipment)<option value="{{ $shipment->id }}" @selected(filter_var(old('shipment_id',$invoice->shipment_id), FILTER_VALIDATE_INT) === $shipment->id)>{{ $shipment->reference }} - {{ $shipment->cargo_name }}{{ $shipment->delivered_at ? ' (Sudah Sampai)' : '' }}</option>@endforeach</select>
+                    <select id="shipment_id" name="shipment_id" class="form-input" @disabled($invoice->purchaseOrder?->note_issued ?? false)>
+                        <option value="">Belum terhubung ke kargo</option>
+                        @foreach($shipments as $shipment)
+                            <option value="{{ $shipment->id }}" @selected(filter_var(old('shipment_id',$invoice->shipment_id), FILTER_VALIDATE_INT) === $shipment->id)>{{ $shipment->reference }} - {{ $shipment->cargo_name }}{{ $shipment->delivered_at ? ' (Sudah Sampai)' : '' }}</option>
+                        @endforeach
+                    </select>
                 </x-ui.field>
                 <div class="form-grid__full"><x-ui.field name="discrepancy_notes" label="Keterangan Retur / Barang Kurang / Rusak / Selisih" hint="Tuliskan barang, jumlah, kondisi fisik, dan rincian pengajuan klaim."><textarea id="discrepancy_notes" name="discrepancy_notes" rows="4" maxlength="4000" class="form-input w-full">{{ is_string(old('discrepancy_notes',$invoice->discrepancy_notes)) ? old('discrepancy_notes',$invoice->discrepancy_notes) : '' }}</textarea></x-ui.field></div>
                 <x-ui.field name="claim_amount" label="Nilai Klaim Dicatat (Rp)" type="number" min="0" :max="$invoice->total_cents/100" step="0.01" :value="number_format($invoice->claim_amount_cents/100,2,'.','')" hint="Catatan pengajuan klaim, tidak otomatis memotong utang." />
@@ -35,14 +156,34 @@
     </x-ui.dialog>
     @if($invoice->remainingCents() > 0)
     <x-ui.dialog name="invoice-payment" title="Catat Pembayaran" description="Pembayaran ini dicatat sebagai pembayaran yang sudah dilakukan ke distributor." :show="request()->boolean('pay') || old('_dialog') === 'invoice-payment'">
-        <form method="POST" action="{{ route('distributor-invoices.pay',$invoice) }}" class="dialog-form" @submit="submitting=true">@csrf<input type="hidden" name="_dialog" value="invoice-payment"><input type="hidden" name="version" value="{{ $invoice->version }}"><input type="hidden" name="request_id" value="{{ is_string(old('request_id')) ? old('request_id') : $requestId }}"><p class="rounded-xl bg-gray-50 p-4 text-sm">Sisa Tagihan: <strong>Rp {{ number_format($invoice->remainingCents()/100,2,',','.') }}</strong></p><div class="form-grid"><x-ui.field name="amount" label="Nominal Pembayaran (Rp)" type="number" min="0.01" :max="$invoice->remainingCents()/100" step="0.01" :value="number_format($invoice->remainingCents()/100,2,'.','')" required /><x-ui.field name="paid_on" label="Tanggal Pembayaran" type="date" :value="\App\Models\DistributorInvoice::today()->toDateString()" :min="$invoice->purchaseOrder->ordered_on->toDateString()" :max="\App\Models\DistributorInvoice::today()->toDateString()" required /><x-ui.field name="method" label="Metode Pembayaran"><select id="method" class="form-input" name="method" required>@foreach(\App\Models\DistributorPayment::METHODS as $value=>$label)<option value="{{ $value }}" @selected(old('method','transfer') === $value)>{{ $label }}</option>@endforeach</select></x-ui.field><x-ui.field name="reference" label="Referensi Transfer / Bukti (opsional)" maxlength="255" /><div class="form-grid__full"><x-ui.field name="notes" id="payment-notes" label="Catatan Pembayaran" maxlength="2000" /></div></div><footer class="dialog-actions"><button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button><button class="ui-button" :disabled="submitting" x-text="submitting ? 'Menyimpan…' : 'Simpan Pembayaran'">Simpan Pembayaran</button></footer></form>
+        <form method="POST" action="{{ route('distributor-invoices.pay',$invoice) }}" class="dialog-form" @submit="submitting=true">
+            @csrf
+            <input type="hidden" name="_dialog" value="invoice-payment">
+            <input type="hidden" name="version" value="{{ $invoice->version }}">
+            <input type="hidden" name="request_id" value="{{ is_string(old('request_id')) ? old('request_id') : $requestId }}">
+            <p class="rounded-xl bg-gray-50 p-4 text-sm">Sisa Tagihan: <strong>Rp {{ number_format($invoice->remainingCents()/100,2,',','.') }}</strong></p>
+            <div class="form-grid">
+                <x-ui.field name="amount" label="Nominal Pembayaran (Rp)" type="number" min="0.01" :max="$invoice->remainingCents()/100" step="0.01" :value="number_format($invoice->remainingCents()/100,2,'.','')" required />
+                <x-ui.field name="paid_on" label="Tanggal Pembayaran" type="date" :value="\App\Models\DistributorInvoice::today()->toDateString()" :min="$invoice->purchaseOrder ? $invoice->purchaseOrder->ordered_on->toDateString() : ($invoice->invoiced_on ? $invoice->invoiced_on->toDateString() : null)" :max="\App\Models\DistributorInvoice::today()->toDateString()" required />
+                <x-ui.field name="method" label="Metode Pembayaran">
+                    <select id="method" class="form-input" name="method" required>
+                        @foreach(\App\Models\DistributorPayment::METHODS as $value=>$label)
+                            <option value="{{ $value }}" @selected(old('method','transfer') === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </x-ui.field>
+                <x-ui.field name="reference" label="Referensi Transfer / Bukti (opsional)" maxlength="255" />
+                <div class="form-grid__full"><x-ui.field name="notes" id="payment-notes" label="Catatan Pembayaran" maxlength="2000" /></div>
+            </div>
+            <footer class="dialog-actions"><button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button><button class="ui-button" :disabled="submitting" x-text="submitting ? 'Menyimpan…' : 'Simpan Pembayaran'">Simpan Pembayaran</button></footer>
+        </form>
     </x-ui.dialog>
     @endif
     <x-ui.dialog name="invoice-delete" title="Hapus Tagihan Distributor" description="Tagihan akan dihapus permanen. Seluruh catatan pembayaran terkait juga akan dibersihkan.">
         <form method="POST" action="{{ route('distributor-invoices.destroy', $invoice) }}" class="dialog-form" @submit="submitting = true">
             @csrf @method('DELETE')
             <input type="hidden" name="version" value="{{ $invoice->version }}">
-            <p class="text-sm">Apakah Anda yakin ingin menghapus tagihan <strong class="break-words">{{ $invoice->reference }}</strong> (PO: {{ $invoice->purchaseOrder->reference }})?</p>
+            <p class="text-sm">Apakah Anda yakin ingin menghapus tagihan <strong class="break-words">{{ $invoice->reference }}</strong>@if($invoice->purchaseOrder) (PO: {{ $invoice->purchaseOrder->reference }})@else (Tagihan Manual)@endif?</p>
             @if($invoice->payments->isNotEmpty())
                 <p class="rounded-xl bg-red-50 p-3 text-xs text-red-700">Perhatian: Tagihan ini memiliki {{ $invoice->payments->count() }} catatan pembayaran. Semua data pembayaran tersebut akan ikut terhapus.</p>
             @endif
