@@ -22,6 +22,11 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DistributorInvoiceController extends Controller
 {
+    public function __construct()
+    {
+        DistributorInvoiceService::ensureSchema();
+    }
+
     public function index(DistributorInvoiceRequest $request): View
     {
         $filters = $request->validated();
@@ -115,6 +120,7 @@ class DistributorInvoiceController extends Controller
         return view('distributor-invoices.show', [
             'invoice' => $distributorInvoice->load(['purchaseOrder.items', 'distributor', 'payments.creator', 'shipment.receiver']),
             'requestId' => (string) Str::uuid(),
+            'distributors' => Distributor::orderBy('name')->get(),
             'shipments' => Shipment::orderByDesc('id')->get(['id', 'reference', 'cargo_name', 'delivered_at']),
         ]);
     }
@@ -123,7 +129,8 @@ class DistributorInvoiceController extends Controller
     {
         $billing->updateDetails($distributorInvoice, $request->validated());
 
-        return redirect()->route('distributor-invoices.show', $distributorInvoice)->with('success', 'Informasi tagihan diperbarui.');
+        return back(fallback: route('distributor-invoices.show', $distributorInvoice))
+            ->with('success', 'Informasi tagihan '.$distributorInvoice->fresh()->reference.' berhasil diperbarui.');
     }
 
     public function pay(DistributorPaymentRequest $request, DistributorInvoice $distributorInvoice, DistributorInvoiceService $billing): RedirectResponse

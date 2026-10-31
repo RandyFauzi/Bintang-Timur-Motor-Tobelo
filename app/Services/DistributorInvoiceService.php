@@ -7,13 +7,81 @@ use App\Models\DistributorPayment;
 use App\Models\PurchaseOrder;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 class DistributorInvoiceService
 {
+    public static function ensureSchema(): void
+    {
+        if (cache()->get('distributor_invoices_schema_v2')) {
+            return;
+        }
+
+        try {
+            if (! Schema::hasColumn('distributor_invoices', 'distributor_id')) {
+                Artisan::call('migrate', ['--force' => true]);
+            }
+        } catch (\Throwable) {
+            try {
+                if (! Schema::hasColumn('distributor_invoices', 'distributor_id')) {
+                    Schema::table('distributor_invoices', function (Blueprint $table): void {
+                        $table->foreignId('distributor_id')->nullable()->after('id')->constrained()->nullOnDelete();
+                    });
+                }
+            } catch (\Throwable) {
+                try {
+                    if (! Schema::hasColumn('distributor_invoices', 'distributor_id')) {
+                        DB::statement('ALTER TABLE distributor_invoices ADD COLUMN distributor_id BIGINT UNSIGNED NULL AFTER id');
+                    }
+                } catch (\Throwable) {
+                    // Ignore
+                }
+            }
+
+            try {
+                DB::statement('ALTER TABLE distributor_invoices MODIFY purchase_order_id BIGINT UNSIGNED NULL');
+            } catch (\Throwable) {
+                // Ignore
+            }
+        }
+
+        // Backfill distributor_id from purchase_orders for existing invoices if needed
+        try {
+            if (Schema::hasColumn('distributor_invoices', 'distributor_id')) {
+                $invoices = DB::table('distributor_invoices')
+                    ->whereNotNull('purchase_order_id')
+                    ->whereNull('distributor_id')
+                    ->get(['id', 'purchase_order_id']);
+
+                foreach ($invoices as $inv) {
+                    $distributorId = DB::table('purchase_orders')
+                        ->where('id', $inv->purchase_order_id)
+                        ->value('distributor_id');
+
+                    if ($distributorId) {
+                        DB::table('distributor_invoices')
+                            ->where('id', $inv->id)
+                            ->update(['distributor_id' => $distributorId]);
+                    }
+                }
+            }
+        } catch (\Throwable) {
+            // Ignore if backfill fails
+        }
+
+        if (Schema::hasColumn('distributor_invoices', 'distributor_id')) {
+            cache()->forever('distributor_invoices_schema_v2', true);
+        }
+    }
+
     public function createForOrder(PurchaseOrder $order, ?string $dueOn = null, int $termMonths = 3): DistributorInvoice
     {
+        self::ensureSchema();
+
         $total = 0;
         foreach ($order->items as $item) {
             $subtotal = self::cents($item->unit_price) * $item->quantity;
@@ -34,6 +102,8 @@ class DistributorInvoiceService
     /** @param array{distributor_id:int,reference?:?string,total:numeric-string|float|int,due_on:string,invoiced_on?:?string,supplier_reference?:?string,shipment_id?:?int,notes?:?string} $data */
     public function createManual(array $data): DistributorInvoice
     {
+        self::ensureSchema();
+
         return DB::transaction(function () use ($data): DistributorInvoice {
             $totalCents = self::cents($data['total']);
             if ($totalCents <= 0 || $totalCents > 9000000000000000) {
@@ -124,9 +194,11 @@ class DistributorInvoiceService
         });
     }
 
-    /** @param array{version:int, due_on:string, total?:numeric-string|float|int, invoiced_on?:?string, shipment_id?:?int, supplier_reference?:?string, notes?:?string, discrepancy_notes?:?string, claim_amount?:?string} $data */
+    /** @param array{version:int, due_on:string, distributor_id?:?int, reference?:?string, total?:numeric-string|float|int, invoiced_on?:?string, shipment_id?:?int, supplier_reference?:?string, notes?:?string, discrepancy_notes?:?string, claim_amount?:?string} $data */
     public function updateDetails(DistributorInvoice $invoice, array $data): void
     {
+        self::ensureSchema();
+
         DB::transaction(function () use ($invoice, $data): void {
             $invoice = DistributorInvoice::lockForUpdate()->findOrFail($invoice->id);
             $this->assertVersion($invoice, (int) $data['version']);
@@ -137,12 +209,24 @@ class DistributorInvoiceService
                     }
                 }
             }
-            if ($invoice->isManual() && array_key_exists('total', $data)) {
-                $newTotal = self::cents($data['total']);
-                if ($newTotal < $invoice->paid_cents) {
-                    throw ValidationException::withMessages(['total' => 'Total tagihan tidak boleh lebih kecil dari jumlah yang sudah dibayar.']);
+            if ($invoice->isManual()) {
+                if (array_key_exists('distributor_id', $data) && ! empty($data['distributor_id'])) {
+                    $invoice->distributor_id = (int) $data['distributor_id'];
                 }
-                $invoice->total_cents = $newTotal;
+                if (array_key_exists('reference', $data) && ! empty($data['reference'])) {
+                    $ref = trim((string) $data['reference']);
+                    if (DistributorInvoice::where('reference', $ref)->where('id', '!=', $invoice->id)->exists()) {
+                        throw ValidationException::withMessages(['reference' => 'Nomor invoice '.$ref.' sudah digunakan.']);
+                    }
+                    $invoice->reference = $ref;
+                }
+                if (array_key_exists('total', $data)) {
+                    $newTotal = self::cents($data['total']);
+                    if ($newTotal < $invoice->paid_cents) {
+                        throw ValidationException::withMessages(['total' => 'Total tagihan tidak boleh lebih kecil dari jumlah yang sudah dibayar (Rp '.number_format($invoice->paid_cents / 100, 2, ',', '.').').']);
+                    }
+                    $invoice->total_cents = $newTotal;
+                }
             }
             $invoice->fill(collect($data)->only(['due_on', 'invoiced_on', 'shipment_id', 'supplier_reference', 'notes', 'discrepancy_notes'])->all());
             if (array_key_exists('claim_amount', $data)) {
@@ -164,6 +248,8 @@ class DistributorInvoiceService
 
     public function delete(DistributorInvoice $invoice, ?int $version = null): void
     {
+        self::ensureSchema();
+
         DB::transaction(function () use ($invoice, $version): void {
             $invoice = DistributorInvoice::lockForUpdate()->findOrFail($invoice->id);
             if ($version !== null) {

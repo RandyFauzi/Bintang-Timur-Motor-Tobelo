@@ -24,10 +24,12 @@ class DistributorInvoiceRequest extends FormRequest
     {
         if ($this->isMethod('PATCH')) {
             $invoice = $this->route('distributorInvoice');
-            $minDate = $invoice?->purchaseOrder?->ordered_on?->toDateString() ?? $invoice?->invoiced_on?->toDateString();
+            $minDate = $invoice?->purchaseOrder?->ordered_on?->toDateString();
 
             return [
                 'version' => ['required', 'integer', 'min:1'],
+                'distributor_id' => ['nullable', 'integer', Rule::exists('distributors', 'id')],
+                'reference' => ['nullable', 'string', 'max:255', Rule::unique('distributor_invoices', 'reference')->ignore($invoice?->id)],
                 'due_on' => array_values(array_filter(['required', 'date_format:Y-m-d', $minDate ? 'after_or_equal:'.$minDate : null])),
                 'invoiced_on' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:due_on'],
                 'total' => ['nullable', 'numeric', 'min:0.01', 'max:90000000000000'],
@@ -41,5 +43,21 @@ class DistributorInvoiceRequest extends FormRequest
         }
 
         return ['search' => ['nullable', 'string', 'max:255'], 'distributor_id' => ['nullable', 'integer'], 'status' => ['nullable', 'array', 'max:4'], 'status.*' => ['required', 'string', 'distinct', Rule::in(array_keys(DistributorInvoice::STATUSES))], 'timing' => ['nullable', Rule::in(['1', '2', '3', '4', 'near', 'overdue'])]];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'distributor_id' => 'distributor',
+            'reference' => 'nomor invoice',
+            'due_on' => 'jatuh tempo',
+            'invoiced_on' => 'tanggal faktur',
+            'total' => 'total tagihan',
+            'shipment_id' => 'kargo kapal',
+            'supplier_reference' => 'nomor nota distributor',
+            'notes' => 'catatan tagihan',
+            'discrepancy_notes' => 'keterangan retur/selisih',
+            'claim_amount' => 'nilai klaim',
+        ];
     }
 }

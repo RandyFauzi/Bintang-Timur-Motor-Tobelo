@@ -258,6 +258,80 @@ class DistributorInvoiceManualAndImportTest extends TestCase
         $showResponse->assertSee('Tagihan ini dicatat secara manual');
     }
 
+    public function test_admin_can_update_manual_invoice_details_including_distributor_reference_and_total(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $distributor1 = Distributor::factory()->create(['name' => 'Distributor A']);
+        $distributor2 = Distributor::factory()->create(['name' => 'Distributor B']);
+
+        $invoice = DistributorInvoice::factory()->manual()->create([
+            'distributor_id' => $distributor1->id,
+            'reference' => 'INV-OLD-123',
+            'invoiced_on' => '2026-10-01',
+            'due_on' => '2026-10-31',
+            'total_cents' => 500000000,
+            'notes' => 'Catatan lama',
+        ]);
+
+        $updateData = [
+            'version' => 1,
+            'distributor_id' => $distributor2->id,
+            'reference' => 'INV-NEW-456',
+            'invoiced_on' => '2026-10-05',
+            'due_on' => '2026-11-15',
+            'total' => '7500000',
+            'notes' => 'Catatan diperbarui',
+            'supplier_reference' => 'NOTA-7788',
+        ];
+
+        $response = $this->actingAs($admin)->patch(route('distributor-invoices.update', $invoice), $updateData);
+
+        $response->assertSessionHasNoErrors();
+        $invoice->refresh();
+
+        $this->assertSame($distributor2->id, $invoice->distributor_id);
+        $this->assertSame('Distributor B', $invoice->distributor_name);
+        $this->assertSame('INV-NEW-456', $invoice->reference);
+        $this->assertSame('2026-10-05', $invoice->invoiced_on->toDateString());
+        $this->assertSame('2026-11-15', $invoice->due_on->toDateString());
+        $this->assertSame(750000000, $invoice->total_cents);
+        $this->assertSame('Catatan diperbarui', $invoice->notes);
+        $this->assertSame('NOTA-7788', $invoice->supplier_reference);
+        $this->assertSame(2, $invoice->version);
+    }
+
+    public function test_manual_invoice_update_rejects_total_less_than_already_paid(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $invoice = DistributorInvoice::factory()->manual()->create([
+            'total_cents' => 1000000000,
+            'paid_cents' => 400000000, // 4 million paid
+        ]);
+
+        $response = $this->actingAs($admin)->patchJson(route('distributor-invoices.update', $invoice), [
+            'version' => 1,
+            'due_on' => $invoice->due_on->toDateString(),
+            'total' => '3000000', // 3 million < 4 million
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors('total');
+    }
+
+    public function test_admin_can_delete_manual_invoice(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $invoice = DistributorInvoice::factory()->manual()->create(['reference' => 'INV-TO-DELETE']);
+
+        $response = $this->actingAs($admin)->delete(route('distributor-invoices.destroy', $invoice), [
+            'version' => 1,
+        ]);
+
+        $response->assertRedirect(route('distributor-invoices.index'));
+        $response->assertSessionHas('success');
+        $this->assertDatabaseMissing('distributor_invoices', ['id' => $invoice->id]);
+    }
+
     /** @param list<list<mixed>> $rows */
     private function createExcelFile(array $rows): UploadedFile
     {

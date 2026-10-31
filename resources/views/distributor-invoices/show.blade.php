@@ -134,7 +134,15 @@
             <input type="hidden" name="_dialog" value="invoice-edit"><input type="hidden" name="version" value="{{ $invoice->version }}">
             <div class="form-grid">
                 @if($invoice->isManual())
-                    <x-ui.field name="total" label="Total Tagihan (Rp)" type="number" min="0.01" max="90000000000000" step="0.01" :value="number_format($invoice->total_cents/100,2,'.','')" hint="Minimal Rp {{ number_format($invoice->paid_cents/100,2,',','.') }} (tidak boleh kurang dari yang sudah dibayar)." required />
+                    <x-ui.field name="distributor_id" label="Distributor" required>
+                        <select id="edit_distributor_id" name="distributor_id" class="form-input" required>
+                            @foreach($distributors as $distributor)
+                                <option value="{{ $distributor->id }}" @selected(old('distributor_id', $invoice->distributor_id) == $distributor->id)>{{ $distributor->name }}</option>
+                            @endforeach
+                        </select>
+                    </x-ui.field>
+                    <x-ui.field name="reference" label="Nomor Invoice" :value="old('reference', $invoice->reference)" maxlength="255" required />
+                    <x-ui.field name="total" label="Total Tagihan (Rp)" type="number" min="0.01" max="90000000000000" step="0.01" :value="old('total', number_format($invoice->total_cents/100,2,'.',''))" hint="Minimal Rp {{ number_format($invoice->paid_cents/100,2,',','.') }} (tidak boleh kurang dari yang sudah dibayar)." required />
                 @endif
                 <x-ui.field name="invoiced_on" label="Tanggal Faktur Distributor" type="date" :value="$invoice->invoiced_on?->toDateString()" hint="Isi tanggal resmi pada dokumen faktur, bukan tanggal PO." :readonly="$invoice->purchaseOrder?->note_issued ?? false" />
                 <x-ui.field name="due_on" label="Jatuh Tempo" type="date" :value="$invoice->due_on->toDateString()" :min="$invoice->purchaseOrder ? $invoice->purchaseOrder->ordered_on->toDateString() : ($invoice->invoiced_on ? $invoice->invoiced_on->toDateString() : null)" required />

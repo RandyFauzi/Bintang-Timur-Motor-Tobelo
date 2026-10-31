@@ -76,11 +76,42 @@
                             <x-ui.icon name="wallet" :size="14" />Bayar
                         </a>
                     @endif
-                    <a class="ui-button ui-button--secondary whitespace-nowrap !min-h-9 !py-1.5 !px-3 !text-xs" href="{{ route('distributor-invoices.show',['distributorInvoice'=>$invoice->id,'edit'=>1]) }}">
+                    <a class="ui-button ui-button--secondary whitespace-nowrap !min-h-9 !py-1.5 !px-3 !text-xs"
+                        href="{{ route('distributor-invoices.show', ['distributorInvoice' => $invoice->id, 'edit' => 1]) }}"
+                        title="Edit Data Tagihan"
+                        @click.prevent="$dispatch('open-edit-invoice', {{ json_encode([
+                            'id' => $invoice->id,
+                            'updateUrl' => route('distributor-invoices.update', $invoice),
+                            'version' => $invoice->version,
+                            'isManual' => $invoice->isManual(),
+                            'distributor_id' => (string) ($invoice->distributor_id ?? ''),
+                            'distributor_name' => $invoice->distributor_name,
+                            'reference' => $invoice->reference,
+                            'invoiced_on' => $invoice->invoiced_on?->toDateString() ?? '',
+                            'due_on' => $invoice->due_on->toDateString(),
+                            'total' => number_format($invoice->total_cents / 100, 2, '.', ''),
+                            'min_total' => number_format($invoice->paid_cents / 100, 2, '.', ''),
+                            'supplier_reference' => $invoice->supplier_reference ?? '',
+                            'shipment_id' => (string) ($invoice->shipment_id ?? ''),
+                            'notes' => $invoice->notes ?? '',
+                            'discrepancy_notes' => $invoice->discrepancy_notes ?? '',
+                            'claim_amount' => number_format($invoice->claim_amount_cents / 100, 2, '.', ''),
+                            'note_issued' => (bool) ($invoice->purchaseOrder?->note_issued),
+                        ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) }})">
                         <x-ui.icon name="edit" :size="14" />Edit Data
                     </a>
                     <a class="ui-button ui-button--secondary whitespace-nowrap !min-h-9 !py-1.5 !px-3 !text-xs" href="{{ route('distributor-invoices.show',$invoice) }}">Detail</a>
-                    <button type="button" class="ui-button ui-button--secondary whitespace-nowrap !min-h-9 !py-1.5 !px-2.5 !text-xs text-red-600 hover:text-red-700 hover:border-red-300" title="Hapus Tagihan" aria-label="Hapus tagihan {{ $invoice->reference }}" @click="$dispatch('open-delete-invoice', { id: {{ $invoice->id }}, reference: '{{ addslashes($invoice->reference) }}', po: '{{ addslashes($invoice->purchaseOrder?->reference ?? 'Manual') }}' })">
+                    <button type="button" class="ui-button ui-button--secondary whitespace-nowrap !min-h-9 !py-1.5 !px-2.5 !text-xs text-red-600 hover:text-red-700 hover:border-red-300"
+                        title="Hapus Tagihan"
+                        aria-label="Hapus tagihan {{ $invoice->reference }}"
+                        @click="$dispatch('open-delete-invoice', {{ json_encode([
+                            'id' => $invoice->id,
+                            'reference' => $invoice->reference,
+                            'distributor' => $invoice->distributor_name,
+                            'po' => $invoice->purchaseOrder?->reference ?? 'Manual',
+                            'version' => $invoice->version,
+                            'hasPayments' => $invoice->paid_cents > 0,
+                        ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) }})">
                         <x-ui.icon name="trash" :size="14" />
                     </button>
                 </div>
@@ -160,11 +191,142 @@
         </form>
     </x-ui.dialog>
 
+    <!-- Dialog: Edit Tagihan Distributor -->
+    <x-ui.dialog name="edit-invoice" title="Edit Tagihan Distributor" description="Perbarui rincian, distributor, jatuh tempo, atau status kargo tagihan." wide>
+        <form method="POST" class="dialog-form"
+            x-data="{
+                updateUrl: '',
+                version: 1,
+                isManual: true,
+                distributor_id: '',
+                distributor_name: '',
+                reference: '',
+                invoiced_on: '',
+                due_on: '',
+                total: '',
+                min_total: '0.00',
+                supplier_reference: '',
+                shipment_id: '',
+                notes: '',
+                discrepancy_notes: '',
+                claim_amount: '0.00',
+                note_issued: false
+            }"
+            :action="updateUrl"
+            @open-edit-invoice.window="
+                updateUrl = $event.detail.updateUrl;
+                version = $event.detail.version;
+                isManual = $event.detail.isManual;
+                distributor_id = $event.detail.distributor_id || '';
+                distributor_name = $event.detail.distributor_name || '';
+                reference = $event.detail.reference || '';
+                invoiced_on = $event.detail.invoiced_on || '';
+                due_on = $event.detail.due_on || '';
+                total = $event.detail.total || '';
+                min_total = $event.detail.min_total || '0.00';
+                supplier_reference = $event.detail.supplier_reference || '';
+                shipment_id = $event.detail.shipment_id || '';
+                notes = $event.detail.notes || '';
+                discrepancy_notes = $event.detail.discrepancy_notes || '';
+                claim_amount = $event.detail.claim_amount || '0.00';
+                note_issued = $event.detail.note_issued || false;
+                $dispatch('open-dialog', { id: 'edit-invoice' });
+            "
+            @submit="submitting = true"
+        >
+            @csrf @method('PATCH')
+            <input type="hidden" name="version" :value="version">
+
+            <div class="form-grid">
+                <template x-if="isManual">
+                    <x-ui.field name="distributor_id" label="Distributor" required>
+                        <select id="edit_distributor_id_idx" name="distributor_id" class="form-input" x-model="distributor_id" required>
+                            <option value="">Pilih Distributor</option>
+                            @foreach($distributors as $distributor)
+                                <option value="{{ $distributor->id }}">{{ $distributor->name }}</option>
+                            @endforeach
+                        </select>
+                    </x-ui.field>
+                </template>
+                <template x-if="!isManual">
+                    <div class="form-field">
+                        <label class="form-field__label">Distributor (PO)</label>
+                        <div class="form-input bg-gray-50 text-gray-700 font-medium" x-text="distributor_name"></div>
+                    </div>
+                </template>
+
+                <template x-if="isManual">
+                    <x-ui.field name="reference" label="Nomor Invoice" required>
+                        <input id="edit_reference_idx" type="text" name="reference" class="form-input" x-model="reference" maxlength="255" required>
+                    </x-ui.field>
+                </template>
+                <template x-if="!isManual">
+                    <div class="form-field">
+                        <label class="form-field__label">Nomor Invoice (PO)</label>
+                        <div class="form-input bg-gray-50 text-gray-700 font-medium" x-text="reference"></div>
+                    </div>
+                </template>
+
+                <template x-if="isManual">
+                    <x-ui.field name="total" label="Total Tagihan (Rp)" required hint="Tidak boleh kurang dari nominal yang sudah dibayar.">
+                        <input id="edit_total_idx" type="number" name="total" class="form-input" x-model="total" min="0.01" max="90000000000000" step="0.01" required>
+                    </x-ui.field>
+                </template>
+
+                <x-ui.field name="invoiced_on" label="Tanggal Faktur Distributor">
+                    <input id="edit_invoiced_on_idx" type="date" name="invoiced_on" class="form-input" x-model="invoiced_on" :readonly="note_issued">
+                </x-ui.field>
+
+                <x-ui.field name="due_on" label="Jatuh Tempo" required>
+                    <input id="edit_due_on_idx" type="date" name="due_on" class="form-input" x-model="due_on" required>
+                </x-ui.field>
+
+                <x-ui.field name="supplier_reference" label="Nomor Nota Distributor (Opsional)">
+                    <input id="edit_supplier_reference_idx" type="text" name="supplier_reference" class="form-input" x-model="supplier_reference" maxlength="255" :readonly="note_issued">
+                </x-ui.field>
+
+                <x-ui.field name="shipment_id" label="Kargo Kapal">
+                    <select id="edit_shipment_id_idx" name="shipment_id" class="form-input" x-model="shipment_id" :disabled="note_issued">
+                        <option value="">Belum terhubung ke kargo</option>
+                        @foreach($shipments as $shipment)
+                            <option value="{{ $shipment->id }}">{{ $shipment->reference }} - {{ $shipment->cargo_name }}{{ $shipment->delivered_at ? ' (Sudah Sampai)' : '' }}</option>
+                        @endforeach
+                    </select>
+                </x-ui.field>
+
+                <div class="form-grid__full">
+                    <x-ui.field name="discrepancy_notes" label="Keterangan Retur / Barang Kurang / Rusak / Selisih">
+                        <textarea id="edit_discrepancy_notes_idx" name="discrepancy_notes" rows="3" maxlength="4000" class="form-input w-full" x-model="discrepancy_notes" placeholder="Tuliskan keterangan jika ada retur atau selisih barang"></textarea>
+                    </x-ui.field>
+                </div>
+
+                <x-ui.field name="claim_amount" label="Nilai Klaim Dicatat (Rp)">
+                    <input id="edit_claim_amount_idx" type="number" name="claim_amount" class="form-input" x-model="claim_amount" min="0" step="0.01">
+                </x-ui.field>
+
+                <div class="form-grid__full">
+                    <x-ui.field name="notes" label="Catatan Tagihan (Opsional)">
+                        <textarea id="edit_notes_idx" name="notes" rows="2" maxlength="2000" class="form-input w-full" x-model="notes" placeholder="Catatan internal"></textarea>
+                    </x-ui.field>
+                </div>
+            </div>
+
+            <footer class="dialog-actions">
+                <button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button>
+                <button type="submit" class="ui-button" :disabled="submitting" x-text="submitting ? 'Menyimpan…' : 'Simpan Perubahan'">Simpan Perubahan</button>
+            </footer>
+        </form>
+    </x-ui.dialog>
+
     <!-- Dialog: Hapus Tagihan -->
     <x-ui.dialog name="delete-invoice" title="Hapus Tagihan Distributor" description="Tagihan akan dihapus permanen beserta catatan pembayaran terkait.">
-        <form method="POST" class="dialog-form" x-data="{ invoiceRef: '', poRef: '', deleteUrl: '' }" :action="deleteUrl" @open-delete-invoice.window="invoiceRef = $event.detail.reference; poRef = $event.detail.po; deleteUrl = '{{ url('distributor-invoices') }}/' + $event.detail.id; $dispatch('open-dialog', { id: 'delete-invoice' })" @submit="submitting = true">
+        <form method="POST" class="dialog-form" x-data="{ invoiceRef: '', distName: '', poRef: '', version: 1, hasPayments: false, deleteUrl: '' }" :action="deleteUrl" @open-delete-invoice.window="invoiceRef = $event.detail.reference; distName = $event.detail.distributor; poRef = $event.detail.po; version = $event.detail.version; hasPayments = $event.detail.hasPayments; deleteUrl = '{{ url('distributor-invoices') }}/' + $event.detail.id; $dispatch('open-dialog', { id: 'delete-invoice' })" @submit="submitting = true">
             @csrf @method('DELETE')
-            <p class="text-sm">Hapus tagihan <strong x-text="invoiceRef"></strong> (PO: <span x-text="poRef"></span>)?</p>
+            <input type="hidden" name="version" :value="version">
+            <p class="text-sm">Hapus tagihan <strong x-text="invoiceRef"></strong> distributor <strong x-text="distName"></strong> (<span x-text="poRef === 'Manual' ? 'Tagihan Manual' : 'PO: ' + poRef"></span>)?</p>
+            <template x-if="hasPayments">
+                <p class="rounded-xl bg-red-50 p-3 text-xs text-red-700">Perhatian: Tagihan ini memiliki catatan pembayaran. Semua data pembayaran terkait akan ikut terhapus permanen.</p>
+            </template>
             <footer class="dialog-actions">
                 <button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button>
                 <button type="submit" class="ui-button ui-button--danger" :disabled="submitting || !deleteUrl" x-text="submitting ? 'Menghapus…' : 'Ya, Hapus Tagihan'">Ya, Hapus Tagihan</button>
