@@ -484,6 +484,49 @@ class DistributorInvoiceManualAndImportTest extends TestCase
         $this->assertDatabaseCount('distributor_invoices', 0);
     }
 
+    public function test_invoice_import_form_contains_an_enabled_file_picker_in_the_multipart_form(): void
+    {
+        $response = $this->actingAs(User::factory()->admin()->create())->get(route('distributor-invoices.index'))->assertOk();
+        $previous = libxml_use_internal_errors(true);
+        try {
+            $document = new \DOMDocument;
+            $document->loadHTML($response->getContent());
+            $xpath = new \DOMXPath($document);
+            $form = $xpath->query('//dialog[@id="invoice-import"]/form')->item(0);
+            $this->assertNotNull($form);
+            $this->assertSame('multipart/form-data', $form->getAttribute('enctype'));
+            $this->assertSame(route('distributor-invoices.import'), $form->getAttribute('action'));
+            $inputs = $xpath->query('.//input[@type="file" and @name="file"]', $form);
+            $this->assertCount(1, $inputs);
+            $this->assertFalse($inputs->item(0)->hasAttribute('disabled'));
+            $this->assertFalse($inputs->item(0)->hasAttribute(':disabled'));
+            $this->assertCount(1, $xpath->query('.//label[@for="'.$inputs->item(0)->getAttribute('id').'"]', $form));
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+        }
+    }
+
+    public function test_import_accepts_the_date_and_rupiah_formats_used_in_the_mobile_workbook(): void
+    {
+        $file = $this->createExcelFile([
+            ['', 'Nino Motor', '10/06/2026', '08/10/2026', 'Rp24.953.500', '', ''],
+            ['', 'BAM', '03/07/2026', '31/10/2026', 'Rp27.662.500', '', ''],
+        ]);
+        $this->post(route('distributor-invoices.import'), ['file' => $file])->assertRedirect(route('distributor-invoices.index'))->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('distributor_invoices', ['invoiced_on' => '2026-06-10 00:00:00', 'due_on' => '2026-10-08 00:00:00', 'total_cents' => 2495350000]);
+        $this->assertDatabaseCount('distributor_invoices', 2);
+    }
+
+    public function test_server_upload_failure_is_distinguished_from_not_selecting_a_file(): void
+    {
+        $file = $this->createExcelFile([['UPLOAD', 'Nino Motor', '10/06/2026', '08/10/2026', 'Rp24.953.500', '', '']]);
+        $failedUpload = new UploadedFile($file->getRealPath(), 'invoices.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', UPLOAD_ERR_INI_SIZE, true);
+        $this->post(route('distributor-invoices.import'), ['file' => $failedUpload])
+            ->assertSessionHasErrors(['file' => 'File gagal diunggah ke server. Pilih ulang file .xlsx dan pastikan ukurannya maksimal 5 MB.']);
+        $this->assertDatabaseCount('distributor_invoices', 0);
+    }
+
     /**
      * @param  list<list<mixed>>  $rows
      * @param  array<string, string>  $extraEntries

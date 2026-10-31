@@ -24,6 +24,7 @@ class ImportDistributorInvoiceRequest extends FormRequest
     {
         return [
             'file.required' => 'Pilih file Excel terlebih dahulu.',
+            'file.uploaded' => 'File gagal diunggah ke server. Pilih ulang file .xlsx dan pastikan ukurannya maksimal 5 MB.',
             'file.mimes' => 'Gunakan file Excel format .xlsx sesuai template.',
             'file.extensions' => 'Gunakan file Excel format .xlsx.',
             'file.max' => 'Ukuran file maksimal 5 MB.',

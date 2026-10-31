@@ -1,8 +1,64 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { appDialog, customSelectAutocomplete, distributorAutocomplete, multiSelect, observationForm } from '../../resources/js/components/catalogue.js';
+import { appDialog, customSelectAutocomplete, distributorAutocomplete, invoiceImportForm, multiSelect, observationForm } from '../../resources/js/components/catalogue.js';
 
 const options = [{ id: '1', name: 'Oli' }, { id: '2', name: 'Rem' }, { id: '3', name: 'Rantai' }];
+
+test('invoice upload prevents requests without a selected file and focuses the picker', () => {
+    const form = invoiceImportForm();
+    let prevented = false;
+    let focused = false;
+    form.$refs = { invoiceFile: { files: [], focus() { focused = true; } } };
+    form.submit({ preventDefault() { prevented = true; } });
+    assert.equal(prevented, true);
+    assert.equal(focused, true);
+    assert.equal(form.uploadError, 'Pilih file Excel terlebih dahulu.');
+    assert.equal(Boolean(form.submitting), false);
+});
+
+test('invoice upload retains the enabled file input and submits a selected workbook only once', () => {
+    const form = invoiceImportForm();
+    const file = { name: 'tagihan.xlsx', size: 1024 };
+    const input = { files: [file], disabled: false };
+    form.$refs = { invoiceFile: input };
+    form.selectFile();
+    assert.equal(form.fileName, 'tagihan.xlsx');
+    form.submit({ preventDefault() { assert.fail('valid upload should proceed'); } });
+    assert.equal(form.submitting, true);
+    assert.equal(input.disabled, false);
+    assert.equal(input.files[0], file);
+    let duplicatePrevented = false;
+    form.submit({ preventDefault() { duplicatePrevented = true; } });
+    assert.equal(duplicatePrevented, true);
+});
+
+test('invoice upload detects when the browser no longer holds the previously selected file', () => {
+    const form = invoiceImportForm();
+    const input = { files: [{ name: 'tagihan.xlsx', size: 1024 }], focus() {} };
+    form.$refs = { invoiceFile: input };
+    form.selectFile();
+    input.files = [];
+    let prevented = false;
+    form.submit({ preventDefault() { prevented = true; } });
+    assert.equal(form.fileName, '');
+    assert.equal(prevented, true);
+});
+
+test('invoice upload rejects unsupported or oversized files and clears errors after choosing a valid file', () => {
+    for (const file of [{ name: 'tagihan.xls', size: 10 }, { name: 'tagihan.xlsx', size: 5 * 1024 * 1024 + 1 }]) {
+        const form = invoiceImportForm();
+        const input = { files: [file], focus() {} };
+        form.$refs = { invoiceFile: input };
+        let prevented = false;
+        form.submit({ preventDefault() { prevented = true; } });
+        assert.equal(prevented, true);
+        assert.ok(form.uploadError);
+        input.files = [{ name: 'TAGIHAN.XLSX', size: 1024 }];
+        form.selectFile();
+        assert.equal(form.uploadError, '');
+        assert.equal(form.fileName, 'TAGIHAN.XLSX');
+    }
+});
 
 test('draft filter changes are not applied until confirmation', () => {
     const filter = multiSelect(options, ['1'], 'Semua Pengerjaan');

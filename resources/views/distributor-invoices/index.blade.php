@@ -163,9 +163,16 @@
 
     <!-- Dialog: Import Tagihan Excel -->
     <x-ui.dialog name="invoice-import" title="Import Tagihan Distributor (Excel)" description="Upload file Excel .xlsx untuk mengimpor banyak tagihan sekaligus ke sistem." :show="old('_dialog') === 'invoice-import'">
-        <form method="POST" action="{{ route('distributor-invoices.import') }}" enctype="multipart/form-data" class="dialog-form" @submit="submitting = true">
+        <form method="POST" action="{{ route('distributor-invoices.import') }}" enctype="multipart/form-data" class="dialog-form" x-data="invoiceImportForm" @submit="submit($event)" :aria-busy="submitting">
             @csrf
             <input type="hidden" name="_dialog" value="invoice-import">
+            <div class="rounded-xl border p-4">
+                <x-ui.field name="file" id="invoice-import-file" label="Pilih File Excel (.xlsx)" hint="Maksimal 5 MB. Jika validasi gagal, pilih ulang file sebelum mengimpor.">
+                    <input class="form-input w-full" type="file" id="invoice-import-file" name="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" x-ref="invoiceFile" @change="selectFile()" aria-describedby="invoice-import-file-help invoice-import-file-status" required>
+                </x-ui.field>
+                <p id="invoice-import-file-status" class="mt-2 break-words text-sm" role="status" aria-live="polite" x-text="fileName ? 'File dipilih: ' + fileName : 'Belum ada file dipilih.'">Belum ada file dipilih.</p>
+                <p class="mt-2 field-error" role="alert" x-show="uploadError" x-text="uploadError" x-cloak></p>
+            </div>
             <div class="rounded-xl border border-blue-100 bg-blue-50/70 p-4 text-xs text-blue-900 leading-relaxed space-y-2">
                 <p class="font-medium text-sm text-blue-950">Panduan Import Tagihan:</p>
                 <ul class="list-disc pl-4 space-y-1">
@@ -181,12 +188,9 @@
                     <x-ui.icon name="export" :size="16" />Download Template Excel (.xlsx)
                 </a>
             </div>
-            <x-ui.field name="file" id="invoice-import-file" label="Pilih File Excel (.xlsx)" required>
-                <input class="form-input" type="file" id="invoice-import-file" name="file" accept=".xlsx" required>
-            </x-ui.field>
             <footer class="dialog-actions">
                 <button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button>
-                <button type="submit" class="ui-button" :disabled="submitting" x-text="submitting ? 'Mengimpor…' : 'Mulai Import'">Mulai Import</button>
+                <button type="submit" class="ui-button" :disabled="submitting || !fileName || !!uploadError" x-text="submitting ? 'Mengimpor…' : 'Mulai Import'">Mulai Import</button>
             </footer>
         </form>
     </x-ui.dialog>

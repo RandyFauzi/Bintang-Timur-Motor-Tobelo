@@ -1,3 +1,34 @@
+export function invoiceImportForm() {
+    return {
+        fileName: '',
+        uploadError: '',
+        selectFile() {
+            const file = this.$refs.invoiceFile.files?.[0];
+            this.fileName = file?.name ?? '';
+            this.uploadError = '';
+            if (file && !/\.xlsx$/i.test(file.name)) {
+                this.uploadError = 'Pilih file Excel dengan format .xlsx.';
+            } else if (file && file.size > 5 * 1024 * 1024) {
+                this.uploadError = 'Ukuran file maksimal 5 MB.';
+            }
+        },
+        submit(event) {
+            if (this.submitting) {
+                event.preventDefault();
+                return;
+            }
+            this.selectFile();
+            if (!this.fileName || this.uploadError) {
+                event.preventDefault();
+                this.uploadError ||= 'Pilih file Excel terlebih dahulu.';
+                this.$refs.invoiceFile.focus();
+                return;
+            }
+            this.submitting = true;
+        },
+    };
+}
+
 export function appDialog(initiallyOpen = false) {
     return {
         submitting: false,
