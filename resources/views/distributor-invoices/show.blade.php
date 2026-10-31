@@ -30,8 +30,8 @@
                     <x-ui.icon name="edit" :size="16" />Edit Faktur & Tempo
                 </button>
                 @if($invoice->remainingCents() > 0)
-                    <button type="button" class="ui-button !bg-emerald-700 hover:!bg-emerald-800 !text-white font-medium shadow-sm" @click="$dispatch('open-dialog',{id:'invoice-payment'})">
-                        <x-ui.icon name="wallet" :size="16" />Catat Pembayaran
+                    <button type="button" class="ui-button !bg-emerald-700 hover:!bg-emerald-800 !text-white font-medium shadow-sm inline-flex items-center gap-1.5" @click="$dispatch('open-dialog',{id:'invoice-payment'})">
+                        <x-ui.icon name="wallet" :size="16" class="brightness-0 invert" />Catat Pembayaran
                     </button>
                 @endif
                 <button type="button" class="ui-button ui-button--danger" @click="$dispatch('open-dialog',{id:'invoice-delete'})">

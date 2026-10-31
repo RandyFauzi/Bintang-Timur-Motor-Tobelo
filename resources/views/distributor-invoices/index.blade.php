@@ -29,7 +29,7 @@
             <div class="form-field"><label class="form-field__label" for="invoice-timing-filter">Filter Jatuh Tempo</label><x-ui.multiselect name="timing" id="invoice-timing-filter" label="Semua Waktu" :options="collect(['' => 'Semua Waktu', '1' => '1 Bulan', '2' => '2 Bulan', '3' => '3 Bulan', '4' => '4 Bulan'])->map(fn (string $label, string $value): object => (object) ['id' => $value, 'name' => $label])->values()" :selected="[request('timing', '')]" :multiple="false" :dropdown="true" icon="calendar" /></div>
             <button class="ui-button">Cari</button><a class="ui-button ui-button--secondary" href="{{ route('distributor-invoices.index') }}">Reset</a>
         </form>
-        <div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead class="border-y bg-gray-50 text-muted"><tr>@foreach(['Invoice / PO','Distributor','Tanggal Faktur / Masuk','Jatuh Tempo','Total Tagihan','Dibayarkan','Sisa','Status','Retur / Selisih','Aksi'] as $label)<th class="whitespace-nowrap p-4 font-medium">{{ $label }}</th>@endforeach</tr></thead><tbody>
+        <div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead class="border-y bg-gray-50 text-muted"><tr>@foreach(['Invoice / PO','Distributor','Tanggal Faktur / Masuk','Jatuh Tempo','Total Tagihan','Dibayarkan','Sisa','Status','Retur / Selisih'] as $label)<th class="whitespace-nowrap p-4 font-medium">{{ $label }}</th>@endforeach<th class="whitespace-nowrap p-4 font-medium min-w-[220px]">Aksi</th></tr></thead><tbody>
         @forelse($invoices as $invoice)<tr class="border-b hover:bg-gray-50">
             <td class="p-4">
                 <a class="whitespace-nowrap font-medium underline underline-offset-4" href="{{ route('distributor-invoices.show',$invoice) }}">{{ $invoice->reference }}</a>
@@ -69,14 +69,14 @@
                     <p class="mt-2 text-xs text-muted">Klaim dicatat: Rp {{ number_format($invoice->claim_amount_cents/100,2,',','.') }}</p>
                 @endif
             </td>
-            <td class="p-4">
-                <div class="flex flex-wrap items-center gap-2">
+            <td class="whitespace-nowrap p-4">
+                <div class="inline-flex items-center gap-1.5 whitespace-nowrap">
                     @if($invoice->remainingCents() > 0)
-                        <a class="ui-button whitespace-nowrap !min-h-9 !py-1.5 !px-3 !text-xs !bg-emerald-700 hover:!bg-emerald-800 !text-white font-medium shadow-sm" href="{{ route('distributor-invoices.show',['distributorInvoice'=>$invoice->id,'pay'=>1]) }}">
-                            <x-ui.icon name="wallet" :size="14" />Bayar
+                        <a class="ui-button whitespace-nowrap inline-flex items-center gap-1 !min-h-8 !py-1 !px-2.5 !text-xs !bg-emerald-700 hover:!bg-emerald-800 !text-white font-medium shadow-sm" href="{{ route('distributor-invoices.show',['distributorInvoice'=>$invoice->id,'pay'=>1]) }}">
+                            <x-ui.icon name="wallet" :size="13" class="brightness-0 invert" />Bayar
                         </a>
                     @endif
-                    <a class="ui-button ui-button--secondary whitespace-nowrap !min-h-9 !py-1.5 !px-3 !text-xs"
+                    <a class="ui-button ui-button--secondary whitespace-nowrap inline-flex items-center gap-1 !min-h-8 !py-1 !px-2.5 !text-xs"
                         href="{{ route('distributor-invoices.show', ['distributorInvoice' => $invoice->id, 'edit' => 1]) }}"
                         title="Edit Data Tagihan"
                         @click.prevent="$dispatch('open-edit-invoice', {{ json_encode([
@@ -98,10 +98,10 @@
                             'claim_amount' => number_format($invoice->claim_amount_cents / 100, 2, '.', ''),
                             'note_issued' => (bool) ($invoice->purchaseOrder?->note_issued),
                         ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) }})">
-                        <x-ui.icon name="edit" :size="14" />Edit Data
+                        <x-ui.icon name="edit" :size="13" />Edit Data
                     </a>
-                    <a class="ui-button ui-button--secondary whitespace-nowrap !min-h-9 !py-1.5 !px-3 !text-xs" href="{{ route('distributor-invoices.show',$invoice) }}">Detail</a>
-                    <button type="button" class="ui-button ui-button--secondary whitespace-nowrap !min-h-9 !py-1.5 !px-2.5 !text-xs text-red-600 hover:text-red-700 hover:border-red-300"
+                    <a class="ui-button ui-button--secondary whitespace-nowrap inline-flex items-center !min-h-8 !py-1 !px-2.5 !text-xs" href="{{ route('distributor-invoices.show',$invoice) }}">Detail</a>
+                    <button type="button" class="ui-button ui-button--secondary whitespace-nowrap inline-flex items-center justify-center !min-h-8 !h-8 !w-8 !p-0 !text-xs text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-300"
                         title="Hapus Tagihan"
                         aria-label="Hapus tagihan {{ $invoice->reference }}"
                         @click="$dispatch('open-delete-invoice', {{ json_encode([
