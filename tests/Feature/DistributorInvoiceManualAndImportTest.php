@@ -4,10 +4,13 @@ namespace Tests\Feature;
 
 use App\Models\Distributor;
 use App\Models\DistributorInvoice;
+use App\Models\DistributorPayment;
 use App\Models\User;
+use App\Services\DistributorInvoiceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\TestWith;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -332,8 +335,160 @@ class DistributorInvoiceManualAndImportTest extends TestCase
         $this->assertDatabaseMissing('distributor_invoices', ['id' => $invoice->id]);
     }
 
-    /** @param list<list<mixed>> $rows */
-    private function createExcelFile(array $rows): UploadedFile
+    #[TestWith(['1.234'])]
+    #[TestWith(['1e3'])]
+    public function test_manual_create_and_edit_reject_amounts_that_cannot_be_converted_to_cents(string $total): void
+    {
+        $invoice = DistributorInvoice::factory()->manual()->create();
+        $this->actingAs(User::factory()->admin()->create());
+
+        $this->postJson(route('distributor-invoices.store'), ['distributor_id' => $invoice->distributor_id, 'due_on' => $invoice->due_on->toDateString(), 'total' => $total])
+            ->assertUnprocessable()->assertJsonValidationErrors('total');
+        $this->patchJson(route('distributor-invoices.update', $invoice), ['version' => 1, 'due_on' => $invoice->due_on->toDateString(), 'total' => $total])
+            ->assertUnprocessable()->assertJsonValidationErrors('total');
+        $this->assertSame(1, $invoice->refresh()->version);
+        $this->assertDatabaseCount('distributor_invoices', 1);
+    }
+
+    public function test_edit_with_empty_total_is_rejected_without_a_server_error(): void
+    {
+        $invoice = DistributorInvoice::factory()->manual()->create();
+        $this->actingAs(User::factory()->admin()->create())->patchJson(route('distributor-invoices.update', $invoice), [
+            'version' => 1, 'due_on' => $invoice->due_on->toDateString(), 'total' => null,
+        ])->assertUnprocessable()->assertJsonValidationErrors('total');
+        $this->assertSame(10000000, $invoice->refresh()->total_cents);
+    }
+
+    #[TestWith([])]
+    #[TestWith(['invalid'])]
+    #[TestWith([99])]
+    public function test_delete_requires_a_valid_current_version(string|int|null $version = null): void
+    {
+        $invoice = DistributorInvoice::factory()->manual()->create();
+        $this->actingAs(User::factory()->admin()->create())->deleteJson(route('distributor-invoices.destroy', $invoice), $version === null ? [] : ['version' => $version])
+            ->assertUnprocessable()->assertJsonValidationErrors('version');
+        $this->assertModelExists($invoice);
+    }
+
+    #[TestWith(['Rp -1.000,00'])]
+    #[TestWith(['90000000000001'])]
+    #[TestWith(['1000abc'])]
+    public function test_import_rejects_invalid_totals_without_creating_any_records(string $total): void
+    {
+        $file = $this->createExcelFile([
+            ['VALID', 'Distributor Baru', '2026-10-01', '2026-11-01', '1000', '', ''],
+            ['INVALID', 'Distributor Baru', '2026-10-01', '2026-11-01', $total, '', ''],
+        ]);
+        $this->post(route('distributor-invoices.import'), ['file' => $file])->assertSessionHasErrors('file');
+        $this->assertDatabaseCount('distributor_invoices', 0);
+        $this->assertDatabaseCount('distributors', 0);
+    }
+
+    #[TestWith(['15.000', 1500000])]
+    #[TestWith(['Rp 1.250.000,50', 125000050])]
+    #[TestWith(['1,250,000.50', 125000050])]
+    public function test_import_preserves_formatted_money_exactly(string $total, int $expectedCents): void
+    {
+        $file = $this->createExcelFile([['MONEY', 'Distributor Baru', '2026-10-01', '2026-11-01', $total, '', '']]);
+        $this->post(route('distributor-invoices.import'), ['file' => $file])->assertSessionHasNoErrors();
+        $this->assertSame($expectedCents, DistributorInvoice::sole()->total_cents);
+    }
+
+    public function test_import_auto_numbers_do_not_collide_with_explicit_numbers_later_in_the_file(): void
+    {
+        $reference = app(DistributorInvoiceService::class)->generateManualReference();
+        $file = $this->createExcelFile([
+            ['', 'Distributor Baru', '2026-10-01', '2026-11-01', '1000', '', ''],
+            [$reference, 'Distributor Baru', '2026-10-01', '2026-11-01', '2000', '', ''],
+        ]);
+        $this->post(route('distributor-invoices.import'), ['file' => $file])->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('distributor_invoices', 2);
+        $this->assertDatabaseHas('distributor_invoices', ['reference' => $reference, 'total_cents' => 200000]);
+    }
+
+    public function test_optional_invoice_date_defaults_to_today_when_creating_a_manual_invoice(): void
+    {
+        $distributor = Distributor::factory()->create();
+        $this->actingAs(User::factory()->admin()->create())->post(route('distributor-invoices.store'), [
+            'distributor_id' => $distributor->id, 'invoiced_on' => null,
+            'due_on' => DistributorInvoice::today()->addMonth()->toDateString(), 'total' => '1000.25',
+        ])->assertRedirect(route('distributor-invoices.index'))->assertSessionHasNoErrors();
+        $this->assertSame(DistributorInvoice::today()->toDateString(), DistributorInvoice::sole()->invoiced_on->toDateString());
+        $this->assertSame(100025, DistributorInvoice::sole()->total_cents);
+    }
+
+    public function test_invalid_edit_from_the_list_returns_to_the_invoice_form_with_old_input(): void
+    {
+        $invoice = DistributorInvoice::factory()->manual()->create(['paid_cents' => 5000000]);
+        $this->actingAs(User::factory()->admin()->create())->followingRedirects()->from(route('distributor-invoices.index'))
+            ->patch(route('distributor-invoices.update', $invoice), [
+                '_dialog' => 'invoice-edit', 'version' => 1, 'due_on' => $invoice->due_on->toDateString(), 'total' => '1.00',
+            ])->assertOk()->assertSee('Total tagihan tidak boleh lebih kecil')->assertSee('value="1.00"', false);
+        $this->assertSame(10000000, $invoice->refresh()->total_cents);
+    }
+
+    public function test_deleting_invoice_removes_its_payments_but_preserves_the_purchase_order(): void
+    {
+        $invoice = DistributorInvoice::factory()->create();
+        $payment = DistributorPayment::factory()->create(['distributor_invoice_id' => $invoice->id]);
+        $order = $invoice->purchaseOrder;
+        $this->actingAs(User::factory()->admin()->create())->delete(route('distributor-invoices.destroy', $invoice), ['version' => 1])
+            ->assertRedirect(route('distributor-invoices.index'))->assertSessionHasNoErrors();
+        $this->assertModelMissing($invoice);
+        $this->assertModelMissing($payment);
+        $this->assertModelExists($order);
+    }
+
+    #[TestWith([0, 256])]
+    #[TestWith([1, 256])]
+    #[TestWith([5, 256])]
+    #[TestWith([6, 2001])]
+    public function test_import_rejects_oversized_text_before_writing_records(int $column, int $length): void
+    {
+        $row = ['TEXT', 'Distributor Baru', '2026-10-01', '2026-11-01', '1000', '', ''];
+        $row[$column] = str_repeat('A', $length);
+        $file = $this->createExcelFile([$row]);
+        $this->post(route('distributor-invoices.import'), ['file' => $file])->assertSessionHasErrors('file');
+        $this->assertDatabaseCount('distributor_invoices', 0);
+        $this->assertDatabaseCount('distributors', 0);
+    }
+
+    public function test_staff_cannot_create_import_edit_or_delete_invoices(): void
+    {
+        $invoice = DistributorInvoice::factory()->manual()->create();
+        $this->actingAs(User::factory()->staff()->create());
+        $this->get(route('distributor-invoices.import.template'))->assertForbidden();
+        $this->post(route('distributor-invoices.store'), [])->assertForbidden();
+        $this->post(route('distributor-invoices.import'), [])->assertForbidden();
+        $this->patch(route('distributor-invoices.update', $invoice), [])->assertForbidden();
+        $this->delete(route('distributor-invoices.destroy', $invoice), ['version' => 1])->assertForbidden();
+        $this->assertModelExists($invoice);
+    }
+
+    public function test_duplicate_references_in_an_import_roll_back_new_distributors_and_invoices(): void
+    {
+        $file = $this->createExcelFile([
+            ['DUPLICATE', 'Distributor Baru', '2026-10-01', '2026-11-01', '1000', '', ''],
+            ['duplicate', 'Distributor Baru', '2026-10-01', '2026-11-01', '2000', '', ''],
+        ]);
+        $this->post(route('distributor-invoices.import'), ['file' => $file])->assertSessionHasErrors('file');
+        $this->assertDatabaseCount('distributor_invoices', 0);
+        $this->assertDatabaseCount('distributors', 0);
+    }
+
+    public function test_import_rejects_excel_with_excessive_uncompressed_contents(): void
+    {
+        $file = $this->createExcelFile([['EXPANDED', 'Distributor Baru', '2026-10-01', '2026-11-01', '1000', '', '']], ['oversized.txt' => str_repeat('A', 21 * 1024 * 1024)]);
+
+        $this->post(route('distributor-invoices.import'), ['file' => $file])->assertSessionHasErrors('file');
+        $this->assertDatabaseCount('distributor_invoices', 0);
+    }
+
+    /**
+     * @param  list<list<mixed>>  $rows
+     * @param  array<string, string>  $extraEntries
+     */
+    private function createExcelFile(array $rows, array $extraEntries = []): UploadedFile
     {
         $admin = User::factory()->admin()->create();
 
@@ -362,6 +517,9 @@ class DistributorInvoiceManualAndImportTest extends TestCase
             }
 
             $zip->addFromString('xl/worksheets/sheet1.xml', str_replace('</sheetData>', $xml.'</sheetData>', $sheet));
+            foreach ($extraEntries as $name => $contents) {
+                $zip->addFromString($name, $contents);
+            }
             $zip->close();
 
             return UploadedFile::fake()->createWithContent('invoices.xlsx', file_get_contents($path));

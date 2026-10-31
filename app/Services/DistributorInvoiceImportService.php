@@ -65,6 +65,12 @@ class DistributorInvoiceImportService
                 continue;
             }
 
+            foreach (['distributor' => 255, 'reference' => 255, 'supplier_reference' => 255, 'notes' => 2000] as $field => $limit) {
+                if (mb_strlen($data[$field] ?? '') > $limit) {
+                    $errors[] = "Baris {$rowNumber}: Kolom {$field} maksimal {$limit} karakter.";
+                }
+            }
+
             // Total
             $rawTotal = $data['total'] ?? '';
             $totalCents = $this->parseMoney($rawTotal);
@@ -128,6 +134,7 @@ class DistributorInvoiceImportService
         }
 
         return DB::transaction(function () use ($validatedRows, &$distributors): int {
+            $reservedReferences = array_values(array_filter(array_column($validatedRows, 'reference')));
             $count = 0;
             foreach ($validatedRows as $row) {
                 $distNameLower = mb_strtolower($row['distributor_name']);
@@ -138,7 +145,7 @@ class DistributorInvoiceImportService
                     $distributor = $distributors[$distNameLower];
                 }
 
-                $reference = $row['reference'] ?? $this->invoiceService->generateManualReference();
+                $reference = $row['reference'] ?? $this->invoiceService->generateManualReference($reservedReferences);
 
                 DistributorInvoice::create([
                     'distributor_id' => $distributor->id,
@@ -171,6 +178,13 @@ class DistributorInvoiceImportService
         try {
             if ($zip->numFiles > 200) {
                 $this->invalid('File Excel terlalu kompleks. Gunakan template yang disediakan.');
+            }
+            $expandedSize = 0;
+            for ($index = 0; $index < $zip->numFiles; $index++) {
+                $expandedSize += $zip->statIndex($index)['size'];
+                if ($expandedSize > 20 * 1024 * 1024) {
+                    $this->invalid('Isi file Excel terlalu besar setelah dibuka. Pisahkan menjadi beberapa file.');
+                }
             }
 
             $workbook = $this->xml($zip, 'xl/workbook.xml');
@@ -308,50 +322,30 @@ class DistributorInvoiceImportService
 
     private function parseMoney(string|float|int|null $val): ?int
     {
-        if ($val === null || $val === '') {
+        if ($val === null) {
             return null;
         }
 
-        if (is_numeric($val)) {
-            $floatVal = (float) $val;
-
-            return (int) round($floatVal * 100);
+        $amount = preg_replace('/^Rp\.?\s*/i', '', trim((string) $val));
+        if (preg_match('/^\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?$/', $amount)) {
+            $amount = str_replace(',', '.', str_replace('.', '', $amount));
+        } elseif (preg_match('/^\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?$/', $amount)) {
+            $amount = str_replace(',', '', $amount);
+        } elseif (preg_match('/^\d+,\d{1,2}$/', $amount)) {
+            $amount = str_replace(',', '.', $amount);
         }
 
-        $str = trim((string) $val);
-        $str = preg_replace('/[^\d.,]/', '', $str);
-
-        // Check format like 15.000.000,00 or 15,000,000.00
-        if (str_contains($str, '.') && str_contains($str, ',')) {
-            if (strrpos($str, ',') > strrpos($str, '.')) {
-                // Indonesian: 15.000.000,50
-                $str = str_replace('.', '', $str);
-                $str = str_replace(',', '.', $str);
-            } else {
-                // English: 15,000,000.50
-                $str = str_replace(',', '', $str);
-            }
-        } elseif (str_contains($str, '.')) {
-            // Check if dot is thousands separator (e.g. 15.000.000 or 15.000)
-            $parts = explode('.', $str);
-            if (count($parts) > 2 || (count($parts) === 2 && strlen($parts[1]) === 3)) {
-                $str = str_replace('.', '', $str);
-            }
-        } elseif (str_contains($str, ',')) {
-            // Check if comma is decimal (e.g. 15000,50) or thousands (e.g. 15,000)
-            $parts = explode(',', $str);
-            if (count($parts) === 2 && strlen($parts[1]) <= 2) {
-                $str = str_replace(',', '.', $str);
-            } else {
-                $str = str_replace(',', '', $str);
-            }
-        }
-
-        if (! is_numeric($str)) {
+        if (! preg_match('/^\d+(?:\.\d{1,2})?$/', $amount)) {
             return null;
         }
+        $parts = explode('.', $amount, 2);
+        $whole = ltrim($parts[0], '0');
+        if (strlen($whole) > 14) {
+            return null;
+        }
+        $cents = (int) $whole * 100 + (int) str_pad($parts[1] ?? '', 2, '0');
 
-        return (int) round(((float) $str) * 100);
+        return $cents <= 9000000000000000 ? $cents : null;
     }
 
     private function xml(ZipArchive $zip, string $path): DOMXPath

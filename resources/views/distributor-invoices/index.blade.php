@@ -181,8 +181,8 @@
                     <x-ui.icon name="export" :size="16" />Download Template Excel (.xlsx)
                 </a>
             </div>
-            <x-ui.field name="file" label="Pilih File Excel (.xlsx)" required>
-                <input class="form-input" type="file" name="file" accept=".xlsx" required :disabled="submitting">
+            <x-ui.field name="file" id="invoice-import-file" label="Pilih File Excel (.xlsx)" required>
+                <input class="form-input" type="file" id="invoice-import-file" name="file" accept=".xlsx" required>
             </x-ui.field>
             <footer class="dialog-actions">
                 <button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button>
@@ -235,6 +235,7 @@
             @submit="submitting = true"
         >
             @csrf @method('PATCH')
+            <input type="hidden" name="_dialog" value="invoice-edit">
             <input type="hidden" name="version" :value="version">
 
             <div class="form-grid">

@@ -20,7 +20,7 @@ class StoreDistributorInvoiceRequest extends FormRequest
             'reference' => ['nullable', 'string', 'max:255', Rule::unique('distributor_invoices', 'reference')],
             'invoiced_on' => ['nullable', 'date_format:Y-m-d'],
             'due_on' => ['required', 'date_format:Y-m-d', 'after_or_equal:invoiced_on'],
-            'total' => ['required', 'numeric', 'min:0.01', 'max:90000000000000'],
+            'total' => ['required', 'numeric', 'min:0.01', 'max:90000000000000', 'regex:/^\d+(\.\d{1,2})?$/'],
             'supplier_reference' => ['nullable', 'string', 'max:255'],
             'shipment_id' => ['nullable', 'integer', Rule::exists('shipments', 'id')],
             'notes' => ['nullable', 'string', 'max:2000'],

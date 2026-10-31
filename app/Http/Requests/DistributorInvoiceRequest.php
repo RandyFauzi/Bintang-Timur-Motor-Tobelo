@@ -32,7 +32,7 @@ class DistributorInvoiceRequest extends FormRequest
                 'reference' => ['nullable', 'string', 'max:255', Rule::unique('distributor_invoices', 'reference')->ignore($invoice?->id)],
                 'due_on' => array_values(array_filter(['required', 'date_format:Y-m-d', $minDate ? 'after_or_equal:'.$minDate : null])),
                 'invoiced_on' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:due_on'],
-                'total' => ['nullable', 'numeric', 'min:0.01', 'max:90000000000000'],
+                'total' => ['sometimes', 'required', 'numeric', 'min:0.01', 'max:90000000000000', 'regex:/^\d+(\.\d{1,2})?$/'],
                 'shipment_id' => ['nullable', 'integer', Rule::exists('shipments', 'id')],
                 'supplier_reference' => ['nullable', 'string', 'max:255'],
                 'notes' => ['nullable', 'string', 'max:2000'],
@@ -43,6 +43,15 @@ class DistributorInvoiceRequest extends FormRequest
         }
 
         return ['search' => ['nullable', 'string', 'max:255'], 'distributor_id' => ['nullable', 'integer'], 'status' => ['nullable', 'array', 'max:4'], 'status.*' => ['required', 'string', 'distinct', Rule::in(array_keys(DistributorInvoice::STATUSES))], 'timing' => ['nullable', Rule::in(['1', '2', '3', '4', 'near', 'overdue'])]];
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        if ($this->isMethod('PATCH') && $this->input('_dialog') === 'invoice-edit') {
+            return route('distributor-invoices.show', $this->route('distributorInvoice'));
+        }
+
+        return parent::getRedirectUrl();
     }
 
     public function attributes(): array

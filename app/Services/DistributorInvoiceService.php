@@ -139,8 +139,10 @@ class DistributorInvoiceService
         });
     }
 
-    public function generateManualReference(): string
+    /** @param list<string> $reservedReferences */
+    public function generateManualReference(array $reservedReferences = []): string
     {
+        $reservedReferences = array_map('mb_strtolower', $reservedReferences);
         $prefix = 'INV-MAN-'.date('Ym').'-';
         $latest = DistributorInvoice::where('reference', 'like', $prefix.'%')
             ->orderByDesc('id')
@@ -153,7 +155,7 @@ class DistributorInvoiceService
 
         do {
             $ref = $prefix.sprintf('%04d', $counter++);
-        } while (DistributorInvoice::where('reference', $ref)->exists());
+        } while (in_array(mb_strtolower($ref), $reservedReferences, true) || DistributorInvoice::where('reference', $ref)->exists());
 
         return $ref;
     }
@@ -246,15 +248,13 @@ class DistributorInvoiceService
         });
     }
 
-    public function delete(DistributorInvoice $invoice, ?int $version = null): void
+    public function delete(DistributorInvoice $invoice, int $version): void
     {
         self::ensureSchema();
 
         DB::transaction(function () use ($invoice, $version): void {
             $invoice = DistributorInvoice::lockForUpdate()->findOrFail($invoice->id);
-            if ($version !== null) {
-                $this->assertVersion($invoice, $version);
-            }
+            $this->assertVersion($invoice, $version);
             $invoice->payments()->delete();
             $invoice->delete();
         });

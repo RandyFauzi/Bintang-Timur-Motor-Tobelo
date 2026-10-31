@@ -17,6 +17,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -127,7 +128,15 @@ class DistributorInvoiceController extends Controller
 
     public function update(DistributorInvoiceRequest $request, DistributorInvoice $distributorInvoice, DistributorInvoiceService $billing): RedirectResponse
     {
-        $billing->updateDetails($distributorInvoice, $request->validated());
+        try {
+            $billing->updateDetails($distributorInvoice, $request->validated());
+        } catch (ValidationException $exception) {
+            if ($request->input('_dialog') === 'invoice-edit') {
+                $exception->redirectTo(route('distributor-invoices.show', $distributorInvoice));
+            }
+
+            throw $exception;
+        }
 
         return back(fallback: route('distributor-invoices.show', $distributorInvoice))
             ->with('success', 'Informasi tagihan '.$distributorInvoice->fresh()->reference.' berhasil diperbarui.');
@@ -143,8 +152,8 @@ class DistributorInvoiceController extends Controller
     public function destroy(Request $request, DistributorInvoice $distributorInvoice, DistributorInvoiceService $billing): RedirectResponse
     {
         $reference = $distributorInvoice->reference;
-        $version = $request->filled('version') ? $request->integer('version') : null;
-        $billing->delete($distributorInvoice, $version);
+        $data = $request->validate(['version' => ['required', 'integer', 'min:1']]);
+        $billing->delete($distributorInvoice, (int) $data['version']);
 
         return redirect()->route('distributor-invoices.index')->with('success', 'Tagihan '.$reference.' berhasil dihapus.');
     }
