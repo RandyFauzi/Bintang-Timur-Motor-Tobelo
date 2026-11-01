@@ -1,4 +1,11 @@
 @layer components {
+    .procurement-page.has-selection { padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)); }
+    @media(max-width:767px) { .procurement-page.has-selection .procurement-create { visibility: hidden; } }
+    .procurement-table tr.procurement-row-selected { background: color-mix(in srgb, var(--color-brand) 12%, var(--color-surface)); }
+    .procurement-table .procurement-select-cell { width: 52px; padding: 12px 16px; }
+    .procurement-selection-bar { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 30; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; max-width: calc(100% - 32px); padding: 12px 20px; border: 1px solid var(--color-border-strong); border-radius: 16px; background: var(--color-surface); box-shadow: var(--shadow-card); }
+    @media(max-width:1023px) { .procurement-table--selectable .procurement-row { grid-template-areas: "selection selection" "name name" "reference reference" "status status" "products units" "actions actions"; } .procurement-table .procurement-select-cell { grid-area: selection; padding: 0; width: auto; } }
+
     .procurement-status { display: inline-flex; align-items: center; justify-content: center; min-width: 110px; min-height: 38px; border: 1px solid; border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 500; line-height: 1.2; white-space: nowrap; }
     .procurement-status--complete { border-color: #7c9c49; background: #f1f6e8; color: #35521b; }
     .procurement-status--progress { border-color: #5c8db7; background: #edf5fc; color: #245780; }

@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\DistributorInvoice;
 use App\Models\PurchaseOrder;
 use App\Models\PurchasePlan;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -11,6 +13,74 @@ use Illuminate\Validation\ValidationException;
 
 class PurchaseOrderDeletionService
 {
+    public static function selectionSnapshot(PurchaseOrder|PurchasePlan $entry): string
+    {
+        if ($entry instanceof PurchasePlan) {
+            return hash('sha256', json_encode(['draft', $entry->id, $entry->version], JSON_THROW_ON_ERROR));
+        }
+        $plan = $entry->purchasePlan;
+        $orders = $plan ? $plan->orders : collect([$entry]);
+
+        return hash('sha256', json_encode([$plan?->id, $plan?->version, $orders->sortBy('id')->map(fn (PurchaseOrder $order): array => [$order->id, $order->version, $order->invoice?->id, $order->invoice?->version])->values()->all()], JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * @param  list<array{type:string,id:int,version:int,snapshot:string}>  $selected
+     * @return array{deleted:int,archived:int}
+     */
+    public function deleteMany(array $selected): array
+    {
+        return DB::transaction(function () use ($selected): array {
+            $entries = collect($selected);
+            $orderIds = $entries->where('type', 'order')->pluck('id');
+            $planIds = PurchaseOrder::whereKey($orderIds)->pluck('purchase_plan_id')->filter()
+                ->merge($entries->where('type', 'draft')->pluck('id'))->unique();
+            $plans = PurchasePlan::whereKey($planIds)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+            $orders = PurchaseOrder::where(fn (Builder $query): Builder => $query->whereIn('id', $orderIds)->orWhereIn('purchase_plan_id', $planIds))
+                ->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+            $invoices = DistributorInvoice::whereIn('purchase_order_id', $orders->keys())->orderBy('id')->lockForUpdate()->get()->keyBy('purchase_order_id');
+            foreach ($orders as $order) {
+                $order->setRelation('purchasePlan', $plans->get($order->purchase_plan_id));
+                $order->setRelation('invoice', $invoices->get($order->id));
+            }
+            foreach ($plans as $plan) {
+                $plan->setRelation('orders', $orders->where('purchase_plan_id', $plan->id)->values());
+            }
+            $targets = [];
+            $seen = [];
+            foreach ($selected as $row) {
+                $entry = $row['type'] === 'draft' ? $plans->get($row['id']) : $orders->get($row['id']);
+                if (! $entry || $entry->version !== (int) $row['version'] || self::selectionSnapshot($entry) !== $row['snapshot']) {
+                    throw ValidationException::withMessages(['selected' => 'Pengadaan atau tagihan terkait sudah berubah atau tidak tersedia. Muat ulang halaman dan periksa pilihan Anda.']);
+                }
+                if ($entry instanceof PurchasePlan && ($entry->status !== 'draft' || $entry->orders->isNotEmpty())) {
+                    throw ValidationException::withMessages(['selected' => 'Draft sudah difinalisasi. Muat ulang halaman.']);
+                }
+                if ($entry instanceof PurchaseOrder && $entry->archived_at !== null) {
+                    throw ValidationException::withMessages(['selected' => 'Pengadaan sudah diarsipkan. Muat ulang halaman.']);
+                }
+                $key = $entry instanceof PurchasePlan ? 'plan:'.$entry->id : ($entry->purchase_plan_id ? 'plan:'.$entry->purchase_plan_id : 'order:'.$entry->id);
+                if (isset($seen[$key])) {
+                    throw ValidationException::withMessages(['selected' => 'Pengadaan yang sama tidak boleh dipilih dua kali.']);
+                }
+                $seen[$key] = true;
+                $targets[] = $entry;
+            }
+            $result = ['deleted' => 0, 'archived' => 0];
+            foreach ($targets as $entry) {
+                if ($entry instanceof PurchasePlan) {
+                    $entry->delete();
+                    $result['deleted']++;
+                } else {
+                    $archived = $this->delete($entry, $entry->version);
+                    $result[$archived ? 'archived' : 'deleted']++;
+                }
+            }
+
+            return $result;
+        });
+    }
+
     public function delete(PurchaseOrder $purchaseOrder, int $version): bool
     {
         return DB::transaction(function () use ($purchaseOrder, $version): bool {

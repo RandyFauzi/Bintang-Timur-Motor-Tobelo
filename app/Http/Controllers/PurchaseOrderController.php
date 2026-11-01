@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\BulkDeletePurchaseOrderRequest;
 use App\Http\Requests\DistributorRequest;
 use App\Http\Requests\PurchaseOrderReceiptRequest;
 use App\Http\Requests\PurchaseOrderRequest;
@@ -112,9 +113,13 @@ class PurchaseOrderController extends Controller
         $orders = DB::query()->fromSub($entries, 'procurement_entries')
             ->orderByDesc('created_at')->orderByDesc('id')->orderBy('entry_type')
             ->paginate($filters['per_page'] ?? 10)->withQueryString();
-        $orderModels = PurchaseOrder::with(['items', 'purchasePlan.orders.items'])->whereIn('id', $orders->getCollection()->where('entry_type', 'order')->pluck('id'))->get()->keyBy('id');
+        $orderModels = PurchaseOrder::with(['items', 'invoice', 'purchasePlan.orders.items', 'purchasePlan.orders.invoice'])->whereIn('id', $orders->getCollection()->where('entry_type', 'order')->pluck('id'))->get()->keyBy('id');
         $draftModels = PurchasePlan::whereIn('id', $orders->getCollection()->where('entry_type', 'draft')->pluck('id'))->get()->keyBy('id');
         $orders->setCollection($orders->getCollection()->map(fn (object $entry): PurchaseOrder|PurchasePlan|null => $entry->entry_type === 'draft' ? $draftModels->get($entry->id) : $orderModels->get($entry->id))->filter()->values());
+
+        if ($request->ajax()) {
+            return view('purchase-orders.list', ['orders' => $orders]);
+        }
 
         return view('purchase-orders.index', ['orders' => $orders, 'distributors' => Distributor::where('is_active', true)->orderBy('name')->get()]);
     }
@@ -216,6 +221,13 @@ class PurchaseOrderController extends Controller
         $distributor = Distributor::create($request->validated());
 
         return redirect()->route('purchase-orders.create', ['distributor_id' => $distributor->id])->with('success', 'Distributor ditambahkan. Silakan buat PO.');
+    }
+
+    public function bulkDestroy(BulkDeletePurchaseOrderRequest $request, PurchaseOrderDeletionService $deletion): RedirectResponse
+    {
+        $result = $deletion->deleteMany($request->validated('selected'));
+
+        return redirect()->route('purchase-orders.index')->with('success', $result['deleted'].' pengadaan dihapus dan '.$result['archived'].' pengadaan dipindahkan ke Arsip.');
     }
 
     public function destroy(Request $request, PurchaseOrder $purchaseOrder, PurchaseOrderDeletionService $deletion): RedirectResponse

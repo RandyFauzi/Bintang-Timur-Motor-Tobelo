@@ -1,4 +1,4 @@
-export function invoiceSelection(initial = []) {
+export function invoiceSelection(initial = [], noun = 'invoice') {
     return {
         selected: Array.isArray(initial) ? initial.filter(row => /^\d+$/.test(String(row?.id)) && Number(row?.version) > 0).slice(0, 100).map(row => ({ id: String(row.id), version: Number(row.version) })) : [],
         rows: [],
@@ -13,14 +13,14 @@ export function invoiceSelection(initial = []) {
             this.limitMessage = '';
             this.selected = this.selected.filter(row => row.id !== String(id));
             if (checked) {
-                if (this.selected.length >= 100) { this.limitMessage = 'Maksimal 100 invoice sekali hapus.'; return; }
+                if (this.selected.length >= 100) { this.limitMessage = `Maksimal 100 ${noun} sekali proses.`; return; }
                 this.selected.push({ id: String(id), version: Number(version) });
             }
         },
         toggleAll(checked) {
             this.refreshRows();
             this.selected = checked ? this.rows.slice(0, 100).map(row => ({ ...row })) : [];
-            this.limitMessage = checked && this.rows.length > 100 ? '100 invoice pertama dipilih. Maksimal 100 invoice sekali hapus.' : '';
+            this.limitMessage = checked && this.rows.length > 100 ? `100 ${noun} pertama dipilih. Maksimal 100 sekali proses.` : '';
         },
     };
 }

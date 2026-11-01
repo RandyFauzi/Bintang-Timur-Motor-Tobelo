@@ -1,5 +1,5 @@
 <x-app-layout>
-    <div class="catalogue-page procurement-page grid gap-5" x-data="{ deletion: { url: '', reference: '', version: 0 }, draftDeletion: { url: '', name: '', version: 0 } }" @delete-purchase-order.window="deletion = $event.detail; $dispatch('open-dialog', { id: 'delete-purchase-order' })">
+    <div class="catalogue-page procurement-page grid gap-5" x-data="procurementSelection(@js(old('selected', [])))" :class="{ 'has-selection': selected.length > 0 }" @infinite-scroll-loaded="refreshRows()" @delete-purchase-order.window="deletion = $event.detail; $dispatch('open-dialog', { id: 'delete-purchase-order' })">
         <header class="catalogue-heading !mb-0"><div><h1>Pengadaan Barang</h1><p class="mt-2 text-sm text-muted">Buat perencanaan dan proses pengadaan barang.</p></div></header>
         <nav class="flex flex-wrap gap-2" aria-label="Daftar pengadaan"><a class="ui-button ui-button--secondary" href="{{ route('purchase-orders.index', request()->except(['archived', 'page'])) }}" @if(!request()->boolean('archived')) aria-current="page" @endif>Aktif</a><a class="ui-button ui-button--secondary" href="{{ route('purchase-orders.index', array_replace(request()->except('page'), ['archived' => 1])) }}" @if(request()->boolean('archived')) aria-current="page" @endif>Arsip</a></nav>
         <section class="catalogue-surface min-w-0" aria-label="Daftar pengadaan">
@@ -17,51 +17,12 @@
                     @if(request()->filled('search') || request()->filled('status') || request()->filled('distributor_id') || request()->filled('from') || request()->filled('until'))<a class="filter-reset" href="{{ route('purchase-orders.index', request()->boolean('archived') ? ['archived' => 1] : []) }}">Reset Filter</a>@endif
                 </div>
             </form>
-            <div class="procurement-list-region overflow-x-auto rounded-b-xl" role="region" aria-label="Daftar pengadaan barang" tabindex="0">
-                <table class="procurement-table w-full text-left text-sm" role="table">
-                    <thead class="bg-gray-50 text-xs uppercase text-muted"><tr>@foreach(['Pengadaan/Tanggal', 'Nama Pengadaan', 'Produk', 'Total Unit', 'Status', 'Aksi'] as $heading)<th scope="col" class="whitespace-nowrap px-4 py-5 font-medium">{{ $heading }}</th>@endforeach</tr></thead>
-                    <tbody>
-                        @forelse($orders as $order)
-                            @php($isDraft = $order instanceof \App\Models\PurchasePlan)
-                            @php($plan = $isDraft ? $order : $order->purchasePlan)
-                            @php($statusLabel = $isDraft ? 'Draft' : ($plan ? $plan->statusLabel() : $order->statusLabel()))
-                            @php($reference = $plan?->reference ?? $order->reference)
-                            @php($productCount = $plan ? count($plan->items) : $order->items->count())
-                            @php($unitCount = $plan ? collect($plan->items)->sum('quantity') : $order->items->sum('quantity'))
-                            @php($estimate = $isDraft ? collect($plan->items)->sum(fn ($item) => ($item['quantity'] ?? 0) * ($item['unit_price'] ?? 0)) : ($plan ? $plan->orders->sum(fn ($child) => $child->total()) : $order->total()))
-                            @php($manageUrl = $isDraft ? route('purchase-plans.edit', $plan) : ($order->purchase_plan_id ? route('purchase-plans.show', $order->purchase_plan_id) : route('purchase-orders.show', $order)))
-                            <tr class="procurement-row border-b hover:bg-gray-50" role="row">
-                                <td class="procurement-cell-reference whitespace-nowrap p-4" role="cell"><a class="font-medium underline underline-offset-4" href="{{ $manageUrl }}">{{ $reference }}</a><p class="mt-1 text-xs text-muted">{{ ($isDraft ? $plan->planned_on : $order->ordered_on)->translatedFormat('d M Y') }}</p></td>
-                                <td class="procurement-cell-name min-w-[180px] break-words p-4" role="cell">@if($plan)<a class="underline underline-offset-4" href="{{ $manageUrl }}">{{ $plan->name }}</a>@if($isDraft)<p class="mt-1 text-xs text-muted">{{ collect($plan->items)->flatMap(fn ($item) => $item['allocations'] ?? [])->pluck('distributor_id')->filter()->unique()->count() }} distributor dialokasikan</p>@else<p class="mt-1 text-xs text-muted" title="{{ $plan->orders->pluck('distributor_name')->join(', ') }}">{{ $plan->orders->count() }} distributor · Lihat rincian di Kelola</p>@endif @else Pengadaan ke {{ $order->distributor_name }} @endif</td>
-                                <td class="procurement-cell-products whitespace-nowrap p-4" role="cell" data-label="Jumlah produk">{{ number_format($productCount, 0, ',', '.') }} <span class="text-muted">produk</span></td>
-                                <td class="procurement-cell-units whitespace-nowrap p-4" role="cell" data-label="Total unit / Estimasi PO">{{ number_format($unitCount, 0, ',', '.') }} <span class="text-muted">unit</span><p class="mt-1 text-xs text-muted">Rp {{ number_format($estimate, 2, ',', '.') }}</p></td>
-                                <td class="procurement-cell-status p-4" role="cell"><span @class(['procurement-status', 'procurement-status--complete' => $statusLabel === 'Selesai', 'procurement-status--progress' => in_array($statusLabel, ['In Progress', 'Sedang diperiksa']), 'procurement-status--discrepancy' => $statusLabel === 'Ada selisih', 'procurement-status--draft' => $statusLabel === 'Draft'])>{{ $statusLabel }}</span></td>
-                                <td class="procurement-cell-actions p-4" role="cell"><div class="flex items-center gap-1">
-                                    <a class="ui-button ui-button--secondary" href="{{ $manageUrl }}" aria-label="{{ $isDraft ? 'Lanjutkan draft' : 'Kelola pengadaan' }} {{ $reference }}">{{ $isDraft ? 'Lanjutkan Draft' : 'Kelola' }}<x-ui.icon name="arrow-right" :size="16" /></a>
-                                    @if($isDraft)
-                                        <button type="button" class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-700 transition-colors hover:border-red-300 hover:bg-red-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600" aria-label="Hapus draft {{ $plan->name }}" title="Hapus draft" aria-haspopup="dialog" aria-controls="delete-purchase-draft" data-url="{{ route('purchase-plans.destroy', $plan) }}" data-name="{{ $plan->name }}" data-version="{{ $plan->version }}" @click="draftDeletion = { url: $el.dataset.url, name: $el.dataset.name, version: Number($el.dataset.version) }; $dispatch('open-dialog', { id: 'delete-purchase-draft' })"><x-ui.icon name="trash" :size="18" /></button>
-                                    @else
-                                    <x-dropdown :portal="true">
-                                        <x-slot:trigger><button type="button" class="procurement-more" aria-label="Aksi pengadaan {{ $reference }}" :aria-expanded="open"><x-ui.icon name="more-dark" :size="18" /></button></x-slot:trigger>
-                                        <x-slot:content>
-                                            <x-dropdown-link :href="$manageUrl">Detail</x-dropdown-link>
-                                            @if($order->archived_at)
-                                                <form method="POST" action="{{ route('purchase-orders.restore', $order) }}">@csrf @method('PATCH')<input type="hidden" name="version" value="{{ $order->version }}"><button type="submit" class="min-h-11 w-full px-4 py-2 text-left text-sm hover:bg-gray-100">Kembalikan ke Aktif</button></form>
-                                            @else
-                                                <button type="button" class="flex min-h-11 w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-700 hover:bg-gray-100 focus:bg-gray-100" @click="$dispatch('delete-purchase-order', @js(['url' => route('purchase-orders.destroy', $order), 'reference' => $reference, 'version' => $order->version]))"><x-ui.icon name="trash" :size="16" />Hapus</button>
-                                            @endif
-                                        </x-slot:content>
-                                    </x-dropdown>
-                                    @endif
-                                </div></td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="6"><x-ui.empty-state title="Pengadaan tidak ditemukan" description="Buat pengadaan pertama atau ubah pencarian dan filter." /></td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            <x-ui.pagination :paginator="$orders" />
+            @if(!request()->boolean('archived'))
+                <div class="flex flex-wrap items-center gap-3 px-4 py-3 text-sm"><label class="inline-flex min-h-11 items-center gap-2"><input type="checkbox" class="rounded" :checked="allSelected" x-effect="$el.indeterminate = selected.length > 0 && !allSelected" @change="toggleAll($event.target.checked)">Pilih Semua</label><span class="text-xs text-muted">Pengadaan yang sudah dimuat, maksimal 100 sekali proses.</span></div>
+                <div class="procurement-selection-bar" x-cloak x-show="selected.length" role="group" aria-label="Aksi pengadaan terpilih"><span role="status" aria-live="polite" x-text="selected.length + ' pengadaan terpilih'"></span><button type="button" class="ui-button ui-button--danger" @click="$dispatch('open-dialog', {id:'procurement-bulk-delete'})">Hapus Terpilih</button><button type="button" class="ui-button ui-button--secondary" @click="selected = []">Batal Pilih</button></div>
+                <p class="px-4 text-sm text-danger" role="status" x-cloak x-show="limitMessage" x-text="limitMessage"></p>
+            @endif
+            @include('purchase-orders.list')
         </section>
         <x-ui.dialog name="delete-purchase-draft" title="Hapus Draft Rencana Pengadaan?" description="Draft yang dihapus tidak dapat dikembalikan.">
             <form method="POST" :action="draftDeletion.url" class="dialog-form" @submit="submitting = true">
@@ -78,6 +39,14 @@
                 <p class="text-sm">Hapus pengadaan <strong x-text="deletion.reference"></strong>?</p>
                 <div class="grid gap-3 text-sm text-muted"><p>Untuk rencana induk, tindakan berlaku pada seluruh order distributor dalam rencana tersebut.</p><p><strong class="text-gray-900">Belum diproses:</strong> rencana, rincian, dan tagihan kosong dihapus permanen.</p><p><strong class="text-gray-900">Sudah diproses:</strong> dipindahkan ke Arsip. Nota, pembayaran, klaim, dan pengiriman tetap tersimpan serta dapat dilanjutkan. Pengadaan dapat dikembalikan ke Aktif.</p></div>
                 <footer class="dialog-actions"><button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button><button type="submit" class="ui-button" :disabled="submitting" x-text="submitting ? 'Memproses…' : 'Ya, Lanjutkan'">Ya, Lanjutkan</button></footer>
+            </form>
+        </x-ui.dialog>
+        <x-ui.dialog name="procurement-bulk-delete" title="Proses Pengadaan Terpilih" description="Pengadaan yang belum diproses dihapus, sedangkan yang sudah diproses diarsipkan." :show="old('_dialog') === 'procurement-bulk-delete'">
+            <form method="POST" action="{{ route('purchase-orders.bulk.destroy') }}" class="dialog-form" @submit="submitting = true">
+                @csrf @method('DELETE')<input type="hidden" name="_dialog" value="procurement-bulk-delete">
+                <template x-for="(entry, index) in selected" :key="entry.id"><div><input type="hidden" :name="'selected['+index+'][id]'" :value="entry.recordId"><input type="hidden" :name="'selected['+index+'][type]'" :value="entry.type"><input type="hidden" :name="'selected['+index+'][version]'" :value="entry.version"><input type="hidden" :name="'selected['+index+'][snapshot]'" :value="entry.snapshot"></div></template>
+                <p class="text-sm">Proses <strong x-text="selected.length"></strong> pengadaan terpilih?</p><p class="text-sm text-muted">Draft dan pengadaan yang belum diproses dihapus permanen. Pengadaan yang sudah diproses dipindahkan ke Arsip; nota, pembayaran, klaim, pengiriman, dan stok tetap tersimpan. Jika satu data berubah, seluruh proses dibatalkan. Maksimal 100 pengadaan sekali proses.</p>
+                <footer class="dialog-actions"><button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button><button type="submit" class="ui-button ui-button--danger" :disabled="submitting || !selected.length">Ya, Proses Terpilih</button></footer>
             </form>
         </x-ui.dialog>
     </div>
