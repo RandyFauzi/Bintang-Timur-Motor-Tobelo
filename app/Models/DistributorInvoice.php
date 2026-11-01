@@ -17,11 +17,11 @@ class DistributorInvoice extends Model
 
     public const REMINDER_DAYS = 7;
 
-    protected $fillable = ['distributor_id', 'purchase_order_id', 'reference', 'due_on', 'total_cents', 'supplier_reference', 'notes', 'invoiced_on', 'shipment_id', 'discrepancy_notes', 'claim_amount_cents'];
+    protected $fillable = ['distributor_id', 'purchase_order_id', 'reference', 'due_on', 'total_cents', 'supplier_reference', 'notes', 'invoiced_on', 'received_on', 'shipment_id', 'discrepancy_notes', 'claim_amount_cents'];
 
     protected function casts(): array
     {
-        return ['distributor_id' => 'integer', 'invoiced_on' => 'immutable_date', 'claim_amount_cents' => 'integer', 'shipment_id' => 'integer', 'due_on' => 'immutable_date', 'total_cents' => 'integer', 'paid_cents' => 'integer', 'version' => 'integer'];
+        return ['distributor_id' => 'integer', 'invoiced_on' => 'immutable_date', 'received_on' => 'immutable_date', 'claim_amount_cents' => 'integer', 'shipment_id' => 'integer', 'due_on' => 'immutable_date', 'total_cents' => 'integer', 'paid_cents' => 'integer', 'version' => 'integer'];
     }
 
     public static function today(): CarbonImmutable
@@ -56,7 +56,13 @@ class DistributorInvoice extends Model
 
     public function receivedAt(): ?CarbonImmutable
     {
-        return $this->shipment?->delivered_at?->timezone(config('shipping.timezone'));
+        if ($this->shipment_id !== null || ! $this->isManual()) {
+            return $this->shipment?->delivered_at?->timezone(config('shipping.timezone'));
+        }
+
+        return $this->received_on
+            ? CarbonImmutable::parse($this->received_on->toDateString(), config('shipping.timezone'))
+            : null;
     }
 
     public function billingStatus(): string

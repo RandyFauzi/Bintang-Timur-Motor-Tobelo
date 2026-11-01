@@ -23,11 +23,12 @@ class DistributorInvoiceImportService
         'Total Tagihan',
         'Nomor Nota',
         'Catatan',
+        'Tanggal Masuk Barang',
     ];
 
     public const EXAMPLE_ROWS = [
-        ['INV-202610-001', 'PT Astra Otoparts', '2026-10-25', '2026-11-25', 15000000, 'FAK-88912', 'Tagihan suku cadang bulan Oktober'],
-        ['', 'CV Makmur Sentosa', '2026-10-28', '2026-12-28', 7500000, 'SJ-4410', 'Ban & velg motor'],
+        ['INV-202610-001', 'PT Astra Otoparts', '2026-10-25', '2026-11-25', 15000000, 'FAK-88912', 'Tagihan suku cadang bulan Oktober', '2026-10-27'],
+        ['', 'CV Makmur Sentosa', '2026-10-28', '2026-12-28', 7500000, 'SJ-4410', 'Ban & velg motor', ''],
     ];
 
     /** @var array<string, list<string>> */
@@ -35,6 +36,7 @@ class DistributorInvoiceImportService
         'reference' => ['nomorinvoice', 'noinvoice', 'invoice', 'nomortagihan', 'notagihan', 'ref'],
         'distributor' => ['distributor', 'namadistributor', 'supplier', 'pemasok'],
         'invoiced_on' => ['tanggalfaktur', 'tglfaktur', 'tanggaltagihan', 'tanggalnota', 'tanggal'],
+        'received_on' => ['tanggalmasukbarang', 'tanggalmasuk', 'tglmasuk', 'tanggalditerima', 'tanggalbarangditerima', 'receivedon'],
         'due_on' => ['jatuhtempo', 'tgljatuhtempo', 'tanggaljatuhtempo', 'tempo', 'duedate'],
         'total' => ['totaltagihan', 'totalfaktur', 'total', 'nominal', 'jumlah', 'jumlahbruto'],
         'supplier_reference' => ['nomornota', 'nonota', 'nota', 'suratjalan', 'nosuratjalan'],
@@ -90,6 +92,12 @@ class DistributorInvoiceImportService
                 $invoicedOn = DistributorInvoice::today()->toDateString();
             }
 
+            $rawReceivedOn = trim($data['received_on'] ?? '');
+            $receivedOn = $rawReceivedOn !== '' ? $this->parseDate($rawReceivedOn) : null;
+            if ($rawReceivedOn !== '' && $receivedOn === null) {
+                $errors[] = "Baris {$rowNumber}: Format tanggal masuk barang '{$rawReceivedOn}' tidak valid (gunakan YYYY-MM-DD atau DD/MM/YYYY).";
+            }
+
             // Due on
             $rawDueOn = trim($data['due_on'] ?? '');
             $dueOn = null;
@@ -122,6 +130,7 @@ class DistributorInvoiceImportService
                 'distributor_name' => $distributorName,
                 'reference' => $ref !== '' ? $ref : null,
                 'invoiced_on' => $invoicedOn,
+                'received_on' => $receivedOn,
                 'due_on' => $dueOn,
                 'total_cents' => $totalCents,
                 'supplier_reference' => trim($data['supplier_reference'] ?? '') ?: null,
@@ -152,6 +161,7 @@ class DistributorInvoiceImportService
                     'purchase_order_id' => null,
                     'reference' => $reference,
                     'invoiced_on' => $row['invoiced_on'],
+                    'received_on' => $row['received_on'],
                     'due_on' => $row['due_on'],
                     'total_cents' => $row['total_cents'],
                     'paid_cents' => 0,

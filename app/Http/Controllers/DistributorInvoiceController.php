@@ -109,7 +109,7 @@ class DistributorInvoiceController extends Controller
             'TEMPLATE IMPORT TAGIHAN DISTRIBUTOR',
             DistributorInvoiceImportService::HEADERS,
             [],
-            'Petunjuk: Kolom Distributor, Jatuh Tempo, dan Total Tagihan wajib diisi. Nomor invoice otomatis jika dikosongkan.',
+            'Petunjuk: Kolom Distributor, Jatuh Tempo, dan Total Tagihan wajib diisi. Nomor invoice otomatis jika dikosongkan. Tanggal Masuk Barang opsional: YYYY-MM-DD atau DD/MM/YYYY.',
             forImport: true
         );
     }
