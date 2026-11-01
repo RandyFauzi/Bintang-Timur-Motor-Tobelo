@@ -147,6 +147,7 @@ export function mobileInfiniteScroll(config = {}) {
                     let appendedCount = 0;
                     newItems.forEach((node) => {
                         if (node.dataset?.procurementKey && currentList.container.querySelector(`[data-procurement-key="${node.dataset.procurementKey}"]`)) return;
+                        if (node.dataset?.productId && currentList.container.querySelector(`[data-product-id="${node.dataset.productId}"]`)) return;
                         if (node.dataset?.invoiceId && currentList.container.querySelector(`[data-invoice-id="${node.dataset.invoiceId}"]`)) return;
                         const imported = document.importNode ? document.importNode(node, true) : node.cloneNode(true);
                         currentList.container.appendChild(imported);

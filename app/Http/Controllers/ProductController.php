@@ -21,6 +21,10 @@ class ProductController extends Controller
     {
         $filters = $request->validated();
         $products = $catalogue->products($filters)->paginate((int) ($filters['per_page'] ?? ($request->input('view') === 'cards' ? 6 : 15)))->withQueryString();
+        if ($request->ajax()) {
+            return view('products.partials.list', ['products' => $products]);
+        }
+
         $editing = $request->filled('edit') ? Product::with(['stock', 'brand', 'type', 'color', 'distributors'])->findOrFail($request->integer('edit')) : null;
 
         return view('products.index', array_merge($catalogue->options(), ['products' => $products, 'editing' => $editing, 'categories' => $catalogue->categories(), 'stockOverview' => $dashboard->stockOverview(), 'importColumns' => ProductImportColumn::definitions()]));

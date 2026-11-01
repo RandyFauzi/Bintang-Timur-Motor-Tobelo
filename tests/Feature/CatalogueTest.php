@@ -301,6 +301,24 @@ class CatalogueTest extends TestCase
         $this->assertDatabaseHas('distributors', ['name' => 'Distributor Kilat Express']);
     }
 
+    public function test_product_list_and_cards_hide_page_size_and_load_filtered_batches_without_the_layout(): void
+    {
+        Product::factory()->withStock()->count(22)->create(['name' => 'Produk Scroll']);
+        Product::factory()->create(['name' => 'Produk Lain']);
+        $this->actingAs(User::factory()->create());
+        foreach (['list', 'cards'] as $view) {
+            $first = $this->get(route('products.index', ['search' => 'Scroll', 'view' => $view]))
+                ->assertOk()->assertDontSee('for="per-page"', false);
+            $products = $first->viewData('products');
+            $this->assertSame(22, $products->total());
+            $this->assertLessThan(22, $products->count());
+            $next = $this->get($products->nextPageUrl(), ['X-Requested-With' => 'XMLHttpRequest'])
+                ->assertOk()->assertViewIs('products.partials.list')->assertDontSee('<html', false)->assertSee('data-product-id', false);
+            $this->assertEmpty(array_intersect($products->modelKeys(), $next->viewData('products')->modelKeys()));
+            $this->assertSame(22, $next->viewData('products')->total());
+        }
+    }
+
     public function test_pagination_component_renders_mobile_infinite_scroll_sentinel_and_loading_indicator(): void
     {
         Product::factory()->count(20)->withStock(5)->create();
