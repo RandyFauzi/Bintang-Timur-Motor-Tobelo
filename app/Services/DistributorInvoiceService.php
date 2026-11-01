@@ -100,7 +100,7 @@ class DistributorInvoiceService
         ]);
     }
 
-    /** @param array{distributor_id?:?int,distributor_name?:?string,reference?:?string,total:numeric-string|float|int,due_on:string,invoiced_on?:?string,supplier_reference?:?string,shipment_id?:?int,notes?:?string} $data */
+    /** @param array{distributor_id?:?int,distributor_name?:?string,reference?:?string,total:numeric-string|float|int,due_on:string,invoiced_on?:?string,received_on?:?string,supplier_reference?:?string,shipment_id?:?int,notes?:?string} $data */
     public function createManual(array $data): DistributorInvoice
     {
         self::ensureSchema();
@@ -141,6 +141,7 @@ class DistributorInvoiceService
                 'purchase_order_id' => null,
                 'reference' => $reference,
                 'invoiced_on' => $invoicedOn,
+                'received_on' => empty($data['shipment_id']) ? ($data['received_on'] ?? null) : null,
                 'due_on' => $dueOn,
                 'total_cents' => $totalCents,
                 'paid_cents' => 0,
@@ -209,7 +210,7 @@ class DistributorInvoiceService
         });
     }
 
-    /** @param array{version:int, due_on:string, distributor_id?:?int, reference?:?string, total?:numeric-string|float|int, invoiced_on?:?string, shipment_id?:?int, supplier_reference?:?string, notes?:?string, discrepancy_notes?:?string, claim_amount?:?string} $data */
+    /** @param array{version:int, due_on:string, distributor_id?:?int, reference?:?string, total?:numeric-string|float|int, invoiced_on?:?string,received_on?:?string, shipment_id?:?int, supplier_reference?:?string, notes?:?string, discrepancy_notes?:?string, claim_amount?:?string} $data */
     public function updateDetails(DistributorInvoice $invoice, array $data): void
     {
         self::ensureSchema();
@@ -246,6 +247,17 @@ class DistributorInvoiceService
                         throw ValidationException::withMessages(['total' => 'Total tagihan tidak boleh lebih kecil dari jumlah yang sudah dibayar (Rp '.number_format($invoice->paid_cents / 100, 2, ',', '.').').']);
                     }
                     $invoice->total_cents = $newTotal;
+                }
+            }
+            $shipmentId = array_key_exists('shipment_id', $data) ? $data['shipment_id'] : $invoice->shipment_id;
+            if (! empty($data['received_on']) && (! $invoice->isManual() || $shipmentId !== null)) {
+                throw ValidationException::withMessages(['received_on' => 'Tanggal masuk barang mengikuti penerimaan pengiriman.']);
+            }
+            if ($invoice->isManual()) {
+                if ($shipmentId !== null) {
+                    $invoice->received_on = null;
+                } elseif (array_key_exists('received_on', $data)) {
+                    $invoice->received_on = $data['received_on'];
                 }
             }
             $invoice->fill(collect($data)->only(['due_on', 'invoiced_on', 'shipment_id', 'supplier_reference', 'notes', 'discrepancy_notes'])->all());

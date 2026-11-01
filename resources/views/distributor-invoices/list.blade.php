@@ -57,6 +57,7 @@
                             'distributor_name' => $invoice->distributor_name,
                             'reference' => $invoice->reference,
                             'invoiced_on' => $invoice->invoiced_on?->toDateString() ?? '',
+                            'received_on' => $invoice->received_on?->toDateString() ?? '',
                             'due_on' => $invoice->due_on->toDateString(),
                             'total' => number_format($invoice->total_cents / 100, 2, '.', ''),
                             'min_total' => number_format($invoice->paid_cents / 100, 2, '.', ''),

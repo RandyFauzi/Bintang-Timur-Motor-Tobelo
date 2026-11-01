@@ -48,7 +48,8 @@ class DistributorInvoiceRequest extends FormRequest
                 'notes' => ['nullable', 'string', 'max:2000'],
                 'discrepancy_notes' => ['nullable', 'string', 'max:4000'],
                 'claim_amount' => ['nullable', 'numeric', 'min:0', 'max:90000000000000', 'regex:/^\d+(\.\d{1,2})?$/'],
-                'received_at' => ['prohibited'], 'received_on' => ['prohibited'],
+                'received_at' => ['prohibited'],
+                'received_on' => ['nullable', 'date_format:Y-m-d', Rule::prohibitedIf(! $invoice?->isManual() || ($this->exists('shipment_id') ? $this->filled('shipment_id') : $invoice?->shipment_id !== null))],
             ];
         }
 
@@ -72,6 +73,7 @@ class DistributorInvoiceRequest extends FormRequest
             'reference' => 'nomor invoice',
             'due_on' => 'jatuh tempo',
             'invoiced_on' => 'tanggal faktur',
+            'received_on' => 'tanggal masuk barang',
             'total' => 'total tagihan',
             'shipment_id' => 'kargo kapal',
             'supplier_reference' => 'nomor nota distributor',

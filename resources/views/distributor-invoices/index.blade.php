@@ -44,7 +44,7 @@
 
     <!-- Dialog: Tambah Tagihan Manual -->
     <x-ui.dialog name="invoice-create" title="Tambah Tagihan Manual" description="Catat faktur tagihan langsung dari distributor tanpa melalui alur PO." :show="old('_dialog') === 'invoice-create'" wide>
-        <form method="POST" action="{{ route('distributor-invoices.store') }}" class="dialog-form" @submit="submitting = true">
+        <form method="POST" action="{{ route('distributor-invoices.store') }}" class="dialog-form" x-data="{ receiptShipment: @js(old('shipment_id', '')) }" @change="if ($event.target.name === 'shipment_id') receiptShipment = $event.target.value" @submit="submitting = true">
             @csrf
             <input type="hidden" name="_dialog" value="invoice-create">
             <div class="form-grid">
@@ -126,6 +126,7 @@
                     @error('distributor_id')<p class="field-error">{{ $message }}</p>@enderror
                 </div>
                 <x-ui.field name="reference" label="Nomor Invoice (Opsional)" :value="old('reference')" maxlength="255" placeholder="Otomatis jika dikosongkan" hint="Kosongkan untuk penomoran otomatis sistem (INV-MAN-...)." />
+                <x-ui.field name="received_on" label="Tanggal Masuk Barang" type="date" :value="old('received_on')" x-bind:disabled="!!receiptShipment" hint="Opsional. Jika memilih kargo, tanggal masuk mengikuti penerimaan pengiriman." />
                 <x-ui.field name="invoiced_on" label="Tanggal Faktur Distributor" type="date" :value="old('invoiced_on', \App\Models\DistributorInvoice::today()->toDateString())" hint="Tanggal yang tertera pada faktur/nota distributor." />
                 <x-ui.field name="due_on" label="Jatuh Tempo" type="date" :value="old('due_on')" required hint="Batas akhir pembayaran faktur." />
                 <x-ui.field name="total" label="Total Tagihan (Rp)" type="number" min="0.01" max="90000000000000" step="0.01" :value="old('total')" placeholder="Contoh: 15000000" required />
@@ -229,6 +230,7 @@
                 },
                 reference: '',
                 invoiced_on: '',
+                received_on: '',
                 due_on: '',
                 total: '',
                 min_total: '0.00',
@@ -248,6 +250,7 @@
                 distributor_name = $event.detail.distributor_name || '';
                 reference = $event.detail.reference || '';
                 invoiced_on = $event.detail.invoiced_on || '';
+                received_on = $event.detail.received_on || '';
                 due_on = $event.detail.due_on || '';
                 total = $event.detail.total || '';
                 min_total = $event.detail.min_total || '0.00';
@@ -377,6 +380,11 @@
                     </x-ui.field>
                 </template>
 
+                <div x-show="isManual && !shipment_id">
+                    <x-ui.field name="received_on" label="Tanggal Masuk Barang" id="edit_received_on_idx">
+                        <input id="edit_received_on_idx" type="date" name="received_on" class="form-input" x-model="received_on" :disabled="!isManual || !!shipment_id">
+                    </x-ui.field>
+                </div>
                 <x-ui.field name="invoiced_on" label="Tanggal Faktur Distributor">
                     <input id="edit_invoiced_on_idx" type="date" name="invoiced_on" class="form-input" x-model="invoiced_on" :readonly="note_issued">
                 </x-ui.field>

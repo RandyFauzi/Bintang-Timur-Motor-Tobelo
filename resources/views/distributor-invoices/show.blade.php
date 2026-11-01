@@ -47,10 +47,10 @@
             <p class="mt-1 text-xs text-muted">Terpisah dari tanggal PO dan tanggal barang masuk.</p>
         </div>
         <div>
-            <p class="text-sm text-muted">Tanggal Masuk Toko (otomatis)</p>
-            <p class="mt-2 font-medium">{{ $invoice->receivedAt() ? $invoice->receivedAt()->format('d/m/Y H:i').' WIT' : '-' }}</p>
+            <p class="text-sm text-muted">Tanggal Masuk Barang</p>
+            <p class="mt-2 font-medium">{{ $invoice->receivedAt() ? ($invoice->shipment_id ? $invoice->receivedAt()->format('d/m/Y H:i').' WIT' : $invoice->receivedAt()->format('d/m/Y')) : '-' }}</p>
             @if(!$invoice->receivedAt())
-                <p class="mt-1 text-sm">{{ $invoice->shipment ? 'Menunggu konfirmasi barang tiba' : 'Belum terhubung ke kargo' }}</p>
+                <p class="mt-1 text-sm">{{ $invoice->shipment ? 'Menunggu konfirmasi barang tiba' : 'Tanggal masuk belum diisi' }}</p>
             @endif
         </div>
         <div class="sm:col-span-2">
@@ -128,8 +128,8 @@
             </table>
         </div>
     </section>
-    <x-ui.dialog name="invoice-edit" title="Edit Faktur, Kargo & Tempo" description="Tanggal masuk otomatis mengikuti approval kargo yang dipilih." :show="request()->boolean('edit') || old('_dialog') === 'invoice-edit'" wide>
-        <form method="POST" action="{{ route('distributor-invoices.update',$invoice) }}" class="dialog-form" @submit="submitting=true">
+    <x-ui.dialog name="invoice-edit" title="Edit Faktur, Kargo & Tempo" description="Tanggal masuk dapat diisi untuk invoice manual tanpa kargo. Jika memilih kargo, tanggal mengikuti penerimaan pengiriman." :show="request()->boolean('edit') || old('_dialog') === 'invoice-edit'" wide>
+        <form method="POST" action="{{ route('distributor-invoices.update',$invoice) }}" class="dialog-form" x-data="{ receiptShipment: @js(old('shipment_id', $invoice->shipment_id ?? '')) }" @change="if ($event.target.name === 'shipment_id') receiptShipment = $event.target.value" @submit="submitting=true">
             @csrf @method('PATCH')
             <input type="hidden" name="_dialog" value="invoice-edit"><input type="hidden" name="version" value="{{ $invoice->version }}">
             <div class="form-grid">
@@ -213,6 +213,9 @@
                     </div>
                     <x-ui.field name="reference" label="Nomor Invoice" :value="old('reference', $invoice->reference)" maxlength="255" required />
                     <x-ui.field name="total" label="Total Tagihan (Rp)" type="number" min="0.01" max="90000000000000" step="0.01" :value="old('total', number_format($invoice->total_cents/100,2,'.',''))" hint="Minimal Rp {{ number_format($invoice->paid_cents/100,2,',','.') }} (tidak boleh kurang dari yang sudah dibayar)." required />
+                @endif
+                @if($invoice->isManual())
+                    <x-ui.field name="received_on" label="Tanggal Masuk Barang" type="date" :value="$invoice->received_on?->toDateString()" hint="Tanggal dari kargo mengikuti penerimaan pengiriman." x-bind:disabled="!!receiptShipment" />
                 @endif
                 <x-ui.field name="invoiced_on" label="Tanggal Faktur Distributor" type="date" :value="$invoice->invoiced_on?->toDateString()" hint="Isi tanggal resmi pada dokumen faktur, bukan tanggal PO." :readonly="$invoice->purchaseOrder?->note_issued ?? false" />
                 <x-ui.field name="due_on" label="Jatuh Tempo" type="date" :value="$invoice->due_on->toDateString()" :min="$invoice->purchaseOrder ? $invoice->purchaseOrder->ordered_on->toDateString() : ($invoice->invoiced_on ? $invoice->invoiced_on->toDateString() : null)" required />
