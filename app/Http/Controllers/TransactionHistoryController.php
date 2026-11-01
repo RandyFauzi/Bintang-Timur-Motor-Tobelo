@@ -27,11 +27,16 @@ class TransactionHistoryController extends Controller
     public function index(TransactionHistoryRequest $request, TransactionHistoryService $history): View
     {
         $filters = $request->validated();
+        $transactions = $history->listing($filters)->paginate((int) ($filters['per_page'] ?? 10))->withQueryString();
+        if ($request->ajax()) {
+            return view('transactions.partials.list', ['transactions' => $transactions]);
+        }
+
         $editId = $request->input('edit') ?? old('_sale_id');
         $editing = is_string($editId) && Str::isUuid($editId) ? $this->detail(Sale::findOrFail($editId)) : null;
 
         return view('transactions.index', [
-            'transactions' => $history->listing($filters)->paginate((int) ($filters['per_page'] ?? 10))->withQueryString(),
+            'transactions' => $transactions,
             'summary' => $history->summary($filters),
             'cashiers' => User::query()->select('id', 'name')->orderBy('name')->get(),
             'paymentMethods' => Payment::query()->select('method')->distinct()->orderBy('method')->pluck('method'),

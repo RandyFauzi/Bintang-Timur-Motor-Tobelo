@@ -30,6 +30,25 @@ class TransactionHistoryTest extends TestCase
         }
     }
 
+    public function test_history_list_and_cards_load_filtered_batches_without_page_size_controls(): void
+    {
+        $cashier = User::factory()->create();
+        Sale::factory()->for($cashier)->count(23)->create(['customer_name' => 'Scroll Pilihan']);
+        Sale::factory()->create(['customer_name' => 'Transaksi Lain']);
+        $this->actingAs($cashier);
+        foreach (['list', 'cards'] as $view) {
+            $first = $this->get(route('transactions.index', ['view' => $view, 'search' => 'Scroll Pilihan', 'user_id' => [$cashier->id]]))
+                ->assertOk()->assertDontSee('for="per-page"', false);
+            $transactions = $first->viewData('transactions');
+            $this->assertSame(23, $transactions->total());
+            $this->assertLessThan(23, $transactions->count());
+            $next = $this->get($transactions->nextPageUrl(), ['X-Requested-With' => 'XMLHttpRequest'])
+                ->assertOk()->assertViewIs('transactions.partials.list')->assertDontSee('<html', false)->assertSee('data-transaction-id', false);
+            $this->assertSame(23, $next->viewData('transactions')->total());
+            $this->assertEmpty(array_intersect($transactions->modelKeys(), $next->viewData('transactions')->modelKeys()));
+        }
+    }
+
     public function test_guests_cannot_access_history_details_or_exports(): void
     {
         $sale = Sale::factory()->create();
