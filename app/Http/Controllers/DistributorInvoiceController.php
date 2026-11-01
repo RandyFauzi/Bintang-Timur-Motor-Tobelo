@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\BulkDeleteDistributorInvoiceRequest;
 use App\Http\Requests\DistributorInvoiceRequest;
 use App\Http\Requests\DistributorPaymentRequest;
 use App\Http\Requests\ImportDistributorInvoiceRequest;
@@ -46,7 +47,7 @@ class DistributorInvoiceController extends Controller
             );
         }
         $today = DistributorInvoice::today();
-        $summary = ['total' => (int) (clone $base)->sum('total_cents'), 'paid' => (int) (clone $base)->sum('paid_cents'), 'outstanding' => (int) (clone $base)->sum(DB::raw('total_cents - paid_cents')), 'overdue' => (int) (clone $base)->outstanding()->whereDate('due_on', '<=', $today->toDateString())->sum(DB::raw('total_cents - paid_cents'))];
+        $summary = $request->ajax() ? [] : ['total' => (int) (clone $base)->sum('total_cents'), 'paid' => (int) (clone $base)->sum('paid_cents'), 'outstanding' => (int) (clone $base)->sum(DB::raw('total_cents - paid_cents')), 'overdue' => (int) (clone $base)->outstanding()->whereDate('due_on', '<=', $today->toDateString())->sum(DB::raw('total_cents - paid_cents'))];
         if (! empty($filters['status'])) {
             $base->where(function (Builder $statuses) use ($filters, $today): void {
                 foreach ($filters['status'] as $status) {
@@ -80,8 +81,13 @@ class DistributorInvoiceController extends Controller
             $base->needsReminder()->whereDate('due_on', '>=', $today->toDateString());
         }
 
+        $invoices = $base->with(['purchaseOrder', 'distributor', 'shipment'])->orderByRaw('paid_cents >= total_cents')->orderBy('due_on')->orderBy('id')->paginate(15)->withQueryString();
+        if ($request->ajax()) {
+            return view('distributor-invoices.list', ['invoices' => $invoices]);
+        }
+
         return view('distributor-invoices.index', [
-            'invoices' => $base->with(['purchaseOrder', 'distributor', 'shipment'])->orderByRaw('paid_cents >= total_cents')->orderBy('due_on')->orderBy('id')->paginate(15)->withQueryString(),
+            'invoices' => $invoices,
             'distributors' => Distributor::orderBy('name')->get(),
             'shipments' => Shipment::orderByDesc('id')->get(['id', 'reference', 'cargo_name', 'delivered_at']),
             'summary' => $summary,
@@ -147,6 +153,14 @@ class DistributorInvoiceController extends Controller
         $billing->pay($distributorInvoice, $request->validated(), $request->user());
 
         return redirect()->route('distributor-invoices.show', $distributorInvoice)->with('success', 'Pembayaran berhasil dicatat. Sisa tagihan diperbarui otomatis.');
+    }
+
+    public function bulkDestroy(BulkDeleteDistributorInvoiceRequest $request, DistributorInvoiceService $billing): RedirectResponse
+    {
+        $selected = $request->validated('selected');
+        $billing->deleteMany($selected);
+
+        return redirect()->route('distributor-invoices.index')->with('success', count($selected).' invoice beserta pembayaran terkait berhasil dihapus.');
     }
 
     public function destroy(Request $request, DistributorInvoice $distributorInvoice, DistributorInvoiceService $billing): RedirectResponse

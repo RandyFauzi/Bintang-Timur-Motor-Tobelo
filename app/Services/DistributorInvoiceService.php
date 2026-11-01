@@ -248,6 +248,25 @@ class DistributorInvoiceService
         });
     }
 
+    /** @param list<array{id:int, version:int}> $selected */
+    public function deleteMany(array $selected): void
+    {
+        DB::transaction(function () use ($selected): void {
+            $versions = collect($selected)->pluck('version', 'id');
+            $invoices = DistributorInvoice::whereKey($versions->keys())->orderBy('id')->lockForUpdate()->get();
+            if ($invoices->count() !== count($selected)) {
+                throw ValidationException::withMessages(['selected' => 'Sebagian invoice tidak tersedia. Muat ulang halaman dan periksa kembali pilihan Anda.']);
+            }
+            foreach ($invoices as $invoice) {
+                $this->assertVersion($invoice, (int) $versions[$invoice->id]);
+            }
+            DistributorPayment::whereIn('distributor_invoice_id', $invoices->modelKeys())->delete();
+            foreach ($invoices as $invoice) {
+                $invoice->delete();
+            }
+        });
+    }
+
     public function delete(DistributorInvoice $invoice, int $version): void
     {
         self::ensureSchema();

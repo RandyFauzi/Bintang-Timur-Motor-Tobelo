@@ -169,3 +169,53 @@ test('mobileInfiniteScroll loadMore also loads on desktop viewports', async () =
         Object.assign(globalThis, saved);
     }
 });
+
+
+test('failed loads preserve the next URL, allow retry and prevent simultaneous requests', async () => {
+    const saved = {window:globalThis.window, document:globalThis.document, fetch:globalThis.fetch, DOMParser:globalThis.DOMParser};
+    try {
+        globalThis.window = {removeEventListener() {}};
+        globalThis.document = {body:{}};
+        const doc = {querySelector: () => null};
+        globalThis.DOMParser = class {parseFromString() {return doc;}};
+        let finish;
+        let requests = 0;
+        globalThis.fetch = () => {requests++; return new Promise(resolve => {finish = resolve;});};
+        const state = mobileInfiniteScroll({nextPageUrl:'/invoices?page=2', desktop:true});
+        state.findContainer = () => ({container:{querySelectorAll:()=>[]}, itemSelector:'tr'});
+        const first = state.loadMore();
+        await state.loadMore();
+        assert.equal(requests, 1);
+        finish({ok:false});
+        await first;
+        assert.equal(state.nextPageUrl, '/invoices?page=2');
+        assert.ok(state.error);
+        globalThis.fetch = async () => ({ok:true, text:async()=>'<table></table>'});
+        await state.loadMore();
+        assert.equal(state.error, '');
+        assert.equal(state.hasMore, false);
+        assert.equal(state.loading, false);
+    } finally {Object.assign(globalThis,saved);}
+});
+
+
+test('invoice scrolling skips duplicate rows and counts only appended invoices', async () => {
+    const saved = {window:globalThis.window, document:globalThis.document, fetch:globalThis.fetch, DOMParser:globalThis.DOMParser};
+    try {
+        globalThis.window = {removeEventListener() {}};
+        const body = {};
+        const doc = {querySelector: () => null};
+        const appended = [];
+        globalThis.document = {body, importNode:node=>node};
+        globalThis.DOMParser = class {parseFromString() {return doc;}};
+        globalThis.fetch = async () => ({ok:true, text:async()=>''});
+        const container = {querySelector:selector=>selector.includes('"1"') ? {} : null, appendChild:node=>appended.push(node)};
+        const next = {querySelectorAll:()=>[{dataset:{invoiceId:'1'}}, {dataset:{invoiceId:'2'}}]};
+        const state = mobileInfiniteScroll({nextPageUrl:'/invoices?page=2', loaded:1});
+        state.findContainer = root => ({container:root === doc ? next : container, itemSelector:'tr'});
+        await state.loadMore();
+        assert.equal(appended.length, 1);
+        assert.equal(appended[0].dataset.invoiceId, '2');
+        assert.equal(state.loaded, 2);
+    } finally {Object.assign(globalThis,saved);}
+});

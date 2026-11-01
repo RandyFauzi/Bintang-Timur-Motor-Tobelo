@@ -1,3 +1,4 @@
+import { invoiceSelection } from './components/invoice-selection';
 import { mobileInfiniteScroll } from './components/infinite-scroll';
 import { purchaseOrderForm, purchaseOrderReceipt, purchasePlanForm } from './components/purchase-orders';
 import { purchaseOrderNotes } from './components/purchase-order-notes';
@@ -15,6 +16,7 @@ import { startSelectPickers } from './components/select-picker';
 
 import.meta.glob('../images/**/*', { eager: true, query: '?url', import: 'default' });
 
+Alpine.data('invoiceSelection', invoiceSelection);
 Alpine.data('appShell', appShell);
 Alpine.data('dateRangeFilter', dateRangeFilter);
 Alpine.data('stockNotifications', stockNotifications);

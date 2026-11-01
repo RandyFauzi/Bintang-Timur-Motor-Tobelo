@@ -55,6 +55,7 @@ Route::middleware('auth')->group(function () {
         Route::get('distributor-invoices/{distributorInvoice}', [DistributorInvoiceController::class, 'show'])->name('distributor-invoices.show');
         Route::patch('distributor-invoices/{distributorInvoice}', [DistributorInvoiceController::class, 'update'])->name('distributor-invoices.update');
         Route::post('distributor-invoices/{distributorInvoice}/payments', [DistributorInvoiceController::class, 'pay'])->name('distributor-invoices.pay');
+        Route::delete('distributor-invoices/bulk/delete', [DistributorInvoiceController::class, 'bulkDestroy'])->name('distributor-invoices.bulk.destroy');
         Route::delete('distributor-invoices/{distributorInvoice}', [DistributorInvoiceController::class, 'destroy'])->name('distributor-invoices.destroy');
     });
 
