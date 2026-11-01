@@ -71,7 +71,13 @@ class DistributorInvoiceReceivedDateImportTest extends TestCase
             $zip->open($path);
             $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
             if ($legacy) {
-                $sheet = preg_replace('/<c\b[^>]*\br="H[0-9]+"[^>]*>.*?<\/c>/s', '', $sheet);
+                $document = new \DOMDocument;
+                $document->loadXML($sheet);
+                $xpath = new \DOMXPath($document);
+                foreach ($xpath->query('//*[local-name()="c" and starts-with(@r, "H")]') as $cell) {
+                    $cell->parentNode->removeChild($cell);
+                }
+                $sheet = $document->saveXML();
             }
             $xml = '';
 
