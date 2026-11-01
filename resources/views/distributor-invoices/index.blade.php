@@ -126,7 +126,7 @@
                     @error('distributor_id')<p class="field-error">{{ $message }}</p>@enderror
                 </div>
                 <x-ui.field name="reference" label="Nomor Invoice (Opsional)" :value="old('reference')" maxlength="255" placeholder="Otomatis jika dikosongkan" hint="Kosongkan untuk penomoran otomatis sistem (INV-MAN-...)." />
-                <x-ui.field name="received_on" label="Tanggal Masuk Barang" type="date" :value="old('received_on')" x-bind:disabled="!!receiptShipment" hint="Opsional. Jika memilih kargo, tanggal masuk mengikuti penerimaan pengiriman." />
+                <x-ui.field name="received_on" label="Tanggal Masuk Barang" type="date" :value="old('received_on')" hint="Opsional. Otomatis mengikuti kargo kapal (jika dipilih), atau isi manual jika ada tanggal masuk spesifik." />
                 <x-ui.field name="invoiced_on" label="Tanggal Faktur Distributor" type="date" :value="old('invoiced_on', \App\Models\DistributorInvoice::today()->toDateString())" hint="Tanggal yang tertera pada faktur/nota distributor." />
                 <x-ui.field name="due_on" label="Jatuh Tempo" type="date" :value="old('due_on')" required hint="Batas akhir pembayaran faktur." />
                 <x-ui.field name="total" label="Total Tagihan (Rp)" type="number" min="0.01" max="90000000000000" step="0.01" :value="old('total')" placeholder="Contoh: 15000000" required />
@@ -380,11 +380,9 @@
                     </x-ui.field>
                 </template>
 
-                <div x-show="isManual && !shipment_id">
-                    <x-ui.field name="received_on" label="Tanggal Masuk Barang" id="edit_received_on_idx">
-                        <input id="edit_received_on_idx" type="date" name="received_on" class="form-input" x-model="received_on" :disabled="!isManual || !!shipment_id">
-                    </x-ui.field>
-                </div>
+                <x-ui.field name="received_on" label="Tanggal Masuk Barang" id="edit_received_on_idx" hint="Otomatis mengikuti kedatangan kargo, tetapi bisa diubah/diedit manual jika ada koreksi.">
+                    <input id="edit_received_on_idx" type="date" name="received_on" class="form-input" x-model="received_on">
+                </x-ui.field>
                 <x-ui.field name="invoiced_on" label="Tanggal Faktur Distributor">
                     <input id="edit_invoiced_on_idx" type="date" name="invoiced_on" class="form-input" x-model="invoiced_on" :readonly="note_issued">
                 </x-ui.field>

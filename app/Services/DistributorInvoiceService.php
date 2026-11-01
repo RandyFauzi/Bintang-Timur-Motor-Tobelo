@@ -141,7 +141,7 @@ class DistributorInvoiceService
                 'purchase_order_id' => null,
                 'reference' => $reference,
                 'invoiced_on' => $invoicedOn,
-                'received_on' => empty($data['shipment_id']) ? ($data['received_on'] ?? null) : null,
+                'received_on' => $data['received_on'] ?? null,
                 'due_on' => $dueOn,
                 'total_cents' => $totalCents,
                 'paid_cents' => 0,
@@ -249,16 +249,8 @@ class DistributorInvoiceService
                     $invoice->total_cents = $newTotal;
                 }
             }
-            $shipmentId = array_key_exists('shipment_id', $data) ? $data['shipment_id'] : $invoice->shipment_id;
-            if (! empty($data['received_on']) && (! $invoice->isManual() || $shipmentId !== null)) {
-                throw ValidationException::withMessages(['received_on' => 'Tanggal masuk barang mengikuti penerimaan pengiriman.']);
-            }
-            if ($invoice->isManual()) {
-                if ($shipmentId !== null) {
-                    $invoice->received_on = null;
-                } elseif (array_key_exists('received_on', $data)) {
-                    $invoice->received_on = $data['received_on'];
-                }
+            if (array_key_exists('received_on', $data)) {
+                $invoice->received_on = $data['received_on'] ?: null;
             }
             $invoice->fill(collect($data)->only(['due_on', 'invoiced_on', 'shipment_id', 'supplier_reference', 'notes', 'discrepancy_notes'])->all());
             if (array_key_exists('claim_amount', $data)) {

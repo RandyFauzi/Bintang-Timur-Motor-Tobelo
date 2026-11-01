@@ -56,13 +56,11 @@ class DistributorInvoice extends Model
 
     public function receivedAt(): ?CarbonImmutable
     {
-        if ($this->shipment_id !== null || ! $this->isManual()) {
-            return $this->shipment?->delivered_at?->timezone(config('shipping.timezone'));
+        if ($this->received_on !== null) {
+            return CarbonImmutable::parse($this->received_on->toDateString(), config('shipping.timezone'));
         }
 
-        return $this->received_on
-            ? CarbonImmutable::parse($this->received_on->toDateString(), config('shipping.timezone'))
-            : null;
+        return $this->shipment?->delivered_at?->timezone(config('shipping.timezone'));
     }
 
     public function billingStatus(): string

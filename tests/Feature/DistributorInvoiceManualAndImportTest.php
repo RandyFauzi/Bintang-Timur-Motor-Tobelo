@@ -297,7 +297,7 @@ class DistributorInvoiceManualAndImportTest extends TestCase
         $indexResponse = $this->get(route('distributor-invoices.index'))->assertOk();
         $indexResponse->assertSee('INV-MAN-TEST-99');
         $indexResponse->assertSee('PT Sentosa Abadi');
-        $indexResponse->assertSee('Manual / Tanpa PO');
+        $indexResponse->assertDontSee('Manual / Tanpa PO');
         $indexResponse->assertSee('Tambah Invoice');
         $indexResponse->assertSee('Import Excel');
 

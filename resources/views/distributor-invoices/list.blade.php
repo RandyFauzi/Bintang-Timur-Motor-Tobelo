@@ -1,11 +1,9 @@
-        <div class="overflow-x-auto" role="region" aria-label="Tabel tagihan distributor, geser untuk melihat seluruh kolom" tabindex="0"><table class="invoice-table text-left text-sm"><thead class="border-y bg-gray-50 text-muted"><tr><th class="invoice-table__select"><input type="checkbox" class="rounded" :checked="allSelected" x-effect="$el.indeterminate = selected.length > 0 && !allSelected" @change="toggleAll($event.target.checked)" aria-label="Pilih semua invoice yang dimuat, maksimal 100"></th>@foreach(['Invoice / PO','Distributor','Tanggal Faktur / Masuk','Jatuh Tempo','Total Tagihan','Dibayarkan','Sisa','Status','Retur / Selisih'] as $label)<th class="whitespace-nowrap font-medium">{{ $label }}</th>@endforeach<th class="whitespace-nowrap font-medium">Aksi</th></tr></thead><tbody>
+        <div class="overflow-x-auto" role="region" aria-label="Tabel tagihan distributor, geser untuk melihat seluruh kolom" tabindex="0"><table class="invoice-table text-left text-sm"><thead class="border-y bg-gray-50 text-muted"><tr><th class="invoice-table__select"><input type="checkbox" class="rounded" :checked="allSelected" x-effect="$el.indeterminate = selected.length > 0 && !allSelected" @change="toggleAll($event.target.checked)" aria-label="Pilih semua invoice yang dimuat, maksimal 100"></th>@foreach(['Invoice / PO','Distributor','Tanggal Masuk','Jatuh Tempo','Total Tagihan','Dibayarkan','Sisa','Status','Retur / Selisih'] as $label)<th class="whitespace-nowrap font-medium">{{ $label }}</th>@endforeach<th class="whitespace-nowrap font-medium">Aksi</th></tr></thead><tbody>
         @forelse($invoices as $invoice)<tr class="border-b hover:bg-gray-50" data-invoice-id="{{ $invoice->id }}" data-invoice-version="{{ $invoice->version }}" :class="{ 'invoice-row-selected': has({{ $invoice->id }}) }"><td class="invoice-table__select"><input type="checkbox" class="rounded" :checked="has({{ $invoice->id }})" @change="toggle({{ $invoice->id }}, {{ $invoice->version }}, $event.target.checked); $el.checked = has({{ $invoice->id }})" aria-label="Pilih invoice {{ $invoice->reference }}"></td>
             <td class="p-4">
                 <a class="whitespace-nowrap font-medium underline underline-offset-4" href="{{ route('distributor-invoices.show',$invoice) }}">{{ $invoice->reference }}</a>
                 @if($invoice->purchaseOrder)
                     <p class="mt-1 text-xs text-muted">{{ $invoice->purchaseOrder->reference }}</p>
-                @else
-                    <span class="mt-1 inline-block text-[11px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">Manual / Tanpa PO</span>
                 @endif
                 @if($invoice->supplier_reference)
                     <p class="mt-1 text-xs text-muted">Nota: {{ $invoice->supplier_reference }}</p>
@@ -13,10 +11,13 @@
             </td>
             <td class="p-4 font-medium">{{ $invoice->distributor_name }}</td>
             <td class="whitespace-nowrap p-4">
-                <p>Faktur: {{ $invoice->invoiced_on?->format('d/m/Y') ?? 'Belum diisi' }}</p>
-                <p class="mt-1 text-xs text-muted">Masuk: {{ $invoice->receivedAt()?->format('d/m/Y') ?? ($invoice->purchaseOrder ? 'Menunggu approval kargo' : '-') }}</p>
+                @if($invoice->receivedAt())
+                    <p class="font-medium text-slate-800">{{ $invoice->receivedAt()->format('d/m/Y') }}</p>
+                @else
+                    <p class="text-xs text-muted">{{ $invoice->shipment ? 'Menunggu kargo' : '-' }}</p>
+                @endif
                 @if($invoice->shipment)
-                    <a class="mt-1 inline-block text-xs underline" href="{{ route('shipments.index',['shipment'=>$invoice->shipment_id]) }}#shipment-detail">{{ $invoice->shipment->reference }}</a>
+                    <a class="mt-1 inline-block text-xs text-muted underline hover:text-slate-800" href="{{ route('shipments.index',['shipment'=>$invoice->shipment_id]) }}#shipment-detail">{{ $invoice->shipment->reference }}</a>
                 @endif
             </td>
             <td class="whitespace-nowrap p-4">
@@ -57,7 +58,7 @@
                             'distributor_name' => $invoice->distributor_name,
                             'reference' => $invoice->reference,
                             'invoiced_on' => $invoice->invoiced_on?->toDateString() ?? '',
-                            'received_on' => $invoice->received_on?->toDateString() ?? '',
+                            'received_on' => $invoice->receivedAt()?->toDateString() ?? '',
                             'due_on' => $invoice->due_on->toDateString(),
                             'total' => number_format($invoice->total_cents / 100, 2, '.', ''),
                             'min_total' => number_format($invoice->paid_cents / 100, 2, '.', ''),

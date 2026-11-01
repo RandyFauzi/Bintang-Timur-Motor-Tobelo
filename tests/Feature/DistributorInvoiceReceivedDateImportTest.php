@@ -25,7 +25,7 @@ class DistributorInvoiceReceivedDateImportTest extends TestCase
         $invoice = DistributorInvoice::where('reference', 'RECEIPT-1')->firstOrFail();
         $this->assertSame('2026-10-28', $invoice->received_on->toDateString());
         $this->assertSame('2026-10-28', $invoice->receivedAt()->toDateString());
-        $this->get(route('distributor-invoices.index'))->assertOk()->assertSee('Masuk: 28/10/2026');
+        $this->get(route('distributor-invoices.index'))->assertOk()->assertSee('28/10/2026');
     }
 
     public function test_invalid_receipt_date_rolls_back_the_entire_import(): void
@@ -49,11 +49,14 @@ class DistributorInvoiceReceivedDateImportTest extends TestCase
     public function test_linked_shipment_remains_the_authoritative_receipt_date(): void
     {
         $shipment = Shipment::factory()->create(['delivered_at' => null]);
-        $invoice = DistributorInvoice::factory()->manual()->create(['received_on' => '2026-10-28', 'shipment_id' => $shipment->id]);
+        $invoice = DistributorInvoice::factory()->manual()->create(['received_on' => null, 'shipment_id' => $shipment->id]);
         $this->assertNull($invoice->receivedAt());
         $shipment->forceFill(['delivered_at' => '2026-10-29 12:00:00'])->save();
         $invoice->refresh();
         $this->assertSame('2026-10-29', $invoice->receivedAt()->toDateString());
+
+        $invoice->update(['received_on' => '2026-10-31']);
+        $this->assertSame('2026-10-31', $invoice->fresh()->receivedAt()->toDateString());
     }
 
     private function createExcelFile(array $rows, array $extraEntries = [], bool $legacy = false): UploadedFile

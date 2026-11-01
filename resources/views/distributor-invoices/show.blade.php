@@ -214,9 +214,7 @@
                     <x-ui.field name="reference" label="Nomor Invoice" :value="old('reference', $invoice->reference)" maxlength="255" required />
                     <x-ui.field name="total" label="Total Tagihan (Rp)" type="number" min="0.01" max="90000000000000" step="0.01" :value="old('total', number_format($invoice->total_cents/100,2,'.',''))" hint="Minimal Rp {{ number_format($invoice->paid_cents/100,2,',','.') }} (tidak boleh kurang dari yang sudah dibayar)." required />
                 @endif
-                @if($invoice->isManual())
-                    <x-ui.field name="received_on" label="Tanggal Masuk Barang" type="date" :value="$invoice->received_on?->toDateString()" hint="Tanggal dari kargo mengikuti penerimaan pengiriman." x-bind:disabled="!!receiptShipment" />
-                @endif
+                <x-ui.field name="received_on" label="Tanggal Masuk Barang" type="date" :value="old('received_on', $invoice->receivedAt()?->toDateString())" hint="Otomatis mengikuti kedatangan kargo, tetapi bisa diubah/diedit manual jika ada koreksi." />
                 <x-ui.field name="invoiced_on" label="Tanggal Faktur Distributor" type="date" :value="$invoice->invoiced_on?->toDateString()" hint="Isi tanggal resmi pada dokumen faktur, bukan tanggal PO." :readonly="$invoice->purchaseOrder?->note_issued ?? false" />
                 <x-ui.field name="due_on" label="Jatuh Tempo" type="date" :value="$invoice->due_on->toDateString()" :min="$invoice->purchaseOrder ? $invoice->purchaseOrder->ordered_on->toDateString() : ($invoice->invoiced_on ? $invoice->invoiced_on->toDateString() : null)" required />
                 <x-ui.field name="supplier_reference" label="Nomor Nota Distributor (opsional)" :value="$invoice->supplier_reference" maxlength="255" :readonly="$invoice->purchaseOrder?->note_issued ?? false" />

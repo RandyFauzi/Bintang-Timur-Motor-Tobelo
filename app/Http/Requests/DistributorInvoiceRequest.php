@@ -49,7 +49,7 @@ class DistributorInvoiceRequest extends FormRequest
                 'discrepancy_notes' => ['nullable', 'string', 'max:4000'],
                 'claim_amount' => ['nullable', 'numeric', 'min:0', 'max:90000000000000', 'regex:/^\d+(\.\d{1,2})?$/'],
                 'received_at' => ['prohibited'],
-                'received_on' => ['nullable', 'date_format:Y-m-d', Rule::prohibitedIf(! $invoice?->isManual() || ($this->exists('shipment_id') ? $this->filled('shipment_id') : $invoice?->shipment_id !== null))],
+                'received_on' => ['nullable', 'date_format:Y-m-d'],
             ];
         }
 

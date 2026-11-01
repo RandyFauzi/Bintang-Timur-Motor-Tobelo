@@ -42,7 +42,7 @@ class DistributorInvoiceCargoTest extends TestCase
             $this->assertSame('2026-10-20 00:30', $invoice->fresh()->receivedAt()->format('Y-m-d H:i'));
             $this->get(route('distributor-invoices.show', $invoice))->assertOk()->assertSee('20/10/2026 00:30 WIT')->assertSee($user->name);
         }
-        $this->get(route('distributor-invoices.index'))->assertOk()->assertSee('Masuk: 20/10/2026');
+        $this->get(route('distributor-invoices.index'))->assertOk()->assertSee('20/10/2026');
         $this->get(route('shipments.index', ['shipment' => $shipment->id]))->assertOk()->assertSee($first->reference)->assertSee($second->reference);
         $this->travel(1)->days();
         $this->patch(route('shipments.arrive', $shipment), ['version' => 1])->assertSessionHasNoErrors();
@@ -65,7 +65,6 @@ class DistributorInvoiceCargoTest extends TestCase
     }
 
     #[TestWith(['received_at', '2026-10-20'])]
-    #[TestWith(['received_on', '2026-10-20'])]
     #[TestWith(['shipment_id', 999999])]
     #[TestWith(['claim_amount', '100000.01'])]
     #[TestWith(['claim_amount', '-1'])]
@@ -80,6 +79,16 @@ class DistributorInvoiceCargoTest extends TestCase
         $this->assertSame(1, $invoice->refresh()->version);
         $this->assertNull($invoice->shipment_id);
         $this->assertSame(0, $invoice->claim_amount_cents);
+    }
+
+    public function test_po_invoice_can_have_receipt_date_manually_edited_and_revised(): void
+    {
+        $invoice = DistributorInvoice::factory()->create();
+        $this->actingAs(User::factory()->create())->patch(route('distributor-invoices.update', $invoice), [
+            'version' => 1, 'due_on' => $invoice->due_on->toDateString(), 'received_on' => '2026-10-25',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('2026-10-25', $invoice->fresh()->received_on->toDateString());
+        $this->assertSame('2026-10-25', $invoice->fresh()->receivedAt()->toDateString());
     }
 
     public function test_a_positive_claim_requires_description_and_stale_edits_cannot_replace_it(): void

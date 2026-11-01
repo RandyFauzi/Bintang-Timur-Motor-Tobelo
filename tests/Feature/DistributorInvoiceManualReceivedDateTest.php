@@ -49,19 +49,23 @@ class DistributorInvoiceManualReceivedDateTest extends TestCase
         }
     }
 
-    public function test_linked_shipments_cannot_have_receipt_dates_overridden(): void
+    public function test_linked_shipments_can_have_receipt_dates_manually_edited_and_cleared(): void
     {
         $this->actingAs(User::factory()->admin()->create());
         $shipment = Shipment::factory()->create();
         $invoice = DistributorInvoice::factory()->manual()->create(['shipment_id' => $shipment->id]);
-        $this->patchJson(route('distributor-invoices.update', $invoice), [
+        $this->patch(route('distributor-invoices.update', $invoice), [
             'version' => 1, 'due_on' => $invoice->due_on->toDateString(), 'received_on' => '2026-10-28',
-        ])->assertUnprocessable()->assertJsonValidationErrors('received_on');
-        $this->postJson(route('distributor-invoices.store'), [
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('2026-10-28', $invoice->fresh()->received_on->toDateString());
+        $this->assertSame('2026-10-28', $invoice->fresh()->receivedAt()->toDateString());
+
+        $this->post(route('distributor-invoices.store'), [
             'distributor_id' => Distributor::factory()->create()->id,
             'invoiced_on' => '2026-10-01', 'due_on' => '2026-11-30', 'total' => '1000',
             'shipment_id' => $shipment->id, 'received_on' => '2026-10-28',
-        ])->assertUnprocessable()->assertJsonValidationErrors('received_on');
-        $this->assertNull($invoice->fresh()->received_on);
+        ])->assertSessionHasNoErrors();
+        $newInvoice = DistributorInvoice::latest('id')->firstOrFail();
+        $this->assertSame('2026-10-28', $newInvoice->received_on->toDateString());
     }
 }
