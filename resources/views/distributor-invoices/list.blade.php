@@ -87,4 +87,4 @@
             </td>
         </tr>
         @empty<tr><td colspan="11"><x-ui.empty-state title="Belum ada tagihan yang ditemukan" description="Tagihan otomatis muncul setelah PO dibuat, atau tambahkan tagihan manual / import file Excel." /></td></tr>@endforelse
-        </tbody></table></div><x-ui.pagination :paginator="$invoices" :desktop-infinite="true" />
+        </tbody></table></div><x-ui.pagination :paginator="$invoices" :desktop-infinite="true" :show-page-size="false" />
