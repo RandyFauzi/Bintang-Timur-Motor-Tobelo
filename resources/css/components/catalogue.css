@@ -6,6 +6,15 @@
     html:has(dialog[open]) { overflow: hidden; }
 }
 @layer components {
+    .invoice-table { width: 100%; min-width: 1560px; border-collapse: collapse; }
+    .invoice-table th, .invoice-table td { padding: 18px 20px; vertical-align: middle; }
+    .invoice-table th { padding-block: 16px; }
+    .invoice-table th:first-child, .invoice-table td:first-child { padding-left: 24px; }
+    .invoice-table th:last-child, .invoice-table td:last-child { padding-right: 24px; }
+    .invoice-table th:nth-child(2), .invoice-table td:nth-child(2) { min-width: 140px; }
+    .invoice-table th:nth-child(5), .invoice-table td:nth-child(5), .invoice-table th:nth-child(6), .invoice-table td:nth-child(6), .invoice-table th:nth-child(7), .invoice-table td:nth-child(7) { text-align: right; font-variant-numeric: tabular-nums; }
+    .invoice-table__notes { min-width: 160px; max-width: 240px; overflow-wrap: anywhere; }
+    .invoice-table__actions { width: 1%; }
     .invoice-filters { display: grid; grid-template-columns: minmax(180px,1fr) repeat(3,minmax(140px,200px)) auto auto; align-items: end; gap: 12px; padding: 20px; }
     .invoice-filters .form-field, .invoice-filters .multi-filter { min-width: 0; }
     .invoice-filters .filter-trigger { width: 100%; min-height: 44px; background: var(--color-surface); }

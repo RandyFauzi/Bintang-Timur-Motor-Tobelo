@@ -29,7 +29,7 @@
             <div class="form-field"><label class="form-field__label" for="invoice-timing-filter">Filter Jatuh Tempo</label><x-ui.multiselect name="timing" id="invoice-timing-filter" label="Semua Waktu" :options="collect(['' => 'Semua Waktu', '1' => '1 Bulan', '2' => '2 Bulan', '3' => '3 Bulan', '4' => '4 Bulan'])->map(fn (string $label, string $value): object => (object) ['id' => $value, 'name' => $label])->values()" :selected="[request('timing', '')]" :multiple="false" :dropdown="true" icon="calendar" /></div>
             <button class="ui-button">Cari</button><a class="ui-button ui-button--secondary" href="{{ route('distributor-invoices.index') }}">Reset</a>
         </form>
-        <div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead class="border-y bg-gray-50 text-muted"><tr>@foreach(['Invoice / PO','Distributor','Tanggal Faktur / Masuk','Jatuh Tempo','Total Tagihan','Dibayarkan','Sisa','Status','Retur / Selisih'] as $label)<th class="whitespace-nowrap p-4 font-medium">{{ $label }}</th>@endforeach<th class="whitespace-nowrap p-4 font-medium min-w-[220px]">Aksi</th></tr></thead><tbody>
+        <div class="overflow-x-auto" role="region" aria-label="Tabel tagihan distributor, geser untuk melihat seluruh kolom" tabindex="0"><table class="invoice-table text-left text-sm"><thead class="border-y bg-gray-50 text-muted"><tr>@foreach(['Invoice / PO','Distributor','Tanggal Faktur / Masuk','Jatuh Tempo','Total Tagihan','Dibayarkan','Sisa','Status','Retur / Selisih'] as $label)<th class="whitespace-nowrap font-medium">{{ $label }}</th>@endforeach<th class="whitespace-nowrap font-medium">Aksi</th></tr></thead><tbody>
         @forelse($invoices as $invoice)<tr class="border-b hover:bg-gray-50">
             <td class="p-4">
                 <a class="whitespace-nowrap font-medium underline underline-offset-4" href="{{ route('distributor-invoices.show',$invoice) }}">{{ $invoice->reference }}</a>
@@ -63,14 +63,14 @@
                     <p class="mt-2 text-xs text-muted">{{ \App\Models\DistributorInvoice::STATUSES[$invoice->status()] }}</p>
                 @endif
             </td>
-            <td class="min-w-48 max-w-xs p-4">
+            <td class="invoice-table__notes">
                 <p class="break-words">{{ \Illuminate\Support\Str::limit($invoice->discrepancy_notes ?: '-',100) }}</p>
                 @if($invoice->claim_amount_cents > 0)
                     <p class="mt-2 text-xs text-muted">Klaim dicatat: Rp {{ number_format($invoice->claim_amount_cents/100,2,',','.') }}</p>
                 @endif
             </td>
-            <td class="whitespace-nowrap p-4">
-                <div class="inline-flex items-center gap-1.5 whitespace-nowrap">
+            <td class="invoice-table__actions whitespace-nowrap">
+                <div class="inline-flex items-center gap-2 whitespace-nowrap">
                     @if($invoice->remainingCents() > 0)
                         <a class="ui-button whitespace-nowrap inline-flex items-center gap-1 !min-h-8 !py-1 !px-2.5 !text-xs !bg-emerald-700 hover:!bg-emerald-800 !text-white font-medium shadow-sm" href="{{ route('distributor-invoices.show',['distributorInvoice'=>$invoice->id,'pay'=>1]) }}">
                             <x-ui.icon name="wallet" :size="13" class="brightness-0 invert" />Bayar
