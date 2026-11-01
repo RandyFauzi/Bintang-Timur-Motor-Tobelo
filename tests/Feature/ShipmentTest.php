@@ -93,14 +93,16 @@ class ShipmentTest extends TestCase
         $this->assertDatabaseHas('activity_logs', ['route_name' => 'shipments.arrive', 'result' => 'success']);
     }
 
-    public function test_stale_or_scheduled_shipments_cannot_be_confirmed_and_delivered_shipments_cannot_be_edited(): void
+    public function test_stale_shipments_cannot_be_confirmed_and_scheduled_cargo_can_arrive_early(): void
     {
         $this->actingAs(User::factory()->create());
         $shipment = Shipment::factory()->create();
         $this->patchJson(route('shipments.arrive', $shipment), ['version' => 99])->assertUnprocessable();
         $future = Shipment::factory()->create(['departed_on' => '2026-10-18']);
-        $this->patchJson(route('shipments.arrive', $future), ['version' => 1])->assertUnprocessable();
-        $this->assertNull($future->fresh()->delivered_at);
+        $this->patch(route('shipments.arrive', $future), ['version' => 1])->assertSessionHasNoErrors();
+        $this->assertNotNull($future->fresh()->delivered_at);
+        $this->assertSame('delivered', $future->fresh()->status());
+        $this->assertSame('2026-10-17', $future->fresh()->departed_on->toDateString());
         $this->patch(route('shipments.arrive', $shipment), ['version' => 1])->assertSessionHasNoErrors();
         $this->patchJson(route('shipments.update', $shipment), $this->payload($shipment->shippingService) + ['version' => 2])->assertUnprocessable();
     }

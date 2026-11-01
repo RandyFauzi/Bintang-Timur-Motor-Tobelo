@@ -65,7 +65,7 @@ class ShipmentService
             }
             $this->assertEditable($shipment, $version);
             if ($shipment->departed_on->toDateString() > Shipment::today()->toDateString()) {
-                throw ValidationException::withMessages(['shipment' => 'Pengiriman belum berangkat. Periksa tanggal keberangkatan.']);
+                $shipment->departed_on = Shipment::today();
             }
             $shipment->delivered_at = now();
             $shipment->received_by = $user->id;

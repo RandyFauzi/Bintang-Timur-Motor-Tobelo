@@ -39,7 +39,7 @@
         </button>
         @if(!$selected->delivered_at)
             <a href="{{ route('shipments.index', ['shipment'=>$selected->id,'edit'=>$selected->id]) }}" class="ui-button ui-button--secondary">Edit Pengiriman</a>
-            <button type="button" class="ui-button" :disabled="state.status === 'scheduled' || state.status === 'delivered'" @click="$dispatch('open-dialog',{id:'shipment-arrive'})">Konfirmasi Sudah Sampai</button>
+            <button type="button" class="ui-button" :disabled="state.status === 'delivered'" @click="$dispatch('open-dialog',{id:'shipment-arrive'})">Konfirmasi Sudah Sampai</button>
         @endif
     </footer>
 </article>
