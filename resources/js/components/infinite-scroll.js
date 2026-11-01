@@ -13,6 +13,7 @@ export function mobileInfiniteScroll(config = {}) {
         scrollHandler: null,
 
         init() {
+            this.listRoot = this.$el.closest('section') || this.$el.closest('.catalogue-surface') || document.body;
             this.checkMobile();
             this.resizeHandler = () => {
                 this.checkMobile();
@@ -100,14 +101,14 @@ export function mobileInfiniteScroll(config = {}) {
             if (!this.scrollHandler) {
                 this.scrollHandler = () => {
                     if (!this.hasMore || this.loading || this.error || (!this.isMobile && !this.desktop)) return;
-                    const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
-                    const innerHeight = window.innerHeight || document.documentElement.clientHeight;
-                    const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
-                    if (scrollY + innerHeight >= scrollHeight - 400) {
+                    const sentinel = this.$refs?.sentinel;
+                    const bounds = sentinel?.getBoundingClientRect();
+                    if (bounds && bounds.top <= window.innerHeight + 400 && bounds.bottom >= 0) {
                         this.loadMore();
                     }
                 };
-                window.addEventListener('scroll', this.scrollHandler, { passive: true });
+                window.addEventListener('scroll', this.scrollHandler, { passive: true, capture: true });
+                this.$nextTick?.(() => this.scrollHandler?.());
             }
         },
 
@@ -119,7 +120,13 @@ export function mobileInfiniteScroll(config = {}) {
             this.requestController = new AbortController();
 
             try {
-                const res = await fetch(this.nextPageUrl, {
+                let requestUrl = this.nextPageUrl;
+                if (window.location?.href) {
+                    const next = new URL(requestUrl, window.location.href);
+                    if (next.host !== window.location.host) throw new Error('Alamat halaman tidak valid.');
+                    requestUrl = next.pathname + next.search;
+                }
+                const res = await fetch(requestUrl, {
                     signal: this.requestController.signal,
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
@@ -134,11 +141,7 @@ export function mobileInfiniteScroll(config = {}) {
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
 
-                const scope = (this.$el && this.$el.closest)
-                    ? (this.$el.closest('section') || this.$el.closest('.catalogue-surface') || document.body)
-                    : document.body;
-
-                const currentList = this.findContainer(scope);
+                const currentList = this.findContainer(this.listRoot || document.body);
                 const nextList = this.findContainer(doc);
 
                 if (!currentList || !nextList) throw new Error('Daftar data tidak ditemukan.');
@@ -172,7 +175,7 @@ export function mobileInfiniteScroll(config = {}) {
                         this.observer = null;
                     }
                     if (this.scrollHandler) {
-                        window.removeEventListener('scroll', this.scrollHandler);
+                        window.removeEventListener('scroll', this.scrollHandler, true);
                         this.scrollHandler = null;
                     }
                 } else {
@@ -184,6 +187,7 @@ export function mobileInfiniteScroll(config = {}) {
                 if (err.name !== 'AbortError') this.error = 'Gagal memuat data. Tekan Muat lebih banyak untuk mencoba lagi.';
             } finally {
                 this.loading = false;
+                if (this.hasMore && !this.error) this.$nextTick?.(() => this.scrollHandler?.());
             }
         },
 
@@ -195,7 +199,7 @@ export function mobileInfiniteScroll(config = {}) {
                 this.observer = null;
             }
             if (this.scrollHandler) {
-                window.removeEventListener('scroll', this.scrollHandler);
+                window.removeEventListener('scroll', this.scrollHandler, true);
                 this.scrollHandler = null;
             }
         },

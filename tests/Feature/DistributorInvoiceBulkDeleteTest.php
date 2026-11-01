@@ -56,6 +56,20 @@ class DistributorInvoiceBulkDeleteTest extends TestCase
         $this->assertModelExists($invoice);
     }
 
+    public function test_html_validation_failures_return_to_the_list_even_when_previous_url_is_the_delete_endpoint(): void
+    {
+        $invoice = DistributorInvoice::factory()->create(['version' => 2]);
+        $this->actingAs(User::factory()->admin()->create());
+        foreach ([[], [['id' => $invoice->id, 'version' => 1]]] as $selected) {
+            $this->from(route('distributor-invoices.bulk.destroy'))
+                ->post(route('distributor-invoices.bulk.destroy'), [
+                    '_method' => 'DELETE', '_dialog' => 'invoice-bulk-delete', 'selected' => $selected,
+                ])->assertRedirect(route('distributor-invoices.index'))->assertSessionHasErrors()->assertSessionHasInput('_dialog', 'invoice-bulk-delete');
+            $this->get(route('distributor-invoices.index'))->assertOk();
+            $this->assertModelExists($invoice);
+        }
+    }
+
     public function test_scroll_response_contains_only_filtered_rows_and_preserves_next_page_filters(): void
     {
         DistributorInvoice::factory()->manual()->count(31)->create(['notes' => 'Loaded']);

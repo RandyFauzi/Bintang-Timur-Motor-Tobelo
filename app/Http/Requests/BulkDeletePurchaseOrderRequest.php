@@ -6,6 +6,8 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class BulkDeletePurchaseOrderRequest extends FormRequest
 {
+    protected $redirectRoute = 'purchase-orders.index';
+
     public function authorize(): bool
     {
         return $this->user()?->can('manage-purchase-orders') ?? false;

@@ -6,6 +6,8 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class BulkDeleteDistributorInvoiceRequest extends FormRequest
 {
+    protected $redirectRoute = 'distributor-invoices.index';
+
     public function authorize(): bool
     {
         return $this->user()?->can('manage-invoices') ?? false;

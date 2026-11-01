@@ -260,7 +260,7 @@
         </form>
     </x-ui.dialog>
     <x-ui.dialog name="invoice-bulk-delete" title="Hapus Invoice Terpilih" description="Invoice dan seluruh pembayaran terkait akan dihapus permanen." :show="old('_dialog') === 'invoice-bulk-delete'">
-        <form method="POST" action="{{ route('distributor-invoices.bulk.destroy') }}" class="dialog-form" @submit="submitting = true">
+        <form method="POST" action="{{ route('distributor-invoices.bulk.destroy', [], false) }}" class="dialog-form" @submit="submitting = true">
             @csrf @method('DELETE')
             <input type="hidden" name="_dialog" value="invoice-bulk-delete">
             <template x-for="(invoice, index) in selected" :key="invoice.id"><div><input type="hidden" :name="'selected[' + index + '][id]'" :value="invoice.id"><input type="hidden" :name="'selected[' + index + '][version]'" :value="invoice.version"></div></template>

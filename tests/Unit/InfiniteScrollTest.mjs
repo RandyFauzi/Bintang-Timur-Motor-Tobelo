@@ -219,3 +219,48 @@ test('invoice scrolling skips duplicate rows and counts only appended invoices',
         assert.equal(state.loaded, 2);
     } finally {Object.assign(globalThis,saved);}
 });
+
+test('scroll fallback uses the list sentinel and catches scrolling inside containers', () => {
+    const saved = {window:globalThis.window};
+    try {
+        let listener, options, removed;
+        globalThis.window = {
+            innerHeight:800,
+            addEventListener(name, callback, settings) { listener = callback; options = settings; },
+            removeEventListener(name, callback, capture) { removed = capture; },
+        };
+        let top = 1400, loads = 0;
+        const state = mobileInfiniteScroll({nextPageUrl:'/products?page=2'});
+        state.$refs = {sentinel:{getBoundingClientRect:()=>({top, bottom:top+32})}};
+        state.$nextTick = callback => callback();
+        state.loadMore = () => { loads++; };
+        state.setupObserver();
+        assert.equal(loads, 0);
+        assert.equal(options.capture, true);
+        top = 1100;
+        listener();
+        assert.equal(loads, 1);
+        state.loading = true;
+        listener();
+        assert.equal(loads, 1);
+        state.destroy();
+        assert.equal(removed, true);
+    } finally {Object.assign(globalThis, saved);}
+});
+
+test('pagination requests retain current HTTPS origin even if generated URLs use HTTP', async () => {
+    const saved = {window:globalThis.window, fetch:globalThis.fetch};
+    try {
+        globalThis.window = {location:{href:'https://shop.test/products', host:'shop.test'}};
+        let requested;
+        globalThis.fetch = async url => {requested = url; return {ok:false};};
+        const state = mobileInfiniteScroll({nextPageUrl:'http://shop.test/products?status=active&page=2'});
+        await state.loadMore();
+        assert.equal(requested, '/products?status=active&page=2');
+        state.nextPageUrl = 'https://other.test/products?page=2';
+        requested = null;
+        await state.loadMore();
+        assert.equal(requested, null);
+        assert.ok(state.error);
+    } finally {Object.assign(globalThis, saved);}
+});

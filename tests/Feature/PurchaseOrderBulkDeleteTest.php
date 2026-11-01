@@ -15,6 +15,15 @@ class PurchaseOrderBulkDeleteTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_html_validation_failure_redirects_to_the_list_instead_of_the_delete_endpoint(): void
+    {
+        $this->actingAs(User::factory()->admin()->create())
+            ->from(route('purchase-orders.bulk.destroy'))
+            ->post(route('purchase-orders.bulk.destroy'), [
+                '_method' => 'DELETE', '_dialog' => 'procurement-bulk-delete', 'selected' => [],
+            ])->assertRedirect(route('purchase-orders.index'))->assertSessionHasErrors('selected');
+    }
+
     public function test_bulk_action_deletes_unprocessed_entries_and_archives_processed_orders_without_changing_stock(): void
     {
         $draft = PurchasePlan::factory()->create();

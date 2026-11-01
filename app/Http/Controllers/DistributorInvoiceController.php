@@ -158,7 +158,13 @@ class DistributorInvoiceController extends Controller
     public function bulkDestroy(BulkDeleteDistributorInvoiceRequest $request, DistributorInvoiceService $billing): RedirectResponse
     {
         $selected = $request->validated('selected');
-        $billing->deleteMany($selected);
+        try {
+            $billing->deleteMany($selected);
+        } catch (ValidationException $exception) {
+            $exception->redirectTo(route('distributor-invoices.index'));
+
+            throw $exception;
+        }
 
         return redirect()->route('distributor-invoices.index')->with('success', count($selected).' invoice beserta pembayaran terkait berhasil dihapus.');
     }

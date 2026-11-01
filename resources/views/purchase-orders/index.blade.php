@@ -42,7 +42,7 @@
             </form>
         </x-ui.dialog>
         <x-ui.dialog name="procurement-bulk-delete" title="Proses Pengadaan Terpilih" description="Pengadaan yang belum diproses dihapus, sedangkan yang sudah diproses diarsipkan." :show="old('_dialog') === 'procurement-bulk-delete'">
-            <form method="POST" action="{{ route('purchase-orders.bulk.destroy') }}" class="dialog-form" @submit="submitting = true">
+            <form method="POST" action="{{ route('purchase-orders.bulk.destroy', [], false) }}" class="dialog-form" @submit="submitting = true">
                 @csrf @method('DELETE')<input type="hidden" name="_dialog" value="procurement-bulk-delete">
                 <template x-for="(entry, index) in selected" :key="entry.id"><div><input type="hidden" :name="'selected['+index+'][id]'" :value="entry.recordId"><input type="hidden" :name="'selected['+index+'][type]'" :value="entry.type"><input type="hidden" :name="'selected['+index+'][version]'" :value="entry.version"><input type="hidden" :name="'selected['+index+'][snapshot]'" :value="entry.snapshot"></div></template>
                 <p class="text-sm">Proses <strong x-text="selected.length"></strong> pengadaan terpilih?</p><p class="text-sm text-muted">Draft dan pengadaan yang belum diproses dihapus permanen. Pengadaan yang sudah diproses dipindahkan ke Arsip; nota, pembayaran, klaim, pengiriman, dan stok tetap tersimpan. Jika satu data berubah, seluruh proses dibatalkan. Maksimal 100 pengadaan sekali proses.</p>

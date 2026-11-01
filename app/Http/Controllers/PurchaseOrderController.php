@@ -225,7 +225,13 @@ class PurchaseOrderController extends Controller
 
     public function bulkDestroy(BulkDeletePurchaseOrderRequest $request, PurchaseOrderDeletionService $deletion): RedirectResponse
     {
-        $result = $deletion->deleteMany($request->validated('selected'));
+        try {
+            $result = $deletion->deleteMany($request->validated('selected'));
+        } catch (ValidationException $exception) {
+            $exception->redirectTo(route('purchase-orders.index'));
+
+            throw $exception;
+        }
 
         return redirect()->route('purchase-orders.index')->with('success', $result['deleted'].' pengadaan dihapus dan '.$result['archived'].' pengadaan dipindahkan ke Arsip.');
     }
