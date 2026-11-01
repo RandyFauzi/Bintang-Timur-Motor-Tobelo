@@ -40,6 +40,18 @@ test('selection never exceeds the server limit and repeat toggles do not duplica
     assert.equal(state.selected.length, 100);
 });
 
+test('select all still reads the list when Alpine event context is the clicked checkbox', () => {
+    const {state, rows} = setup(2);
+    state.$el = {querySelectorAll: () => []};
+    state.toggleAll(true);
+    assert.equal(state.selected.length, 2);
+    rows.push({dataset:{invoiceId:'3', invoiceVersion:1}});
+    state.refreshRows();
+    assert.equal(state.rows.length, 3);
+    state.toggleAll(false);
+    assert.deepEqual(state.selected, []);
+});
+
 test('invalid flashed selection does not break the page', () => {
     assert.deepEqual(invoiceSelection('bad').selected, []);
     assert.deepEqual(invoiceSelection([null, {id:'x'}, {id:1,version:0}]).selected, []);

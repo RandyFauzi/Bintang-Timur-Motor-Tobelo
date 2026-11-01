@@ -97,6 +97,19 @@ class PurchaseOrderBulkDeleteTest extends TestCase
         $this->assertStringContainsString('search=PILIHAN', $response->viewData('orders')->nextPageUrl());
     }
 
+    public function test_procurement_has_no_page_size_control_and_loads_additional_data_in_batches(): void
+    {
+        PurchasePlan::factory()->count(23)->create();
+        $this->actingAs(User::factory()->admin()->create());
+        $response = $this->get(route('purchase-orders.index'))->assertOk()->assertDontSee('for="per-page"', false);
+        $orders = $response->viewData('orders');
+        $this->assertSame(23, $orders->total());
+        $this->assertLessThan(23, $orders->count());
+        $this->assertNotNull($orders->nextPageUrl());
+        $next = $this->get($orders->nextPageUrl(), ['X-Requested-With' => 'XMLHttpRequest'])->assertOk()->assertViewIs('purchase-orders.list');
+        $this->assertEmpty(array_intersect($orders->getCollection()->pluck('id')->all(), $next->viewData('orders')->getCollection()->pluck('id')->all()));
+    }
+
     private function row(PurchasePlan|PurchaseOrder $entry): array
     {
         $entry->refresh();

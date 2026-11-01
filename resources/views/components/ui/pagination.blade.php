@@ -1,4 +1,4 @@
-@props(['paginator', 'alwaysShowNavigation' => false, 'infinite' => true, 'desktopInfinite' => true])
+@props(['paginator', 'alwaysShowNavigation' => false, 'infinite' => true, 'desktopInfinite' => true, 'showPageSize' => true])
 
 <div class="pagination-wrapper"
      @if($infinite)
@@ -38,11 +38,15 @@
     @endif
 
     <footer class="catalogue-pagination" @if($infinite) :class="{ 'hidden': (isMobile || desktop) && (hasMore || loading) }" @endif>
+        @if($showPageSize)
         <form method="GET" action="{{ url()->current() }}" class="flex items-center gap-2 text-xs text-muted">
             <x-ui.query-fields :except="['page','per_page','edit','create']" />
             <label for="per-page">Tampilkan</label><select id="per-page" name="per_page" class="pagination-select" onchange="this.form.requestSubmit()">@foreach([5,6,10,12,15,25,50] as $size)<option value="{{ $size }}" @selected($paginator->perPage() == $size)>{{ $size }}</option>@endforeach</select>
             <span @if($infinite) x-text="loaded + ' dari ' + total + ' data dimuat'" @endif>{{ $paginator->firstItem() ?? 0 }}–{{ $paginator->lastItem() ?? 0 }} dari {{ $paginator->total() }}</span>
         </form>
+        @else
+            <span class="text-xs text-muted" @if($infinite) x-text="loaded + ' dari ' + total + ' data dimuat'" @endif>{{ $paginator->count() }} dari {{ $paginator->total() }} data dimuat</span>
+        @endif
         @if($paginator->hasPages() || $alwaysShowNavigation)
             <nav class="pagination-links" aria-label="Halaman data" @if($infinite) x-show="!isMobile && !desktop" @endif>
                 @if($paginator->onFirstPage())<span aria-disabled="true" class="opacity-40">‹</span>@else<a href="{{ $paginator->previousPageUrl() }}" aria-label="Halaman sebelumnya">‹</a>@endif

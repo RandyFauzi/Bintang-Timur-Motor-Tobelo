@@ -45,4 +45,4 @@
                     </tbody>
                 </table>
             </div>
-            <x-ui.pagination :paginator="$orders" :desktop-infinite="true" />
+            <x-ui.pagination :paginator="$orders" :desktop-infinite="true" :show-page-size="false" />

@@ -26,6 +26,16 @@ test('selection distinguishes draft IDs from order IDs and preserves their snaps
     assert.equal(state.allSelected,true);
 });
 
+test('select all uses the original list root from a checkbox event context', () => {
+    const state = procurementSelection();
+    state.$el = {querySelectorAll:()=>[row('draft',1), row('order',2)]};
+    state.init();
+    state.$el = {querySelectorAll:()=>[]};
+    state.toggleAll(true);
+    assert.equal(state.selected.length,2);
+    assert.equal(state.allSelected,true);
+});
+
 test('flashed server selections restore stable composite keys and invalid data is ignored', () => {
     const state = procurementSelection([{type:'draft',id:1,version:2,snapshot:'a'.repeat(64)}, null, {type:'bad',id:4}]);
     assert.equal(state.selected.length,1);
