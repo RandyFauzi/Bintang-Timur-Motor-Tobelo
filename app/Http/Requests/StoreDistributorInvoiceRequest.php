@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Distributor;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -12,11 +13,23 @@ class StoreDistributorInvoiceRequest extends FormRequest
         return $this->user() !== null;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->filled('distributor_name') && ! $this->filled('distributor_id')) {
+            $name = trim((string) $this->input('distributor_name'));
+            $match = Distributor::whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower($name)])->value('id');
+            if ($match) {
+                $this->merge(['distributor_id' => $match]);
+            }
+        }
+    }
+
     /** @return array<string, mixed> */
     public function rules(): array
     {
         return [
-            'distributor_id' => ['required', 'integer', Rule::exists('distributors', 'id')],
+            'distributor_id' => ['required_without:distributor_name', 'nullable', 'integer', Rule::exists('distributors', 'id')],
+            'distributor_name' => ['required_without:distributor_id', 'nullable', 'string', 'max:255'],
             'reference' => ['nullable', 'string', 'max:255', Rule::unique('distributor_invoices', 'reference')],
             'invoiced_on' => ['nullable', 'date_format:Y-m-d'],
             'due_on' => ['required', 'date_format:Y-m-d', 'after_or_equal:invoiced_on'],
@@ -33,6 +46,7 @@ class StoreDistributorInvoiceRequest extends FormRequest
         return [
             'distributor_id.required' => 'Pilih distributor terlebih dahulu.',
             'distributor_id.exists' => 'Distributor yang dipilih tidak valid.',
+            'distributor_name.required_without' => 'Pilih atau tulis nama distributor terlebih dahulu.',
             'reference.unique' => 'Nomor invoice ini sudah digunakan.',
             'due_on.required' => 'Tanggal jatuh tempo wajib diisi.',
             'due_on.after_or_equal' => 'Jatuh tempo tidak boleh sebelum tanggal faktur.',

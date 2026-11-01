@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Distributor;
 use App\Models\DistributorInvoice;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -12,6 +13,14 @@ class DistributorInvoiceRequest extends FormRequest
     {
         if ($this->isMethod('GET') && $this->filled('status') && ! is_array($this->input('status'))) {
             $this->merge(['status' => [$this->input('status')]]);
+        }
+
+        if ($this->isMethod('PATCH') && $this->filled('distributor_name') && ! $this->filled('distributor_id')) {
+            $name = trim((string) $this->input('distributor_name'));
+            $match = Distributor::whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower($name)])->value('id');
+            if ($match) {
+                $this->merge(['distributor_id' => $match]);
+            }
         }
     }
 
@@ -29,6 +38,7 @@ class DistributorInvoiceRequest extends FormRequest
             return [
                 'version' => ['required', 'integer', 'min:1'],
                 'distributor_id' => ['nullable', 'integer', Rule::exists('distributors', 'id')],
+                'distributor_name' => ['nullable', 'string', 'max:255'],
                 'reference' => ['nullable', 'string', 'max:255', Rule::unique('distributor_invoices', 'reference')->ignore($invoice?->id)],
                 'due_on' => array_values(array_filter(['required', 'date_format:Y-m-d', $minDate ? 'after_or_equal:'.$minDate : null])),
                 'invoiced_on' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:due_on'],
@@ -58,6 +68,7 @@ class DistributorInvoiceRequest extends FormRequest
     {
         return [
             'distributor_id' => 'distributor',
+            'distributor_name' => 'nama distributor',
             'reference' => 'nomor invoice',
             'due_on' => 'jatuh tempo',
             'invoiced_on' => 'tanggal faktur',

@@ -5,7 +5,83 @@
     <form action="{{ route('purchase-orders.store') }}" method="POST" class="grid gap-5" x-data="purchaseOrderForm(@js($initialItems))" @submit="submitting = true">
         @csrf<input type="hidden" name="request_id" value="{{ is_string(old('request_id')) ? old('request_id') : $requestId }}">
         <section class="catalogue-surface p-5"><div class="form-grid !grid-cols-1 sm:!grid-cols-2">
-            <x-ui.field name="distributor_id" label="Distributor"><select id="distributor_id" name="distributor_id" required class="form-input"><option value="">Pilih distributor</option>@foreach($distributors as $distributor)<option value="{{ $distributor->id }}" @selected((string) $selectedDistributor === (string) $distributor->id)>{{ $distributor->name }}</option>@endforeach</select></x-ui.field>
+            <div class="form-field relative" :class="{ 'z-30': open, 'z-10': !open }" x-data="customSelectAutocomplete(@js($distributors->pluck('name')), @js($distributors->firstWhere('id', $selectedDistributor)?->name ?? old('distributor_name', '')))" @click.outside="close()" @keydown.escape="close()">
+                <label for="distributor_name" class="form-field__label">Distributor <span class="text-danger">*</span></label>
+                <div class="relative flex items-center">
+                    <input
+                        id="distributor_name"
+                        name="distributor_name"
+                        type="text"
+                        class="form-input !pr-16 w-full"
+                        placeholder="Tulis atau cari nama distributor..."
+                        autocomplete="off"
+                        role="combobox"
+                        x-ref="input"
+                        x-model="query"
+                        @focus="openDropdown()"
+                        @input="openDropdown()"
+                        @keydown.arrow-down.prevent="onArrowDown()"
+                        @keydown.arrow-up.prevent="onArrowUp()"
+                        @keydown.enter="onEnter($event)"
+                        @keydown.tab="close()"
+                        required
+                        maxlength="255"
+                    >
+                    <div class="absolute right-2 flex items-center gap-0.5">
+                        <button
+                            type="button"
+                            x-show="query.trim()"
+                            x-cloak
+                            class="flex items-center justify-center w-6 h-6 rounded text-muted hover:text-stone-900 hover:bg-stone-100 transition-colors"
+                            @click="clear()"
+                            title="Kosongkan distributor"
+                            aria-label="Kosongkan distributor"
+                        >
+                            <x-ui.icon name="close" :size="13" />
+                        </button>
+                        <button
+                            type="button"
+                            class="flex items-center justify-center w-7 h-7 rounded text-muted hover:text-stone-900 hover:bg-stone-100 transition-colors"
+                            @click="toggle()"
+                            title="Buka pilihan distributor"
+                            aria-label="Buka pilihan distributor"
+                            tabindex="-1"
+                        >
+                            <x-ui.icon name="chevron" :size="13" class="transition-transform duration-200" x-bind:class="{ '-rotate-90': open, 'rotate-90': !open }" />
+                        </button>
+                    </div>
+                </div>
+                <div x-show="open" x-cloak x-transition.opacity class="system-autocomplete-menu" role="listbox" aria-label="Pilihan distributor" tabindex="-1">
+                    <div x-ref="menuList" class="max-h-52 overflow-y-auto py-1">
+                        <template x-for="(item, index) in filtered" :key="item">
+                            <button
+                                type="button"
+                                class="system-autocomplete-item"
+                                :class="{ 'is-highlighted': highlightedIndex === index, 'is-selected': query.trim().toLowerCase() === item.toLowerCase() }"
+                                @click="select(item)"
+                                @mouseenter="highlightedIndex = index"
+                                role="option"
+                            >
+                                <span class="truncate font-medium" x-text="item"></span>
+                                <span x-show="query.trim().toLowerCase() === item.toLowerCase()" class="text-xs text-green-700 font-semibold" aria-hidden="true">✓</span>
+                            </button>
+                        </template>
+                        <div x-show="filtered.length === 0 && query.trim()" class="px-3 py-3 text-center text-xs text-muted">
+                            <p>Tidak ada distributor terdaftar yang cocok.</p>
+                            <p class="mt-1 font-medium text-stone-800">"<span x-text="query.trim()"></span>" akan didaftarkan sebagai distributor baru.</p>
+                        </div>
+                        <div x-show="options.length === 0 && !query.trim()" class="px-3 py-3 text-center text-xs text-muted">
+                            Belum ada daftar distributor. Ketik nama distributor baru di atas.
+                        </div>
+                    </div>
+                    <div x-show="isCustomNewValue && filtered.length > 0" class="px-3 py-2 border-t border-stone-100 bg-stone-50/80 text-xs text-stone-600 flex items-center justify-between">
+                        <span>Distributor baru: <strong class="text-stone-900" x-text="query.trim()"></strong></span>
+                        <span class="text-[11px] text-muted">Tersimpan otomatis</span>
+                    </div>
+                </div>
+                @error('distributor_name')<p class="field-error">{{ $message }}</p>@enderror
+                @error('distributor_id')<p class="field-error">{{ $message }}</p>@enderror
+            </div>
             <div class="flex items-end"><button type="button" class="ui-button ui-button--secondary" @click="$dispatch('open-dialog',{id:'po-distributor'})">Tambah Distributor</button></div>
             <x-ui.field name="ordered_on" label="Tanggal Order" type="date" :value="now()->toDateString()" required />
             <x-ui.field name="expected_on" label="Estimasi Datang (opsional)" type="date" />

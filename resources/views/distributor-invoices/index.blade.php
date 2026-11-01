@@ -48,14 +48,83 @@
             @csrf
             <input type="hidden" name="_dialog" value="invoice-create">
             <div class="form-grid">
-                <x-ui.field name="distributor_id" label="Distributor" required>
-                    <select id="create_distributor_id" name="distributor_id" class="form-input" required>
-                        <option value="">Pilih Distributor</option>
-                        @foreach($distributors as $distributor)
-                            <option value="{{ $distributor->id }}" @selected(old('distributor_id') == $distributor->id)>{{ $distributor->name }}</option>
-                        @endforeach
-                    </select>
-                </x-ui.field>
+                <div class="form-field relative" :class="{ 'z-30': open, 'z-10': !open }" x-data="customSelectAutocomplete(@js($distributors->pluck('name')), @js(old('distributor_name', '')))" @click.outside="close()" @keydown.escape="close()">
+                    <label for="create_distributor_name" class="form-field__label">Distributor <span class="text-danger">*</span></label>
+                    <div class="relative flex items-center">
+                        <input
+                            id="create_distributor_name"
+                            name="distributor_name"
+                            type="text"
+                            class="form-input !pr-16 w-full"
+                            placeholder="Tulis atau cari distributor..."
+                            autocomplete="off"
+                            role="combobox"
+                            x-ref="input"
+                            x-model="query"
+                            @focus="openDropdown()"
+                            @input="openDropdown()"
+                            @keydown.arrow-down.prevent="onArrowDown()"
+                            @keydown.arrow-up.prevent="onArrowUp()"
+                            @keydown.enter="onEnter($event)"
+                            @keydown.tab="close()"
+                            required
+                            maxlength="255"
+                        >
+                        <div class="absolute right-2 flex items-center gap-0.5">
+                            <button
+                                type="button"
+                                x-show="query.trim()"
+                                x-cloak
+                                class="flex items-center justify-center w-6 h-6 rounded text-muted hover:text-stone-900 hover:bg-stone-100 transition-colors"
+                                @click="clear()"
+                                title="Kosongkan distributor"
+                                aria-label="Kosongkan distributor"
+                            >
+                                <x-ui.icon name="close" :size="13" />
+                            </button>
+                            <button
+                                type="button"
+                                class="flex items-center justify-center w-7 h-7 rounded text-muted hover:text-stone-900 hover:bg-stone-100 transition-colors"
+                                @click="toggle()"
+                                title="Buka pilihan distributor"
+                                aria-label="Buka pilihan distributor"
+                                tabindex="-1"
+                            >
+                                <x-ui.icon name="chevron" :size="13" class="transition-transform duration-200" x-bind:class="{ '-rotate-90': open, 'rotate-90': !open }" />
+                            </button>
+                        </div>
+                    </div>
+                    <div x-show="open" x-cloak x-transition.opacity class="system-autocomplete-menu" role="listbox" aria-label="Pilihan distributor" tabindex="-1">
+                        <div x-ref="menuList" class="max-h-52 overflow-y-auto py-1">
+                            <template x-for="(item, index) in filtered" :key="item">
+                                <button
+                                    type="button"
+                                    class="system-autocomplete-item"
+                                    :class="{ 'is-highlighted': highlightedIndex === index, 'is-selected': query.trim().toLowerCase() === item.toLowerCase() }"
+                                    @click="select(item)"
+                                    @mouseenter="highlightedIndex = index"
+                                    role="option"
+                                >
+                                    <span class="truncate font-medium" x-text="item"></span>
+                                    <span x-show="query.trim().toLowerCase() === item.toLowerCase()" class="text-xs text-green-700 font-semibold" aria-hidden="true">✓</span>
+                                </button>
+                            </template>
+                            <div x-show="filtered.length === 0 && query.trim()" class="px-3 py-3 text-center text-xs text-muted">
+                                <p>Tidak ada distributor terdaftar yang cocok.</p>
+                                <p class="mt-1 font-medium text-stone-800">"<span x-text="query.trim()"></span>" akan disimpan sebagai distributor baru.</p>
+                            </div>
+                            <div x-show="options.length === 0 && !query.trim()" class="px-3 py-3 text-center text-xs text-muted">
+                                Belum ada daftar distributor. Ketik nama distributor baru di atas.
+                            </div>
+                        </div>
+                        <div x-show="isCustomNewValue && filtered.length > 0" class="px-3 py-2 border-t border-stone-100 bg-stone-50/80 text-xs text-stone-600 flex items-center justify-between">
+                            <span>Distributor baru: <strong class="text-stone-900" x-text="query.trim()"></strong></span>
+                            <span class="text-[11px] text-muted">Tersimpan otomatis</span>
+                        </div>
+                    </div>
+                    @error('distributor_name')<p class="field-error">{{ $message }}</p>@enderror
+                    @error('distributor_id')<p class="field-error">{{ $message }}</p>@enderror
+                </div>
                 <x-ui.field name="reference" label="Nomor Invoice (Opsional)" :value="old('reference')" maxlength="255" placeholder="Otomatis jika dikosongkan" hint="Kosongkan untuk penomoran otomatis sistem (INV-MAN-...)." />
                 <x-ui.field name="invoiced_on" label="Tanggal Faktur Distributor" type="date" :value="old('invoiced_on', \App\Models\DistributorInvoice::today()->toDateString())" hint="Tanggal yang tertera pada faktur/nota distributor." />
                 <x-ui.field name="due_on" label="Jatuh Tempo" type="date" :value="old('due_on')" required hint="Batas akhir pembayaran faktur." />
@@ -125,6 +194,39 @@
                 isManual: true,
                 distributor_id: '',
                 distributor_name: '',
+                distributor_options: @js($distributors->pluck('name')),
+                distributor_open: false,
+                distributor_highlight: -1,
+                get filteredDistributors() {
+                    const q = (this.distributor_name || '').trim().toLowerCase();
+                    if (!q) return this.distributor_options.slice(0, 40);
+                    return this.distributor_options.filter(opt => opt.toLowerCase().includes(q)).slice(0, 40);
+                },
+                get hasExactDistributor() {
+                    const q = (this.distributor_name || '').trim().toLowerCase();
+                    return this.distributor_options.some(opt => opt.toLowerCase() === q);
+                },
+                get isNewDistributor() {
+                    return (this.distributor_name || '').trim().length > 0 && !this.hasExactDistributor;
+                },
+                selectDistributor(name) {
+                    this.distributor_name = name;
+                    this.distributor_open = false;
+                    this.distributor_highlight = -1;
+                },
+                clearDistributor() {
+                    this.distributor_name = '';
+                    this.distributor_open = true;
+                    this.distributor_highlight = -1;
+                    this.$nextTick(() => document.getElementById('edit_distributor_name_idx')?.focus());
+                },
+                toggleDistributor() {
+                    this.distributor_open = !this.distributor_open;
+                    this.distributor_highlight = -1;
+                    if (this.distributor_open) {
+                        this.$nextTick(() => document.getElementById('edit_distributor_name_idx')?.focus());
+                    }
+                },
                 reference: '',
                 invoiced_on: '',
                 due_on: '',
@@ -165,14 +267,90 @@
 
             <div class="form-grid">
                 <template x-if="isManual">
-                    <x-ui.field name="distributor_id" label="Distributor" required>
-                        <select id="edit_distributor_id_idx" name="distributor_id" class="form-input" x-model="distributor_id" required>
-                            <option value="">Pilih Distributor</option>
-                            @foreach($distributors as $distributor)
-                                <option value="{{ $distributor->id }}">{{ $distributor->name }}</option>
-                            @endforeach
-                        </select>
-                    </x-ui.field>
+                    <div class="form-field relative" :class="{ 'z-30': distributor_open, 'z-10': !distributor_open }" @click.outside="distributor_open = false" @keydown.escape="distributor_open = false">
+                        <label for="edit_distributor_name_idx" class="form-field__label">Distributor <span class="text-danger">*</span></label>
+                        <div class="relative flex items-center">
+                            <input
+                                id="edit_distributor_name_idx"
+                                name="distributor_name"
+                                type="text"
+                                class="form-input !pr-16 w-full"
+                                placeholder="Tulis atau cari distributor..."
+                                autocomplete="off"
+                                x-model="distributor_name"
+                                @focus="distributor_open = true; distributor_highlight = -1"
+                                @input="distributor_open = true; distributor_highlight = -1"
+                                @keydown.arrow-down.prevent="
+                                    if (!distributor_open) { distributor_open = true; distributor_highlight = 0; }
+                                    else if (filteredDistributors.length > 0) { distributor_highlight = (distributor_highlight + 1) % filteredDistributors.length; }
+                                "
+                                @keydown.arrow-up.prevent="
+                                    if (!distributor_open) { distributor_open = true; distributor_highlight = filteredDistributors.length - 1; }
+                                    else if (filteredDistributors.length > 0) { distributor_highlight = (distributor_highlight - 1 + filteredDistributors.length) % filteredDistributors.length; }
+                                "
+                                @keydown.enter="
+                                    if (distributor_open && distributor_highlight >= 0 && distributor_highlight < filteredDistributors.length) {
+                                        $event.preventDefault();
+                                        selectDistributor(filteredDistributors[distributor_highlight]);
+                                    }
+                                "
+                                required
+                                maxlength="255"
+                            >
+                            <div class="absolute right-2 flex items-center gap-0.5">
+                                <button
+                                    type="button"
+                                    x-show="(distributor_name || '').trim()"
+                                    x-cloak
+                                    class="flex items-center justify-center w-6 h-6 rounded text-muted hover:text-stone-900 hover:bg-stone-100 transition-colors"
+                                    @click="clearDistributor()"
+                                    title="Kosongkan distributor"
+                                    aria-label="Kosongkan distributor"
+                                >
+                                    <x-ui.icon name="close" :size="13" />
+                                </button>
+                                <button
+                                    type="button"
+                                    class="flex items-center justify-center w-7 h-7 rounded text-muted hover:text-stone-900 hover:bg-stone-100 transition-colors"
+                                    @click="toggleDistributor()"
+                                    title="Buka pilihan distributor"
+                                    aria-label="Buka pilihan distributor"
+                                    tabindex="-1"
+                                >
+                                    <x-ui.icon name="chevron" :size="13" class="transition-transform duration-200" x-bind:class="{ '-rotate-90': distributor_open, 'rotate-90': !distributor_open }" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div x-show="distributor_open" x-cloak x-transition.opacity class="system-autocomplete-menu" role="listbox" aria-label="Pilihan distributor" tabindex="-1">
+                            <div class="max-h-52 overflow-y-auto py-1">
+                                <template x-for="(item, index) in filteredDistributors" :key="item">
+                                    <button
+                                        type="button"
+                                        class="system-autocomplete-item"
+                                        :class="{ 'is-highlighted': distributor_highlight === index, 'is-selected': (distributor_name || '').trim().toLowerCase() === item.toLowerCase() }"
+                                        @click="selectDistributor(item)"
+                                        @mouseenter="distributor_highlight = index"
+                                        role="option"
+                                    >
+                                        <span class="truncate font-medium" x-text="item"></span>
+                                        <span x-show="(distributor_name || '').trim().toLowerCase() === item.toLowerCase()" class="text-xs text-green-700 font-semibold" aria-hidden="true">✓</span>
+                                    </button>
+                                </template>
+                                <div x-show="filteredDistributors.length === 0 && (distributor_name || '').trim()" class="px-3 py-3 text-center text-xs text-muted">
+                                    <p>Tidak ada distributor terdaftar yang cocok.</p>
+                                    <p class="mt-1 font-medium text-stone-800">"<span x-text="distributor_name.trim()"></span>" akan disimpan sebagai distributor baru.</p>
+                                </div>
+                                <div x-show="distributor_options.length === 0 && !(distributor_name || '').trim()" class="px-3 py-3 text-center text-xs text-muted">
+                                    Belum ada daftar distributor. Ketik nama distributor baru di atas.
+                                </div>
+                            </div>
+                            <div x-show="isNewDistributor && filteredDistributors.length > 0" class="px-3 py-2 border-t border-stone-100 bg-stone-50/80 text-xs text-stone-600 flex items-center justify-between">
+                                <span>Distributor baru: <strong class="text-stone-900" x-text="distributor_name.trim()"></strong></span>
+                                <span class="text-[11px] text-muted">Tersimpan otomatis</span>
+                            </div>
+                        </div>
+                    </div>
                 </template>
                 <template x-if="!isManual">
                     <div class="form-field">

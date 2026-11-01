@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Distributor;
 use App\Models\DistributorInvoice;
 use App\Models\DistributorPayment;
 use App\Models\PurchaseOrder;
@@ -99,7 +100,7 @@ class DistributorInvoiceService
         ]);
     }
 
-    /** @param array{distributor_id:int,reference?:?string,total:numeric-string|float|int,due_on:string,invoiced_on?:?string,supplier_reference?:?string,shipment_id?:?int,notes?:?string} $data */
+    /** @param array{distributor_id?:?int,distributor_name?:?string,reference?:?string,total:numeric-string|float|int,due_on:string,invoiced_on?:?string,supplier_reference?:?string,shipment_id?:?int,notes?:?string} $data */
     public function createManual(array $data): DistributorInvoice
     {
         self::ensureSchema();
@@ -108,6 +109,18 @@ class DistributorInvoiceService
             $totalCents = self::cents($data['total']);
             if ($totalCents <= 0 || $totalCents > 9000000000000000) {
                 throw ValidationException::withMessages(['total' => 'Total tagihan harus lebih dari 0 dan dalam batas yang valid.']);
+            }
+
+            $distributorId = $data['distributor_id'] ?? null;
+            if (! empty($data['distributor_name'])) {
+                $distributorName = trim((string) $data['distributor_name']);
+                $distributor = Distributor::whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower($distributorName)])->first()
+                    ?? Distributor::create(['name' => $distributorName, 'is_active' => true]);
+                $distributorId = $distributor->id;
+            } elseif ($distributorId) {
+                $distributorId = (int) $distributorId;
+            } else {
+                throw ValidationException::withMessages(['distributor_name' => 'Pilih atau tulis nama distributor terlebih dahulu.']);
             }
 
             $reference = ! empty($data['reference']) ? trim($data['reference']) : $this->generateManualReference();
@@ -124,7 +137,7 @@ class DistributorInvoiceService
             }
 
             return DistributorInvoice::create([
-                'distributor_id' => $data['distributor_id'],
+                'distributor_id' => $distributorId,
                 'purchase_order_id' => null,
                 'reference' => $reference,
                 'invoiced_on' => $invoicedOn,
@@ -212,7 +225,12 @@ class DistributorInvoiceService
                 }
             }
             if ($invoice->isManual()) {
-                if (array_key_exists('distributor_id', $data) && ! empty($data['distributor_id'])) {
+                if (! empty($data['distributor_name'])) {
+                    $distributorName = trim((string) $data['distributor_name']);
+                    $distributor = Distributor::whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower($distributorName)])->first()
+                        ?? Distributor::create(['name' => $distributorName, 'is_active' => true]);
+                    $invoice->distributor_id = $distributor->id;
+                } elseif (array_key_exists('distributor_id', $data) && ! empty($data['distributor_id'])) {
                     $invoice->distributor_id = (int) $data['distributor_id'];
                 }
                 if (array_key_exists('reference', $data) && ! empty($data['reference'])) {

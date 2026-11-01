@@ -90,6 +90,58 @@ class DistributorInvoiceManualAndImportTest extends TestCase
         $this->assertStringStartsWith('INV-MAN-', $invoice->reference);
     }
 
+    public function test_admin_can_create_manual_invoice_by_typing_new_distributor_name(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $payload = [
+            'distributor_name' => 'PT Distributor Cipta Baru',
+            'reference' => 'INV-CIPTA-01',
+            'invoiced_on' => '2026-10-25',
+            'due_on' => '2026-11-25',
+            'total' => '8000000',
+        ];
+
+        $response = $this->actingAs($admin)->post(route('distributor-invoices.store'), $payload);
+
+        $response->assertRedirect(route('distributor-invoices.index'));
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('distributors', ['name' => 'PT Distributor Cipta Baru']);
+        $newDistributor = Distributor::where('name', 'PT Distributor Cipta Baru')->firstOrFail();
+
+        $invoice = DistributorInvoice::where('reference', 'INV-CIPTA-01')->firstOrFail();
+        $this->assertSame($newDistributor->id, $invoice->distributor_id);
+        $this->assertSame('PT Distributor Cipta Baru', $invoice->distributor_name);
+    }
+
+    public function test_admin_can_update_manual_invoice_by_typing_new_distributor_name(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $distributor = Distributor::factory()->create(['name' => 'Distributor Lama']);
+
+        $invoice = DistributorInvoice::factory()->manual()->create([
+            'distributor_id' => $distributor->id,
+            'reference' => 'INV-TEST-EDIT',
+            'due_on' => '2026-11-01',
+            'total_cents' => 200000000,
+        ]);
+
+        $updateData = [
+            'version' => 1,
+            'distributor_name' => 'Distributor Brand Baru',
+            'due_on' => '2026-11-20',
+        ];
+
+        $response = $this->actingAs($admin)->patch(route('distributor-invoices.update', $invoice), $updateData);
+
+        $response->assertSessionHasNoErrors();
+        $invoice->refresh();
+
+        $this->assertDatabaseHas('distributors', ['name' => 'Distributor Brand Baru']);
+        $this->assertSame('Distributor Brand Baru', $invoice->distributor_name);
+    }
+
     public function test_manual_invoice_validation_prevents_invalid_data(): void
     {
         $admin = User::factory()->admin()->create();

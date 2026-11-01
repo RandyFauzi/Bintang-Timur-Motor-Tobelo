@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Distributor;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -12,11 +13,22 @@ class PurchaseOrderRequest extends FormRequest
         return $this->user() !== null;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->filled('distributor_name') && ! $this->filled('distributor_id')) {
+            $name = trim((string) $this->input('distributor_name'));
+            $distributor = Distributor::whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower($name)])->first()
+                ?? Distributor::create(['name' => $name, 'is_active' => true]);
+            $this->merge(['distributor_id' => $distributor->id]);
+        }
+    }
+
     public function rules(): array
     {
         return [
             'request_id' => ['required', 'uuid'],
-            'distributor_id' => ['required', 'integer', Rule::exists('distributors', 'id')->whereNull('deleted_at')->where('is_active', true)],
+            'distributor_id' => ['required_without:distributor_name', 'nullable', 'integer', Rule::exists('distributors', 'id')->whereNull('deleted_at')->where('is_active', true)],
+            'distributor_name' => ['nullable', 'string', 'max:255'],
             'ordered_on' => ['required', 'date_format:Y-m-d'], 'expected_on' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:ordered_on'],
             'payment_term_months' => ['nullable', 'integer', Rule::in([2, 3])],
             'due_on' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:ordered_on'],
