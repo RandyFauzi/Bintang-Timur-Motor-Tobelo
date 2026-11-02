@@ -6,6 +6,13 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class ImportDistributorInvoiceRequest extends FormRequest
 {
+    protected $redirectRoute = 'distributor-invoices.index';
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge(['_dialog' => 'invoice-import']);
+    }
+
     public function authorize(): bool
     {
         return $this->user() !== null;

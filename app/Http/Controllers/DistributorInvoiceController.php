@@ -14,6 +14,7 @@ use App\Services\DistributorInvoiceImportService;
 use App\Services\DistributorInvoiceService;
 use App\Services\ExcelExportService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -116,7 +117,21 @@ class DistributorInvoiceController extends Controller
 
     public function import(ImportDistributorInvoiceRequest $request, DistributorInvoiceImportService $importer): RedirectResponse
     {
-        $count = $importer->import($request->file('file'));
+        try {
+            $count = $importer->import($request->file('file'));
+        } catch (QueryException|ValidationException $exception) {
+            if ($exception instanceof QueryException) {
+                report($exception);
+                $exception = ValidationException::withMessages(['file' => 'Impor gagal disimpan karena masalah database atau data yang berubah saat impor. Tidak ada data impor yang disimpan. Hubungi administrator dan coba lagi.']);
+            }
+            if ($request->expectsJson()) {
+                throw $exception;
+            }
+
+            return redirect()->route('distributor-invoices.index')
+                ->withInput(['_dialog' => 'invoice-import'])
+                ->withErrors($exception->errors());
+        }
 
         return redirect()->route('distributor-invoices.index')
             ->with('success', $count.' tagihan distributor berhasil diimpor.');

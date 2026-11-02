@@ -171,7 +171,10 @@
                     <li>Kolom <strong>Distributor</strong>, <strong>Jatuh Tempo</strong>, dan <strong>Total Tagihan</strong> wajib diisi.</li>
                     <li>Jika nama distributor belum ada di database, sistem akan otomatis mendaftarkannya.</li>
                     <li>Nomor invoice bersifat opsional. Jika kosong, sistem membuatkan nomor otomatis (INV-MAN-...).</li>
-                    <li>Format tanggal yang didukung: <code>YYYY-MM-DD</code> atau <code>DD/MM/YYYY</code>.</li>
+                    <li>Tanggal Faktur dan Tanggal Masuk Barang bersifat opsional. Tanggal Faktur kosong menggunakan tanggal hari ini; Tanggal Masuk Barang kosong tetap belum diisi.</li>
+                    <li>Format tanggal: <code>YYYY-MM-DD</code>, <code>DD/MM/YYYY</code>, atau sel tanggal Excel. Nominal dapat berupa angka atau format rupiah seperti <code>Rp24.953.500</code>.</li>
+                    <li>Setiap judul kolom hanya boleh muncul sekali. Jika ada sel error atau rumus tanpa hasil, perbaiki atau tempel sebagai nilai.</li>
+                    <li>Semua baris diperiksa sebelum disimpan. Jika ada kesalahan, seluruh impor dibatalkan dan nomor baris ditampilkan.</li>
                 </ul>
             </div>
             <div class="flex items-center justify-between">

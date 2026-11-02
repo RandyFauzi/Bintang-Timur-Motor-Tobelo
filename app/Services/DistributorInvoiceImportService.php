@@ -10,11 +10,14 @@ use DOMElement;
 use DOMXPath;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use ZipArchive;
 
 class DistributorInvoiceImportService
 {
+    private bool $date1904 = false;
+
     public const HEADERS = [
         'Nomor Invoice',
         'Distributor',
@@ -47,6 +50,10 @@ class DistributorInvoiceImportService
 
     public function import(UploadedFile $file): int
     {
+        if (! Schema::hasColumn('distributor_invoices', 'received_on')) {
+            $this->invalid('Impor belum dapat diproses karena database server belum diperbarui. Minta administrator menjalankan php artisan migrate --force, lalu unggah ulang file. Belum ada data yang disimpan.');
+        }
+
         $rows = $this->read($file);
         if (empty($rows)) {
             $this->invalid('File Excel kosong atau tidak memiliki baris data yang valid.');
@@ -198,6 +205,7 @@ class DistributorInvoiceImportService
             }
 
             $workbook = $this->xml($zip, 'xl/workbook.xml');
+            $this->date1904 = in_array($workbook->evaluate('string(//*[local-name()="workbookPr"]/@date1904)'), ['1', 'true'], true);
             $first = $workbook->query('//*[local-name()="sheet"]')->item(0);
             if (! $first instanceof DOMElement) {
                 $this->invalid('Sheet data tidak ditemukan.');
@@ -249,6 +257,11 @@ class DistributorInvoiceImportService
                     if (! preg_match('/^([A-Z]+)'.$number.'$/', $cell->getAttribute('r'), $match)) {
                         continue;
                     }
+                    if ($columns !== [] && isset($columns[$match[1]]) &&
+                        ($cell->getAttribute('t') === 'e' ||
+                        ($sheet->query('./*[local-name()="f"]', $cell)->length > 0 && $sheet->evaluate('string(./*[local-name()="v"])', $cell) === ''))) {
+                        $this->invalid("Baris {$number}, sel {$match[1]}{$number}: sel berisi error atau rumus tanpa hasil. Perbaiki rumus atau tempel sebagai nilai sebelum mengunggah.");
+                    }
                     $value = match ($cell->getAttribute('t')) {
                         'inlineStr' => $this->text($sheet, $cell),
                         's' => $this->sharedString($sheet, $cell, $strings),
@@ -268,6 +281,12 @@ class DistributorInvoiceImportService
                         }
                     }
                     if (in_array('distributor', $candidate, true) && in_array('due_on', $candidate, true)) {
+                        if (! in_array('total', $candidate, true)) {
+                            $this->invalid("Baris {$number}: kolom Total Tagihan tidak ditemukan. Gunakan template resmi.");
+                        }
+                        if (count($candidate) !== count(array_unique($candidate))) {
+                            $this->invalid("Baris {$number}: judul kolom duplikat. Gunakan satu kolom untuk setiap jenis data.");
+                        }
                         $columns = $candidate;
                     }
 
@@ -306,13 +325,15 @@ class DistributorInvoiceImportService
             return null;
         }
 
-        // Excel serial date (e.g. 45229)
-        if (preg_match('/^\d{4,6}$/', $val)) {
-            $serial = (int) $val;
-            // 25569 is the offset from Excel's base date (1899-12-30) to UNIX epoch (1970-01-01)
-            $timestamp = ($serial - 25569) * 86400;
+        if (preg_match('/^\d{1,7}(?:\.\d+)?$/', $val)) {
+            $serial = (int) floor((float) $val);
+            $maximum = $this->date1904 ? 2957003 : 2958465;
+            if ($serial < ($this->date1904 ? 0 : 1) || $serial > $maximum || (! $this->date1904 && $serial === 60)) {
+                return null;
+            }
+            $base = $this->date1904 ? '1904-01-01' : ($serial < 60 ? '1899-12-31' : '1899-12-30');
 
-            return CarbonImmutable::createFromTimestampUTC($timestamp)->toDateString();
+            return CarbonImmutable::parse($base, 'UTC')->addDays($serial)->toDateString();
         }
 
         // Standard string dates
@@ -402,6 +423,6 @@ class DistributorInvoiceImportService
 
     private function invalid(string $message): never
     {
-        throw ValidationException::withMessages(['file' => $message]);
+        throw ValidationException::withMessages(['file' => explode("\n", $message)]);
     }
 }
