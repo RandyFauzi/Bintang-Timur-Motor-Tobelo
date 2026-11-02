@@ -120,6 +120,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/reports/observations', [CompetitorObservationController::class, 'store'])->name('reports.observations.store');
     Route::patch('/reports/observations/{observation}', [CompetitorObservationController::class, 'update'])->name('reports.observations.update');
     Route::delete('/reports/observations/{observation}', [CompetitorObservationController::class, 'destroy'])->name('reports.observations.destroy');
+    Route::delete('/reports/workshops/{workshop}', [ReportLookupController::class, 'destroyWorkshop'])->name('reports.workshops.destroy');
     Route::post('/reports/workshops', [ReportLookupController::class, 'workshops'])->name('reports.workshops.store');
     Route::post('/reports/work-types', [ReportLookupController::class, 'workTypes'])->name('reports.work-types.store');
 

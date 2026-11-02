@@ -5,15 +5,32 @@ namespace App\Http\Controllers;
 use App\Models\Workshop;
 use App\Models\WorkType;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ReportLookupController extends Controller
 {
     public function workshops(Request $request): JsonResponse
     {
         return $this->store($request, Workshop::class, 'workshops');
+    }
+
+    public function destroyWorkshop(Workshop $workshop): RedirectResponse
+    {
+        DB::transaction(function () use ($workshop): void {
+            $workshop = Workshop::lockForUpdate()->findOrFail($workshop->id);
+            if ($workshop->observations()->exists()) {
+                throw ValidationException::withMessages([
+                    'workshop' => 'Bengkel masih memiliki pengamatan. Hapus pengamatannya terlebih dahulu sebelum menghapus bengkel.',
+                ])->redirectTo(route('reports.index'));
+            }
+            $workshop->delete();
+        });
+
+        return redirect()->route('reports.index')->with('success', 'Bengkel berhasil dihapus dari seluruh pilihan.');
     }
 
     public function workTypes(Request $request): JsonResponse

@@ -46,7 +46,12 @@
                 <x-ui.query-fields :values="$reportFilters" :except="['search','view','per_page','page','edit','create','start_date','end_date','hour','workshop_id','work_type_ids']" />
                 <nav class="catalogue-tabs" aria-label="Filter bengkel">
                     <a href="{{ request()->fullUrlWithQuery(['workshop_id'=>null,'page'=>1,'edit'=>null,'create'=>null]) }}" @class(['catalogue-tab','is-active'=>!request('workshop_id')])>Semua Bengkel</a>
-                    @foreach($workshops as $workshop)<a href="{{ request()->fullUrlWithQuery(['workshop_id'=>$workshop->id,'page'=>1,'edit'=>null,'create'=>null]) }}" @class(['catalogue-tab','is-active'=>request('workshop_id') == $workshop->id])>{{ $workshop->name }}</a>@endforeach
+                    @foreach($workshops as $workshop)
+                        <div class="inline-flex items-center">
+                            <a href="{{ request()->fullUrlWithQuery(['workshop_id'=>$workshop->id,'page'=>1,'edit'=>null,'create'=>null]) }}" @class(['catalogue-tab','is-active'=>request('workshop_id') == $workshop->id])>{{ $workshop->name }}</a>
+                            <button type="button" class="inline-flex min-h-11 min-w-11 items-center justify-center text-danger" aria-label="Hapus bengkel {{ $workshop->name }}" @click="$dispatch('open-delete-workshop', {{ json_encode(['url' => route('reports.workshops.destroy', $workshop, false), 'name' => $workshop->name]) }})"><x-ui.icon name="trash" :size="16" /></button>
+                        </div>
+                    @endforeach
                 </nav>
                 @if(request('workshop_id'))<input type="hidden" name="workshop_id" value="{{ request('workshop_id') }}">@endif
                 <div class="catalogue-filters">
@@ -79,6 +84,18 @@
                 <footer class="dialog-actions">
                     <button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button>
                     <button type="submit" class="ui-button ui-button--danger" :disabled="submitting || !deleteUrl" x-text="submitting ? 'Menghapus…' : 'Ya, Hapus Pengamatan'">Ya, Hapus Pengamatan</button>
+                </footer>
+            </form>
+        </x-ui.dialog>
+        <x-ui.dialog name="delete-workshop" title="Hapus Bengkel" description="Bengkel yang dihapus tidak akan muncul lagi pada tab maupun dropdown.">
+            <form method="POST" class="dialog-form" x-data="{ deleteUrl: '', workshopName: '' }" :action="deleteUrl" @open-delete-workshop.window="deleteUrl = $event.detail.url; workshopName = $event.detail.name; $dispatch('open-dialog', { id: 'delete-workshop' })" @submit="submitting = true">
+                @csrf
+                @method('DELETE')
+                <p>Hapus bengkel <strong x-text="workshopName"></strong>?</p>
+                <p class="text-sm text-muted">Bengkel hanya dapat dihapus jika seluruh pengamatannya sudah dihapus. Riwayat pengamatan tidak dihapus melalui tombol ini.</p>
+                <footer class="dialog-actions">
+                    <button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button>
+                    <button type="submit" class="ui-button ui-button--danger" :disabled="submitting || !deleteUrl">Hapus Bengkel</button>
                 </footer>
             </form>
         </x-ui.dialog>
