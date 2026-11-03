@@ -245,7 +245,7 @@ class ProductImportTest extends TestCase
         $this->assertSame('variation', $product->fresh()->product_kind);
         $invalid = $this->workbook([[(string) $product->id, 'Asal']], headers: ['ID', 'Tipe Produk']);
         $this->postJson(route('products.import'), ['file' => $invalid])->assertUnprocessable()
-            ->assertJsonPath('errors.file.0', 'Baris 7: Tipe Produk harus Harian, Non-Harian, atau Variasi. Boleh dikosongkan.');
+            ->assertJsonPath('errors.file.0', 'Baris 7: Tipe Produk harus Harian, Non-Harian, Variasi, Body, atau Printilan. Boleh dikosongkan.');
     }
 
     public function test_unknown_distributors_are_created_once_and_existing_names_are_reused(): void

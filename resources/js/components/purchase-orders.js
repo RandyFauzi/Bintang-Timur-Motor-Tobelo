@@ -94,7 +94,7 @@ export function purchasePlanForm(initial, distributors, urls) {
             this.leaving = true;
             window.location.assign(this.pendingLeaveUrl);
         },
-        kinds: {daily: 'Harian', non_daily: 'Non-Harian', variation: 'Variasi'},
+        kinds: {daily: 'Harian', non_daily: 'Non-Harian', variation: 'Variasi', body: 'Body', printilan: 'Printilan'},
         add() {
             if (this.rows.length >= 100) { this.errors = ['Maksimal 100 produk per rencana.']; return; }
             this.rows.push(decorate(blank()));

@@ -91,7 +91,7 @@ class ProductController extends Controller
             $product->color?->name,
             $product->purchase_price,
             $product->selling_price,
-            Product::KINDS[$product->product_kind] ?? '–',
+            Product::kindLabel($product->product_kind),
             $product->brand?->name,
             $product->type?->name,
             $product->distributors->pluck('name')->join(' | '),

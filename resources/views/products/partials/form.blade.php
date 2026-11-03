@@ -280,7 +280,81 @@
             </div>
             <x-ui.field name="purchase_price" label="Modal" type="number" :value="$product ? (float) $product->purchase_price : null" placeholder="0" min="0" step="0.01" onfocus="this.select()" required />
             <x-ui.field name="selling_price" label="Harga Jual" type="number" :value="$product ? (float) $product->selling_price : null" placeholder="0" min="0" step="0.01" onfocus="this.select()" required />
-            <x-ui.field name="product_kind" label="Tipe Produk"><select id="product_kind" name="product_kind" class="form-input">@foreach(\App\Models\Product::KINDS as $value => $kindLabel)<option value="{{ $value }}" @selected(old('product_kind',$product?->product_kind ?? 'daily') === $value)>{{ $kindLabel }}</option>@endforeach</select></x-ui.field>
+            <div class="form-field relative" :class="{ 'z-30': open, 'z-10': !open }" x-data="customSelectAutocomplete(@js(\App\Models\Product::allKindLabels()), @js($product ? \App\Models\Product::kindLabel($product->product_kind) : (old('product_kind') ? \App\Models\Product::kindLabel(old('product_kind')) : 'Harian')))" @click.outside="close()" @keydown.escape="close()">
+                <label for="product_kind" class="form-field__label">Tipe Produk</label>
+                <div class="relative flex items-center">
+                    <input
+                        id="product_kind"
+                        name="product_kind"
+                        type="text"
+                        class="form-input !pr-16 w-full"
+                        placeholder="Pilih atau tulis tipe produk..."
+                        autocomplete="off"
+                        autocorrect="off"
+                        autocapitalize="off"
+                        spellcheck="false"
+                        role="combobox"
+                        aria-autocomplete="list"
+                        :aria-expanded="open"
+                        aria-controls="product_kind_menu"
+                        :aria-activedescendant="highlightedIndex >= 0 ? 'product_kind_opt_' + highlightedIndex : null"
+                        x-model="query"
+                        @focus="open = true"
+                        @input="onInput()"
+                        @keydown="onKeydown($event)"
+                    >
+                    <div class="absolute right-2 flex items-center gap-1">
+                        <button
+                            type="button"
+                            x-show="query.length > 0"
+                            class="flex items-center justify-center w-6 h-6 rounded text-muted hover:text-stone-900 hover:bg-stone-100 transition-colors"
+                            @click="clear()"
+                            title="Kosongkan tipe produk"
+                            aria-label="Kosongkan tipe produk"
+                        >
+                            <x-ui.icon name="close" :size="13" />
+                        </button>
+                        <button
+                            type="button"
+                            class="flex items-center justify-center w-7 h-7 rounded text-muted hover:text-stone-900 hover:bg-stone-100 transition-colors"
+                            @click="toggle()"
+                            title="Buka pilihan tipe produk"
+                            aria-label="Buka pilihan tipe produk"
+                            tabindex="-1"
+                        >
+                            <x-ui.icon name="chevron" :size="13" class="transition-transform duration-200" x-bind:class="{ '-rotate-90': open, 'rotate-90': !open }" />
+                        </button>
+                    </div>
+                </div>
+                <div x-show="open" x-cloak x-transition.opacity id="product_kind_menu" class="system-autocomplete-menu" role="listbox" aria-label="Pilihan tipe produk" tabindex="-1">
+                    <div x-ref="menuList" class="max-h-52 overflow-y-auto py-1">
+                        <template x-for="(item, index) in filtered" :key="item">
+                            <button
+                                type="button"
+                                class="system-autocomplete-item"
+                                :class="{ 'is-highlighted': highlightedIndex === index, 'is-selected': query.trim().toLowerCase() === item.toLowerCase() }"
+                                @click="select(item)"
+                                @mouseenter="highlightedIndex = index"
+                                role="option"
+                                :id="'product_kind_opt_' + index"
+                                :aria-selected="query.trim().toLowerCase() === item.toLowerCase()"
+                            >
+                                <span class="truncate font-medium" x-text="item"></span>
+                                <span x-show="query.trim().toLowerCase() === item.toLowerCase()" class="text-xs text-green-700 font-semibold" aria-hidden="true">✓</span>
+                            </button>
+                        </template>
+                        <div x-show="filtered.length === 0 && query.trim()" class="px-3 py-3 text-center text-xs text-muted">
+                            <p>Tidak ada tipe produk terdaftar yang cocok.</p>
+                            <p class="mt-1 font-medium text-stone-800">"<span x-text="query.trim()"></span>" akan disimpan sebagai tipe produk baru.</p>
+                        </div>
+                    </div>
+                    <div x-show="isCustomNewValue && filtered.length > 0" class="px-3 py-2 border-t border-stone-100 bg-stone-50/80 text-xs text-stone-600 flex items-center justify-between">
+                        <span>Tipe baru: <strong class="text-stone-900" x-text="query.trim()"></strong></span>
+                        <span class="text-[11px] text-muted">Tersimpan otomatis</span>
+                    </div>
+                </div>
+                @error('product_kind')<p class="field-error">{{ $message }}</p>@enderror
+            </div>
             <div class="form-field relative product-distributor-picker" x-data="distributorAutocomplete(@js($distributorItems), @js($initialDistributorId), @js($initialDistributorName), @js(route('distributors.store')))" @click.outside="close()" @keydown.escape="close()">
                 <label for="distributor_name" class="form-field__label">Distributor</label>
                 <div class="relative">

@@ -9,7 +9,7 @@
             <form method="GET" action="{{ route('products.index') }}" class="catalogue-query">
                 <x-ui.catalogue-toolbar export-route="products.export" create-label="Tambah Produk" dialog="product-form" />
                 <nav class="catalogue-tabs" aria-label="Tipe produk">
-                    @foreach(['' => 'Semua Produk', 'daily' => 'Produk Harian', 'non_daily' => 'Produk Non Harian', 'variation' => 'Produk Variasi'] as $kind => $label)
+                    @foreach(\App\Models\Product::tabKinds() as $kind => $label)
                         <a href="{{ request()->fullUrlWithQuery(['kind'=>$kind ?: null,'page'=>1,'edit'=>null,'create'=>null]) }}" @class(['catalogue-tab','is-active'=>request('kind','') === $kind]) @if(request('kind','') === $kind) aria-current="page" @endif>{{ $label }}</a>
                     @endforeach
                 </nav>

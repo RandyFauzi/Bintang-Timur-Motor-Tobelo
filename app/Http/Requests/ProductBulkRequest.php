@@ -14,6 +14,15 @@ class ProductBulkRequest extends FormRequest
         return $this->user() !== null;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('changes.product_kind') && $this->filled('changes.product_kind')) {
+            $changes = $this->input('changes', []);
+            $changes['product_kind'] = Product::normalizeKind($changes['product_kind']);
+            $this->merge(['changes' => $changes]);
+        }
+    }
+
     /** @return array<string, mixed> */
     public function rules(): array
     {
@@ -28,7 +37,7 @@ class ProductBulkRequest extends FormRequest
                 'changes.selling_price' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
                 'changes.quantity' => ['nullable', 'integer', 'min:0', 'max:100000000'],
                 'changes.stock_minimum' => ['nullable', 'integer', 'min:0', 'max:100000000'],
-                'changes.product_kind' => ['nullable', Rule::in(array_keys(Product::KINDS))],
+                'changes.product_kind' => ['nullable', 'string', 'max:20'],
                 'changes.brand_id' => ['nullable', 'integer', Rule::exists('brands', 'id')->whereNull('deleted_at')->where('is_active', true)],
                 'changes.type_id' => ['nullable', 'integer', Rule::exists('product_types', 'id')->whereNull('deleted_at')->where('is_active', true)],
                 'changes.color_id' => ['nullable', 'integer', Rule::exists('colors', 'id')->whereNull('deleted_at')->where('is_active', true)],

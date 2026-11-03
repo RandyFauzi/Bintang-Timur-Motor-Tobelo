@@ -27,7 +27,7 @@ class PurchasePlanRequest extends FormRequest
             'items.*.product_id' => ['nullable', 'integer'],
             'items.*.product_name' => ['nullable', 'string', 'max:255'],
             'items.*.color' => ['nullable', 'string', 'max:100'],
-            'items.*.product_kind' => ['nullable', Rule::in(['daily', 'non_daily', 'variation'])],
+            'items.*.product_kind' => ['nullable', 'string', 'max:20'],
             'items.*.brand' => ['nullable', 'string', 'max:255'],
             'items.*.part_type' => ['nullable', 'string', 'max:255'],
             'items.*.current_stock' => ['required', 'integer', 'min:0', 'max:1000000000'],

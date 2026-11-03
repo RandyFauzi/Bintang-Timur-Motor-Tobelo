@@ -26,7 +26,7 @@ class CatalogueService
             foreach ($words as $word) {
                 $term = '%'.$word.'%';
                 $normalized = preg_replace('/[\s_-]+/u', '', mb_strtolower($word));
-                $kinds = array_keys(array_filter(Product::KINDS, fn (string $label, string $key): bool => str_contains(preg_replace('/[\s_-]+/u', '', mb_strtolower($label.' '.$key)), $normalized), ARRAY_FILTER_USE_BOTH));
+                $kinds = array_keys(array_filter(Product::allKinds(), fn (string $label, string $key): bool => str_contains(preg_replace('/[\s_-]+/u', '', mb_strtolower($label.' '.$key)), $normalized), ARRAY_FILTER_USE_BOTH));
                 $query->where(function (Builder $relatedQuery) use ($term, $kinds): void {
                     $relatedQuery->where('name', 'like', $term)->orWhere('sku', 'like', $term)->orWhere('barcode', 'like', $term);
                     foreach (['brand', 'type', 'color', 'distributors'] as $relation) {

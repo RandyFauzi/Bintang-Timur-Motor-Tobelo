@@ -71,6 +71,56 @@ class CatalogueTest extends TestCase
         $this->assertStringContainsString('Variasi', $this->get(route('products.export', ['kind' => 'variation']))->streamedContent());
     }
 
+    public function test_body_printilan_and_custom_product_kinds_can_be_created_filtered_and_render_dynamic_tabs(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        // 1. Create Body product using Indonesian text 'Body'
+        $this->post(route('products.store'), [
+            'name' => 'Cover Body Beat', 'product_kind' => 'Body', 'quantity' => 10,
+            'stock_minimum' => 2, 'purchase_price' => 50000, 'selling_price' => 75000,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $bodyProduct = Product::where('name', 'Cover Body Beat')->sole();
+        $this->assertSame('body', $bodyProduct->product_kind);
+
+        // 2. Create Printilan product using Indonesian text 'Printilan'
+        $this->post(route('products.store'), [
+            'name' => 'Baut Klip Motor', 'product_kind' => 'Printilan', 'quantity' => 50,
+            'stock_minimum' => 5, 'purchase_price' => 1000, 'selling_price' => 2500,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $printilanProduct = Product::where('name', 'Baut Klip Motor')->sole();
+        $this->assertSame('printilan', $printilanProduct->product_kind);
+
+        // 3. Create Custom product kind manually typed e.g. 'Aksesoris'
+        $this->post(route('products.store'), [
+            'name' => 'Gantungan Kunci', 'product_kind' => 'Aksesoris', 'quantity' => 20,
+            'stock_minimum' => 2, 'purchase_price' => 5000, 'selling_price' => 10000,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $customProduct = Product::where('name', 'Gantungan Kunci')->sole();
+        $this->assertSame('aksesoris', $customProduct->product_kind);
+
+        // 4. Verify products.index renders tabs for Body, Printilan, and dynamic Aksesoris tab
+        $page = $this->get(route('products.index', ['view' => 'cards']));
+        $page->assertOk()
+            ->assertSee('Produk Body')
+            ->assertSee('Produk Printilan')
+            ->assertSee('Produk Aksesoris');
+
+        // 5. Test filtering by Body
+        $pageBody = $this->get(route('products.index', ['kind' => 'body', 'view' => 'cards']));
+        $pageBody->assertOk()
+            ->assertSee('Cover Body Beat')
+            ->assertDontSee('Baut Klip Motor')
+            ->assertDontSee('Gantungan Kunci');
+
+        // 6. Test filtering by custom kind
+        $pageCustom = $this->get(route('products.index', ['kind' => 'aksesoris', 'view' => 'cards']));
+        $pageCustom->assertOk()
+            ->assertSee('Gantungan Kunci')
+            ->assertDontSee('Cover Body Beat')
+            ->assertDontSee('Baut Klip Motor');
+    }
+
     public function test_guests_cannot_manage_catalogues(): void
     {
         $this->get(route('products.index'))->assertRedirect(route('login'));

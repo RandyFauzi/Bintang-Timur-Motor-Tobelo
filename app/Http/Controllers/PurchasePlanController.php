@@ -135,7 +135,7 @@ class PurchasePlanController extends Controller
 
     public function template(ExcelExportService $excel): StreamedResponse
     {
-        return $excel->download('template-rencana-pengadaan.xlsx', 'RENCANA PENGADAAN', ['Nama Produk', 'Warna', 'Tipe Produk', 'Merk', 'Jenis Part', 'Kebutuhan', 'SKU', 'Modal'], [], 'Tipe Produk: daily, non_daily, variation. Kebutuhan adalah jumlah unit yang akan dipesan.', forImport: true);
+        return $excel->download('template-rencana-pengadaan.xlsx', 'RENCANA PENGADAAN', ['Nama Produk', 'Warna', 'Tipe Produk', 'Merk', 'Jenis Part', 'Kebutuhan', 'SKU', 'Modal'], [], 'Tipe Produk: daily, non_daily, variation, body, printilan, atau tipe lainnya. Kebutuhan adalah jumlah unit yang akan dipesan.', forImport: true);
     }
 
     public function import(ProductImportRequest $request, ProductImportService $importer): JsonResponse
@@ -143,9 +143,20 @@ class PurchasePlanController extends Controller
         $rows = $importer->readForPlanning($request->file('file'));
         $items = [];
         foreach ($rows as $row) {
-            $items[] = ['product_id' => null, 'product_name' => $row['name'] ?? '', 'color' => $row['color_name'] ?? '', 'product_kind' => match (mb_strtolower($row['product_kind'] ?? 'daily')) {
-                'harian' => 'daily', 'non-harian', 'non harian' => 'non_daily', 'variasi' => 'variation', default => $row['product_kind'] ?? 'daily'
-            }, 'brand' => $row['brand_name'] ?? '', 'part_type' => $row['type_name'] ?? '', 'current_stock' => 0, 'quantity' => $row['quantity'] ?? 0, 'sku' => $row['sku'] ?? '', 'unit' => 'pcs', 'unit_price' => $row['purchase_price'] ?? 0, 'allocations' => []];
+            $items[] = [
+                'product_id' => null,
+                'product_name' => $row['name'] ?? '',
+                'color' => $row['color_name'] ?? '',
+                'product_kind' => Product::normalizeKind($row['product_kind'] ?? 'daily'),
+                'brand' => $row['brand_name'] ?? '',
+                'part_type' => $row['type_name'] ?? '',
+                'current_stock' => 0,
+                'quantity' => $row['quantity'] ?? 0,
+                'sku' => $row['sku'] ?? '',
+                'unit' => 'pcs',
+                'unit_price' => $row['purchase_price'] ?? 0,
+                'allocations' => [],
+            ];
         }
         $validation = new PurchasePlanRequest;
         $rules = collect($validation->rules())->filter(fn (mixed $rule, string $key): bool => $key === 'items' || str_starts_with($key, 'items.'))->all();

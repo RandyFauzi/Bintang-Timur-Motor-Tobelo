@@ -45,7 +45,7 @@ class ProductReturnController extends Controller
             ->map(fn (Product $product): array => [
                 'id' => $product->id, 'name' => $product->name, 'sku' => $product->sku,
                 'brand' => $product->brand?->name, 'type' => $product->type?->name,
-                'color' => $product->color?->name, 'kind' => Product::KINDS[$product->product_kind] ?? null,
+                'color' => $product->color?->name, 'kind' => Product::kindLabel($product->product_kind),
                 'available' => max(0, ($product->stock?->quantity ?? 0) - ($product->stock?->reserved_quantity ?? 0)),
             ]);
 
@@ -104,7 +104,7 @@ class ProductReturnController extends Controller
                 $record->id, $record->created_at->format('Y-m-d H:i:s'), $record->product_snapshot['name'], $record->product_snapshot['sku'],
                 $record->note_status === 'credited' ? 'Sudah Dikurangi' : 'Belum Dikurangi', $record->quantity,
                 $record->product_snapshot['purchase_price'], $record->totalPurchaseCost(),
-                Product::KINDS[$record->product_snapshot['kind']] ?? '–',
+                Product::kindLabel($record->product_snapshot['kind'] ?? ''),
                 $record->product_snapshot['brand'], $record->product_snapshot['color'], $record->product_snapshot['type'],
                 $record->product_snapshot['distributors'], $record->status,
             ]);

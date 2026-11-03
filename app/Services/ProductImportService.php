@@ -66,12 +66,7 @@ class ProductImportService
             unset($data['id']);
             $provided = array_keys($data);
             if (array_key_exists('product_kind', $data)) {
-                $data['product_kind'] = match (mb_strtolower($data['product_kind'] ?? $product?->product_kind ?? 'harian')) {
-                    'harian', 'produk harian', 'daily' => 'daily',
-                    'variasi', 'produk variasi', 'variation' => 'variation',
-                    'non harian', 'non-harian', 'produk non harian', 'produk non-harian', 'non_daily' => 'non_daily',
-                    default => $data['product_kind'],
-                };
+                $data['product_kind'] = Product::normalizeKind($data['product_kind'] ?? $product?->product_kind ?? 'daily');
             }
             $data += [
                 'name' => $product?->name,
@@ -91,12 +86,13 @@ class ProductImportService
                 }
             }
             $rules = $request->rules();
+            $rules['product_kind'] = ['nullable', Rule::in(array_keys(Product::allKinds()))];
             $rules['supplier_names'] = ['sometimes', 'array', 'max:1'];
             $rules['supplier_names.*'] = ['string', 'max:255'];
             foreach (['sku', 'barcode'] as $field) {
-                $rules[$field] = ['nullable', 'string', 'max:100', Rule::unique('products', $field)->ignore($product?->id)];
+                $rules[$field] = ['nullable', 'string', 'max:100', Rule::unique('products', 'field')->ignore($product?->id)];
             }
-            $validator = Validator::make($data, $rules, array_merge($request->messages(), ['product_kind.in' => 'Tipe Produk harus Harian, Non-Harian, atau Variasi. Boleh dikosongkan.', 'supplier_names.max' => 'Satu baris produk hanya boleh memiliki satu distributor. Gunakan baris terpisah untuk distributor lain.']));
+            $validator = Validator::make($data, $rules, array_merge($request->messages(), ['product_kind.in' => 'Tipe Produk harus Harian, Non-Harian, Variasi, Body, atau Printilan. Boleh dikosongkan.', 'supplier_names.max' => 'Satu baris produk hanya boleh memiliki satu distributor. Gunakan baris terpisah untuk distributor lain.']));
             foreach ($validator->errors()->all() as $message) {
                 $errors[] = 'Baris '.$number.': '.$message;
             }

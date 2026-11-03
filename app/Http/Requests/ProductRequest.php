@@ -10,6 +10,9 @@ class ProductRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
+        if ($this->filled('product_kind')) {
+            $this->merge(['product_kind' => Product::normalizeKind($this->input('product_kind'))]);
+        }
         if ($this->boolean('_sync_distributors') && ! $this->has('distributor_ids')) {
             if ($this->filled('distributor_id')) {
                 $this->merge(['distributor_ids' => [$this->integer('distributor_id')]]);
@@ -39,7 +42,7 @@ class ProductRequest extends FormRequest
             'stock_minimum' => ['required', 'integer', 'min:0', 'max:100000000'],
             'quantity' => ['required_without:initial_stock', 'integer', 'min:0', 'max:100000000'],
             'initial_stock' => ['sometimes', 'integer', 'min:0', 'max:100000000'],
-            'product_kind' => ['sometimes', Rule::in(array_keys(Product::KINDS))],
+            'product_kind' => ['sometimes', 'nullable', 'string', 'max:20'],
             'brand_id' => ['nullable', Rule::exists('brands', 'id')->whereNull('deleted_at')],
             'type_id' => ['nullable', Rule::exists('product_types', 'id')->whereNull('deleted_at')],
             'color_id' => ['nullable', Rule::exists('colors', 'id')->whereNull('deleted_at')],
