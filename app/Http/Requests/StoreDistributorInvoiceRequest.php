@@ -22,6 +22,12 @@ class StoreDistributorInvoiceRequest extends FormRequest
                 $this->merge(['distributor_id' => $match]);
             }
         }
+
+        if ($this->filled('received_on') && ! $this->filled('invoiced_on')) {
+            $this->merge(['invoiced_on' => $this->input('received_on')]);
+        } elseif ($this->filled('invoiced_on') && ! $this->filled('received_on')) {
+            $this->merge(['received_on' => $this->input('invoiced_on')]);
+        }
     }
 
     /** @return array<string, mixed> */
@@ -51,7 +57,7 @@ class StoreDistributorInvoiceRequest extends FormRequest
             'reference.unique' => 'Nomor invoice ini sudah digunakan.',
             'received_on.date_format' => 'Tanggal masuk barang harus berupa tanggal yang valid.',
             'due_on.required' => 'Tanggal jatuh tempo wajib diisi.',
-            'due_on.after_or_equal' => 'Jatuh tempo tidak boleh sebelum tanggal faktur.',
+            'due_on.after_or_equal' => 'Jatuh tempo tidak boleh sebelum tanggal masuk barang.',
             'total.required' => 'Total tagihan wajib diisi.',
             'total.min' => 'Total tagihan harus lebih dari 0.',
         ];

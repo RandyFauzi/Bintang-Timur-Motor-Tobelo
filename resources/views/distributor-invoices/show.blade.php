@@ -42,16 +42,21 @@
     </section>
     <section class="catalogue-surface grid gap-5 p-5 sm:grid-cols-2">
         <div>
-            <p class="text-sm text-muted">Tanggal Faktur Distributor</p>
-            <p class="mt-2 font-medium">{{ $invoice->invoiced_on?->format('d/m/Y') ?? 'Belum diisi sesuai dokumen distributor' }}</p>
-            <p class="mt-1 text-xs text-muted">Terpisah dari tanggal PO dan tanggal barang masuk.</p>
-        </div>
-        <div>
             <p class="text-sm text-muted">Tanggal Masuk Barang</p>
             <p class="mt-2 font-medium">{{ $invoice->receivedAt() ? ($invoice->shipment_id ? $invoice->receivedAt()->format('d/m/Y H:i').' WIT' : $invoice->receivedAt()->format('d/m/Y')) : '-' }}</p>
             @if(!$invoice->receivedAt())
                 <p class="mt-1 text-sm">{{ $invoice->shipment ? 'Menunggu konfirmasi barang tiba' : 'Tanggal masuk belum diisi' }}</p>
             @endif
+        </div>
+        <div>
+            <p class="text-sm text-muted">Jatuh Tempo</p>
+            <p class="mt-2 font-medium">{{ $invoice->due_on->format('d/m/Y') }}</p>
+            <p class="mt-1 text-xs text-muted">{{ $invoice->timingLabel() }}</p>
+        </div>
+        <div>
+            <p class="text-sm text-muted">Tanggal Faktur Distributor</p>
+            <p class="mt-2 font-medium">{{ $invoice->invoiced_on?->format('d/m/Y') ?? 'Belum diisi sesuai dokumen distributor' }}</p>
+            <p class="mt-1 text-xs text-muted">Terpisah dari tanggal PO dan tanggal barang masuk.</p>
         </div>
         <div class="sm:col-span-2">
             <p class="text-sm text-muted">Kargo Kapal</p>
@@ -215,8 +220,7 @@
                     <x-ui.field name="total" label="Total Tagihan (Rp)" type="number" min="0.01" max="90000000000000" step="0.01" :value="old('total', number_format($invoice->total_cents/100,2,'.',''))" hint="Minimal Rp {{ number_format($invoice->paid_cents/100,2,',','.') }} (tidak boleh kurang dari yang sudah dibayar)." required />
                 @endif
                 <x-ui.field name="received_on" label="Tanggal Masuk Barang" type="date" :value="old('received_on', $invoice->receivedAt()?->toDateString())" hint="Otomatis mengikuti kedatangan kargo, tetapi bisa diubah/diedit manual jika ada koreksi." />
-                <x-ui.field name="invoiced_on" label="Tanggal Faktur Distributor" type="date" :value="$invoice->invoiced_on?->toDateString()" hint="Isi tanggal resmi pada dokumen faktur, bukan tanggal PO." :readonly="$invoice->purchaseOrder?->note_issued ?? false" />
-                <x-ui.field name="due_on" label="Jatuh Tempo" type="date" :value="$invoice->due_on->toDateString()" :min="$invoice->purchaseOrder ? $invoice->purchaseOrder->ordered_on->toDateString() : ($invoice->invoiced_on ? $invoice->invoiced_on->toDateString() : null)" required />
+                <x-ui.field name="due_on" label="Jatuh Tempo" type="date" :value="$invoice->due_on->toDateString()" :min="$invoice->purchaseOrder ? $invoice->purchaseOrder->ordered_on->toDateString() : ($invoice->receivedAt() ? $invoice->receivedAt()->toDateString() : null)" required />
                 <x-ui.field name="supplier_reference" label="Nomor Nota Distributor (opsional)" :value="$invoice->supplier_reference" maxlength="255" :readonly="$invoice->purchaseOrder?->note_issued ?? false" />
                 <x-ui.field name="shipment_id" label="Kargo Kapal" hint="Satu kargo dapat memuat beberapa faktur. Tanggal masuk mengikuti konfirmasi Sudah Sampai.">
                     <select id="shipment_id" name="shipment_id" class="form-input" @disabled($invoice->purchaseOrder?->note_issued ?? false)>

@@ -20,7 +20,7 @@ class DistributorInvoiceReceivedDateImportTest extends TestCase
     #[TestWith(['46323'])]
     public function test_import_saves_receipt_date_and_displays_it_on_invoice(string $date): void
     {
-        $file = $this->createExcelFile([['RECEIPT-1', 'Distributor A', '2026-10-01', '2026-11-30', '120000', '', '', $date]]);
+        $file = $this->createExcelFile([['RECEIPT-1', 'Distributor A', $date, '2026-11-30', '120000', '', '']]);
         $this->post(route('distributor-invoices.import'), ['file' => $file])->assertSessionHasNoErrors();
         $invoice = DistributorInvoice::where('reference', 'RECEIPT-1')->firstOrFail();
         $this->assertSame('2026-10-28', $invoice->received_on->toDateString());
@@ -31,8 +31,8 @@ class DistributorInvoiceReceivedDateImportTest extends TestCase
     public function test_invalid_receipt_date_rolls_back_the_entire_import(): void
     {
         $file = $this->createExcelFile([
-            ['VALID', 'New Distributor', '2026-10-01', '2026-11-30', '1000', '', '', '2026-10-28'],
-            ['INVALID', 'Other Distributor', '2026-10-01', '2026-11-30', '1000', '', '', '31/02/2026'],
+            ['VALID', 'New Distributor', '2026-10-28', '2026-11-30', '1000', '', ''],
+            ['INVALID', 'Other Distributor', '31/02/2026', '2026-11-30', '1000', '', ''],
         ]);
         $this->post(route('distributor-invoices.import'), ['file' => $file])->assertSessionHasErrors('file');
         $this->assertDatabaseCount('distributor_invoices', 0);
@@ -41,7 +41,7 @@ class DistributorInvoiceReceivedDateImportTest extends TestCase
 
     public function test_old_template_without_receipt_column_still_imports(): void
     {
-        $file = $this->createExcelFile([['LEGACY', 'Distributor A', '2026-10-01', '2026-11-30', '1000', '', '']], legacy: true);
+        $file = $this->createExcelFile([['LEGACY', 'Distributor A', '', '2026-11-30', '1000', '', '']]);
         $this->post(route('distributor-invoices.import'), ['file' => $file])->assertSessionHasNoErrors();
         $this->assertNull(DistributorInvoice::firstOrFail()->receivedAt());
     }

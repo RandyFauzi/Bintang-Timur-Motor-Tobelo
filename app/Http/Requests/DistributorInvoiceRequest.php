@@ -22,6 +22,10 @@ class DistributorInvoiceRequest extends FormRequest
                 $this->merge(['distributor_id' => $match]);
             }
         }
+
+        if ($this->filled('received_on') && ! $this->filled('invoiced_on')) {
+            $this->merge(['invoiced_on' => $this->input('received_on')]);
+        }
     }
 
     public function authorize(): bool

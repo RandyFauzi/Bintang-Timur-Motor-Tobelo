@@ -129,11 +129,12 @@ class DistributorInvoiceService
                 throw ValidationException::withMessages(['reference' => 'Nomor invoice '.$reference.' sudah digunakan.']);
             }
 
-            $invoicedOn = ! empty($data['invoiced_on']) ? $data['invoiced_on'] : DistributorInvoice::today()->toDateString();
+            $receivedOn = ! empty($data['received_on']) ? $data['received_on'] : (! empty($data['invoiced_on']) ? $data['invoiced_on'] : null);
+            $invoicedOn = ! empty($data['invoiced_on']) ? $data['invoiced_on'] : ($receivedOn ?? DistributorInvoice::today()->toDateString());
             $dueOn = $data['due_on'];
 
             if ($invoicedOn && $dueOn < $invoicedOn) {
-                throw ValidationException::withMessages(['due_on' => 'Jatuh tempo tidak boleh sebelum tanggal faktur.']);
+                throw ValidationException::withMessages(['due_on' => 'Jatuh tempo tidak boleh sebelum tanggal masuk barang.']);
             }
 
             return DistributorInvoice::create([
@@ -141,7 +142,7 @@ class DistributorInvoiceService
                 'purchase_order_id' => null,
                 'reference' => $reference,
                 'invoiced_on' => $invoicedOn,
-                'received_on' => $data['received_on'] ?? null,
+                'received_on' => $receivedOn,
                 'due_on' => $dueOn,
                 'total_cents' => $totalCents,
                 'paid_cents' => 0,
@@ -251,13 +252,19 @@ class DistributorInvoiceService
             }
             if (array_key_exists('received_on', $data)) {
                 $invoice->received_on = $data['received_on'] ?: null;
+                if ($invoice->isManual() && $invoice->received_on && empty($data['invoiced_on'])) {
+                    $invoice->invoiced_on = $invoice->received_on;
+                }
             }
-            $invoice->fill(collect($data)->only(['due_on', 'invoiced_on', 'shipment_id', 'supplier_reference', 'notes', 'discrepancy_notes'])->all());
+            if (array_key_exists('invoiced_on', $data) && ! empty($data['invoiced_on'])) {
+                $invoice->invoiced_on = $data['invoiced_on'];
+            }
+            $invoice->fill(collect($data)->only(['due_on', 'shipment_id', 'supplier_reference', 'notes', 'discrepancy_notes'])->all());
             if (array_key_exists('claim_amount', $data)) {
                 $invoice->claim_amount_cents = self::cents($data['claim_amount'] ?? '0');
             }
             if ($invoice->invoiced_on && $invoice->due_on->toDateString() < $invoice->invoiced_on->toDateString()) {
-                throw ValidationException::withMessages(['due_on' => 'Jatuh tempo tidak boleh sebelum tanggal faktur.']);
+                throw ValidationException::withMessages(['due_on' => 'Jatuh tempo tidak boleh sebelum tanggal masuk barang.']);
             }
             if ($invoice->claim_amount_cents > $invoice->total_cents) {
                 throw ValidationException::withMessages(['claim_amount' => 'Nilai klaim tidak boleh melebihi total faktur.']);

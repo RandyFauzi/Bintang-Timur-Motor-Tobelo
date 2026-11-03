@@ -21,25 +21,24 @@ class DistributorInvoiceImportService
     public const HEADERS = [
         'Nomor Invoice',
         'Distributor',
-        'Tanggal Faktur',
+        'Tanggal Masuk',
         'Jatuh Tempo',
         'Total Tagihan',
         'Nomor Nota',
         'Catatan',
-        'Tanggal Masuk Barang',
     ];
 
     public const EXAMPLE_ROWS = [
-        ['INV-202610-001', 'PT Astra Otoparts', '2026-10-25', '2026-11-25', 15000000, 'FAK-88912', 'Tagihan suku cadang bulan Oktober', '2026-10-27'],
-        ['', 'CV Makmur Sentosa', '2026-10-28', '2026-12-28', 7500000, 'SJ-4410', 'Ban & velg motor', ''],
+        ['INV-202610-001', 'PT Astra Otoparts', '2026-10-25', '2026-11-25', 15000000, 'FAK-88912', 'Tagihan suku cadang bulan Oktober'],
+        ['', 'CV Makmur Sentosa', '2026-10-28', '2026-12-28', 7500000, 'SJ-4410', 'Ban & velg motor'],
     ];
 
     /** @var array<string, list<string>> */
     private const COLUMN_ALIASES = [
         'reference' => ['nomorinvoice', 'noinvoice', 'invoice', 'nomortagihan', 'notagihan', 'ref'],
         'distributor' => ['distributor', 'namadistributor', 'supplier', 'pemasok'],
+        'received_on' => ['tanggalmasuk', 'tglmasuk', 'tanggalmasukbarang', 'tanggalditerima', 'tanggalbarangditerima', 'receivedon'],
         'invoiced_on' => ['tanggalfaktur', 'tglfaktur', 'tanggaltagihan', 'tanggalnota', 'tanggal'],
-        'received_on' => ['tanggalmasukbarang', 'tanggalmasuk', 'tglmasuk', 'tanggalditerima', 'tanggalbarangditerima', 'receivedon'],
         'due_on' => ['jatuhtempo', 'tgljatuhtempo', 'tanggaljatuhtempo', 'tempo', 'duedate'],
         'total' => ['totaltagihan', 'totalfaktur', 'total', 'nominal', 'jumlah', 'jumlahbruto'],
         'supplier_reference' => ['nomornota', 'nonota', 'nota', 'suratjalan', 'nosuratjalan'],
@@ -87,22 +86,32 @@ class DistributorInvoiceImportService
                 $errors[] = "Baris {$rowNumber}: Total tagihan tidak valid (harus lebih dari 0).";
             }
 
-            // Invoiced on
+            // Parse received_on and invoiced_on (either column can supply the entry date)
+            $rawReceivedOn = trim($data['received_on'] ?? '');
             $rawInvoicedOn = trim($data['invoiced_on'] ?? '');
+
+            $receivedOn = null;
+            if ($rawReceivedOn !== '') {
+                $receivedOn = $this->parseDate($rawReceivedOn);
+                if (! $receivedOn) {
+                    $errors[] = "Baris {$rowNumber}: Format tanggal masuk '{$rawReceivedOn}' tidak valid (gunakan YYYY-MM-DD atau DD/MM/YYYY).";
+                }
+            }
+
             $invoicedOn = null;
             if ($rawInvoicedOn !== '') {
                 $invoicedOn = $this->parseDate($rawInvoicedOn);
                 if (! $invoicedOn) {
                     $errors[] = "Baris {$rowNumber}: Format tanggal faktur '{$rawInvoicedOn}' tidak valid (gunakan YYYY-MM-DD atau DD/MM/YYYY).";
                 }
-            } else {
-                $invoicedOn = DistributorInvoice::today()->toDateString();
             }
 
-            $rawReceivedOn = trim($data['received_on'] ?? '');
-            $receivedOn = $rawReceivedOn !== '' ? $this->parseDate($rawReceivedOn) : null;
-            if ($rawReceivedOn !== '' && $receivedOn === null) {
-                $errors[] = "Baris {$rowNumber}: Format tanggal masuk barang '{$rawReceivedOn}' tidak valid (gunakan YYYY-MM-DD atau DD/MM/YYYY).";
+            if ($receivedOn !== null && $invoicedOn === null) {
+                $invoicedOn = $receivedOn;
+            } elseif ($invoicedOn !== null && $receivedOn === null) {
+                $receivedOn = $invoicedOn;
+            } elseif ($invoicedOn === null && $receivedOn === null) {
+                $invoicedOn = DistributorInvoice::today()->toDateString();
             }
 
             // Due on
@@ -115,7 +124,7 @@ class DistributorInvoiceImportService
                 if (! $dueOn) {
                     $errors[] = "Baris {$rowNumber}: Format tanggal jatuh tempo '{$rawDueOn}' tidak valid (gunakan YYYY-MM-DD atau DD/MM/YYYY).";
                 } elseif ($invoicedOn && $dueOn < $invoicedOn) {
-                    $errors[] = "Baris {$rowNumber}: Jatuh tempo ({$dueOn}) tidak boleh sebelum tanggal faktur ({$invoicedOn}).";
+                    $errors[] = "Baris {$rowNumber}: Jatuh tempo ({$dueOn}) tidak boleh sebelum tanggal masuk ({$invoicedOn}).";
                 }
             }
 
