@@ -45,7 +45,7 @@
         </button>
     </div>
 
-    <nav class="sidebar-navigation sidebar-scroll">
+    <nav id="sidebar-navigation" class="sidebar-navigation sidebar-scroll">
         @foreach ($navigation as $group)
             @php
                 $visibleItems = collect($group['items'])->filter(function ($item) {
@@ -93,6 +93,28 @@
             @endif
         @endforeach
     </nav>
+    <script>
+        (function() {
+            try {
+                var nav = document.getElementById('sidebar-navigation');
+                if (!nav) return;
+                var saved = sessionStorage.getItem('bt_sidebar_scroll');
+                if (saved !== null) {
+                    nav.scrollTop = parseInt(saved, 10);
+                }
+                var active = nav.querySelector('.sidebar-link--active, [aria-current="page"]');
+                if (active) {
+                    var navRect = nav.getBoundingClientRect();
+                    var activeRect = active.getBoundingClientRect();
+                    if (activeRect.top < navRect.top + 20 || activeRect.bottom > navRect.bottom - 20) {
+                        var target = nav.scrollTop + (activeRect.top - navRect.top) - (nav.clientHeight / 2) + (active.clientHeight / 2);
+                        nav.scrollTop = Math.max(0, target);
+                        sessionStorage.setItem('bt_sidebar_scroll', String(nav.scrollTop));
+                    }
+                }
+            } catch (e) {}
+        })();
+    </script>
 
     <div class="sidebar-footer" x-data="stockNotifications(@js($stockAlerts), @js($shipmentNotifications), @js(route('shipments.notifications')), @js($stockOverview['count']), @js($invoiceNotifications))" @focus.window="refresh()" @watch-shipments.window="watch($event.detail.ids)">
         <div class="sidebar-profile" x-data="{ profileOpen: false }" @click.outside="profileOpen = false" @keydown.escape.stop="profileOpen = false; $refs.profile.focus()">

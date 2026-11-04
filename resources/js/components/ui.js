@@ -16,7 +16,55 @@ export function appShell() {
             this.media.addEventListener('change', this.mediaListener);
             this.$watch('collapsed', (value) => {
                 try { localStorage.setItem('sidebarCollapsed', String(value)); } catch {}
+                this.$nextTick(() => this.restoreSidebarScroll());
             });
+            this.restoreSidebarScroll();
+            this.bindSidebarScrollEvents();
+        },
+        restoreSidebarScroll() {
+            const nav = document.getElementById('sidebar-navigation') || document.querySelector('.sidebar-navigation');
+            if (!nav) return;
+
+            try {
+                const saved = sessionStorage.getItem('bt_sidebar_scroll');
+                if (saved !== null) {
+                    nav.scrollTop = parseInt(saved, 10);
+                }
+
+                const active = nav.querySelector('.sidebar-link--active, [aria-current="page"]');
+                if (active) {
+                    const navRect = nav.getBoundingClientRect();
+                    const activeRect = active.getBoundingClientRect();
+                    const isOutOfView = (activeRect.top < navRect.top + 20) || (activeRect.bottom > navRect.bottom - 20);
+                    if (isOutOfView) {
+                        const target = nav.scrollTop + (activeRect.top - navRect.top) - (nav.clientHeight / 2) + (active.clientHeight / 2);
+                        nav.scrollTop = Math.max(0, target);
+                        sessionStorage.setItem('bt_sidebar_scroll', String(nav.scrollTop));
+                    }
+                }
+            } catch {}
+        },
+        bindSidebarScrollEvents() {
+            const nav = document.getElementById('sidebar-navigation') || document.querySelector('.sidebar-navigation');
+            if (!nav || nav.dataset.scrollBound) return;
+            nav.dataset.scrollBound = 'true';
+
+            let ticking = false;
+            nav.addEventListener('scroll', () => {
+                if (!ticking) {
+                    window.requestAnimationFrame(() => {
+                        try { sessionStorage.setItem('bt_sidebar_scroll', String(nav.scrollTop)); } catch {}
+                        ticking = false;
+                    });
+                    ticking = true;
+                }
+            }, { passive: true });
+
+            nav.addEventListener('click', (event) => {
+                if (event.target.closest('a')) {
+                    try { sessionStorage.setItem('bt_sidebar_scroll', String(nav.scrollTop)); } catch {}
+                }
+            }, { passive: true });
         },
         toggleSidebar() {
             if (this.isMobile) this.closeMobileMenu();
@@ -25,7 +73,10 @@ export function appShell() {
         openMobileMenu() {
             this.mobileMenuOpen = true;
             document.body.style.overflow = 'hidden';
-            this.$nextTick(() => document.querySelector('#app-sidebar a')?.focus());
+            this.$nextTick(() => {
+                this.restoreSidebarScroll();
+                document.querySelector('#app-sidebar a')?.focus();
+            });
         },
         closeMobileMenu() {
             if (!this.mobileMenuOpen) return;
