@@ -166,10 +166,10 @@ class ActivityRecorder
             'GET','HEAD' => $status >= 400 ? ($result === 'denied' ? 'access_denied' : 'request_failed') : 'update', 'POST' => str_ends_with($name ?? '', '.store') ? 'create' : 'submit', 'PUT','PATCH' => 'update', 'DELETE' => 'delete', default => 'submit'
         });
         $action = match ($name) {
-            'pos.checkout' => 'checkout', 'pos.scan' => 'scan', 'returns.cancel' => 'cancel', 'returns.bulk' => 'bulk', default => $action
+            'activity-logs.undo' => 'undo', 'pos.checkout' => 'checkout', 'pos.scan' => 'scan', 'returns.cancel' => 'cancel', 'returns.bulk' => 'bulk', default => $action
         };
         try {
-            ActivityLog::create(($this->actor ?? ['user_id' => null, 'actor_name' => 'Tamu', 'actor_role' => null]) + [
+            $createdLog = ActivityLog::create(($this->actor ?? ['user_id' => null, 'actor_name' => 'Tamu', 'actor_role' => null]) + [
                 'request_id' => $requestId, 'action' => $action, 'module' => $module, 'route_name' => $name,
                 'method' => $request->method(), 'route_path' => Str::limit($route?->uri() ?? 'unknown', 255, ''),
                 'status_code' => $status, 'result' => $result, 'ip_address' => null,
@@ -179,6 +179,14 @@ class ActivityRecorder
                 'metadata' => ['targets' => $this->targets($request), 'changes_truncated' => $this->truncated, 'parameters' => array_values(array_intersect(array_keys($request->all()), ['search', 'period', 'view', 'kind', 'low_stock', 'category', 'amount', 'expense_date', 'items', 'quantity', 'role', 'user_id', 'module', 'action', 'result', 'start_date', 'end_date', 'detail', 'edit', 'invoice']))],
                 'occurred_at' => now(),
             ]);
+
+            if ($action === 'undo') {
+                $targetLog = $request->route('activityLog');
+                $targetId = $targetLog instanceof ActivityLog ? $targetLog->id : (int) $targetLog;
+                if ($targetId > 0) {
+                    DB::table('activity_logs')->where('id', $targetId)->update(['undo_activity_log_id' => $createdLog->id]);
+                }
+            }
         } catch (Throwable $exception) {
             Log::critical('Audit activity could not be persisted.', ['request_id' => $requestId, 'route' => $name, 'exception_type' => $exception::class]);
         } finally {

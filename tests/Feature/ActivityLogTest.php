@@ -188,6 +188,149 @@ class ActivityLogTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => 'admin']))->get(route('activity-logs.index', ['end_date' => now()->toDateString(), 'per_page' => 6]))->assertOk();
     }
 
+    public function test_admin_can_undo_an_update_and_it_is_logged_as_undo(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = Product::factory()->withStock(10)->create([
+            'selling_price' => 50000,
+        ]);
+
+        $this->actingAs($admin)->patch(route('products.update', $product), [
+            'selling_price' => 75000,
+            'quantity' => 15,
+            'stock_minimum' => 3,
+        ])->assertRedirect();
+
+        $updateLog = ActivityLog::where('route_name', 'products.update')->latest('id')->firstOrFail();
+        $this->assertTrue($updateLog->canBeUndone());
+        $this->assertFalse($updateLog->isUndone());
+
+        // Perform undo
+        $response = $this->actingAs($admin)->post(route('activity-logs.undo', $updateLog));
+        $response->assertSessionHas('success');
+
+        $product->refresh();
+        $this->assertSame(50000, (int) $product->selling_price);
+
+        $updateLog->refresh();
+        $this->assertTrue($updateLog->isUndone());
+        $this->assertSame($admin->id, $updateLog->undone_by_user_id);
+        $this->assertNotNull($updateLog->undo_activity_log_id);
+
+        // Check undo audit log entry
+        $undoLog = ActivityLog::find($updateLog->undo_activity_log_id);
+        $this->assertNotNull($undoLog);
+        $this->assertSame('undo', $undoLog->action);
+        $this->assertSame('activity-logs', $undoLog->module);
+        $this->assertSame($admin->id, $undoLog->user_id);
+    }
+
+    public function test_admin_can_undo_a_deletion_and_restore_soft_deleted_model(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = Product::factory()->create(['name' => 'Produk Akan Dihapus']);
+
+        $this->actingAs($admin)->delete(route('products.destroy', $product))->assertRedirect();
+        $this->assertSoftDeleted('products', ['id' => $product->id]);
+
+        $deleteLog = ActivityLog::where('route_name', 'products.destroy')->firstOrFail();
+        $this->assertTrue($deleteLog->canBeUndone());
+
+        // Perform undo
+        $this->actingAs($admin)->post(route('activity-logs.undo', $deleteLog))->assertSessionHas('success');
+
+        $this->assertNotSoftDeleted('products', ['id' => $product->id]);
+        $this->assertTrue($deleteLog->fresh()->isUndone());
+    }
+
+    public function test_admin_can_undo_a_creation_and_entity_is_removed(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->post(route('reports.expenses.store'), [
+            'category' => 'Operasional',
+            'amount' => 50000,
+            'expense_date' => now()->toDateString(),
+        ])->assertRedirect();
+
+        $this->assertDatabaseCount('expenses', 1);
+        $createLog = ActivityLog::where('route_name', 'reports.expenses.store')->firstOrFail();
+
+        // Perform undo
+        $this->actingAs($admin)->post(route('activity-logs.undo', $createLog))->assertSessionHas('success');
+
+        $this->assertDatabaseCount('expenses', 0);
+        $this->assertTrue($createLog->fresh()->isUndone());
+    }
+
+    public function test_undone_activity_cannot_be_undone_again(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = Product::factory()->withStock(10)->create(['selling_price' => 30000]);
+
+        $this->actingAs($admin)->patch(route('products.update', $product), [
+            'name' => $product->name,
+            'purchase_price' => $product->purchase_price,
+            'selling_price' => 45000,
+            'quantity' => 10,
+            'stock_minimum' => 2,
+        ])->assertSessionHasNoErrors()->assertRedirect();
+
+        $log = ActivityLog::where('route_name', 'products.update')->latest('id')->firstOrFail();
+
+        // Undo first time
+        $this->actingAs($admin)->post(route('activity-logs.undo', $log))->assertSessionHas('success');
+
+        // Undo second time should fail
+        $response = $this->actingAs($admin)->post(route('activity-logs.undo', $log));
+        $response->assertSessionHasErrors('activity');
+    }
+
+    public function test_staff_cannot_undo_activity(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $staff = User::factory()->create(['role' => 'staff']);
+        $product = Product::factory()->withStock(10)->create(['selling_price' => 20000]);
+
+        $this->actingAs($admin)->patch(route('products.update', $product), [
+            'name' => $product->name,
+            'purchase_price' => $product->purchase_price,
+            'selling_price' => 30000,
+            'quantity' => 10,
+            'stock_minimum' => 2,
+        ])->assertSessionHasNoErrors()->assertRedirect();
+
+        $log = ActivityLog::where('route_name', 'products.update')->latest('id')->firstOrFail();
+
+        $this->actingAs($staff)->post(route('activity-logs.undo', $log))->assertForbidden();
+    }
+
+    public function test_activity_detail_renders_human_friendly_changes_presentation(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = Product::factory()->withStock(10)->create(['name' => 'Busi Honda Beat', 'selling_price' => 25000]);
+
+        $this->actingAs($admin)->patch(route('products.update', $product), [
+            'name' => 'Busi Honda Beat Baru',
+            'purchase_price' => $product->purchase_price,
+            'selling_price' => 30000,
+            'quantity' => 10,
+            'stock_minimum' => 2,
+        ])->assertSessionHasNoErrors()->assertRedirect();
+
+        $log = ActivityLog::where('route_name', 'products.update')->latest('id')->firstOrFail();
+
+        $response = $this->actingAs($admin)->get(route('activity-logs.index', ['detail' => $log->id]));
+        $response->assertOk();
+
+        // Should render Indonesian presenter labels and human-friendly diff
+        $response->assertSee('Perubahan Data');
+        $response->assertSee('Harga Jual');
+        $response->assertSee('Sebelum');
+        $response->assertSee('Sesudah');
+        $response->assertSee('Kembalikan Perubahan');
+    }
+
     public function test_model_rejects_deleting_an_existing_audit_entry(): void
     {
         $log = ActivityLog::factory()->create();

@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ActivityLogFilterRequest;
 use App\Models\ActivityLog;
+use App\Services\ActivityChangePresenter;
+use App\Services\ActivityUndoService;
 use App\Services\CsvExportService;
 use App\Services\ExcelExportService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -35,15 +38,35 @@ class ActivityLogController extends Controller
         return $query;
     }
 
-    public function index(ActivityLogFilterRequest $request): View
+    public function index(ActivityLogFilterRequest $request, ActivityChangePresenter $presenter): View
     {
         $filters = $request->validated();
         $query = $this->query($filters);
         $summary = ['total' => (clone $query)->count(), 'failed' => (clone $query)->whereIn('result', ['failed', 'denied'])->count(), 'users' => (clone $query)->whereNotNull('user_id')->distinct()->count('user_id')];
         $logs = $query->orderByDesc('occurred_at')->orderByDesc('id')->paginate($filters['per_page'] ?? 25)->withQueryString()->appends(['detail' => null]);
         $detail = ! empty($filters['detail']) ? ActivityLog::where('action', '!=', 'view')->findOrFail($filters['detail']) : null;
+        $presentedChanges = $detail ? $presenter->presentAll($detail->changes ?? []) : [];
 
-        return view('activity-logs.index', ['logs' => $logs, 'summary' => $summary, 'detail' => $detail, 'users' => ActivityLog::where('action', '!=', 'view')->whereNotNull('user_id')->select(['user_id as id', 'actor_name as name'])->distinct()->orderBy('name')->limit(500)->get(), 'actions' => ActivityLog::ACTIONS, 'results' => ActivityLog::RESULTS, 'modules' => ActivityLog::MODULES]);
+        return view('activity-logs.index', [
+            'logs' => $logs,
+            'summary' => $summary,
+            'detail' => $detail,
+            'presentedChanges' => $presentedChanges,
+            'users' => ActivityLog::where('action', '!=', 'view')->whereNotNull('user_id')->select(['user_id as id', 'actor_name as name'])->distinct()->orderBy('name')->limit(500)->get(),
+            'actions' => ActivityLog::ACTIONS,
+            'results' => ActivityLog::RESULTS,
+            'modules' => ActivityLog::MODULES,
+        ]);
+    }
+
+    public function undo(ActivityLog $activityLog, ActivityUndoService $undoService): RedirectResponse
+    {
+        $actor = auth()->user();
+        $description = $activityLog->summaryDescription();
+
+        $undoService->undo($activityLog, $actor);
+
+        return back()->with('success', "Perubahan data dari \"{$description}\" berhasil dikembalikan (di-undo) dan dicatat ke log aktivitas.");
     }
 
     public function export(ActivityLogFilterRequest $request, CsvExportService $csv, ExcelExportService $excel): StreamedResponse
