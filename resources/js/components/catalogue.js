@@ -175,11 +175,16 @@ export function multiSelect(options, selected, label, submitOnApply = true) {
 export function observationForm(initial, types, workshops, endpoints) {
     return {
         form: { ...initial, items: Object.values(initial.items ?? {}).map((item) => ({ work_type_id: String(item.work_type_id), quantity: Number(item.quantity) })) },
+        setNoWork(checked) {
+            this.form.no_work = checked;
+            if (checked) this.form.items = [];
+        },
         types, workshops, endpoints, lookupKind: 'workshops', newNames: [''], lookupBusy: false, lookupError: '',
         get total() { return this.form.items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0); },
         typeName(id) { return this.types.find((type) => String(type.id) === String(id))?.name ?? ''; },
         hasType(id) { return this.form.items.some((item) => item.work_type_id === String(id)); },
         toggleType(id, checked) {
+            if (this.form.no_work) return;
             const value = String(id);
             if (checked && !this.hasType(value)) this.form.items.push({ work_type_id: value, quantity: 1 });
             if (!checked) this.form.items = this.form.items.filter((item) => item.work_type_id !== value);

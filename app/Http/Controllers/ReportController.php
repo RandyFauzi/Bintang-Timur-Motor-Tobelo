@@ -25,7 +25,7 @@ class ReportController extends Controller
 
     public function export(ReportFilterRequest $request, CompetitorReportService $service, CsvExportService $csv, ExcelExportService $excel): StreamedResponse
     {
-        $rows = $service->query($request->validated())->lazy(200)->map(fn (CompetitorObservation $row): array => [$row->observed_on->toDateString(), $row->workshop->name, sprintf('%02d.00', $row->observed_hour), $row->workTypes->sum('pivot.quantity'), $row->workTypes->map(fn (WorkType $type): string => $type->name.' ('.$type->pivot->quantity.')')->join(', ')]);
+        $rows = $service->query($request->validated())->lazy(200)->map(fn (CompetitorObservation $row): array => [$row->observed_on->toDateString(), $row->workshop->name, sprintf('%02d.00', $row->observed_hour), $row->workTypes->sum('pivot.quantity'), ($row->workTypes->map(fn (WorkType $type): string => $type->name.' ('.$type->pivot->quantity.')')->join(', ') ?: 'Kosong (0 pengerjaan)')]);
         $headers = ['Tanggal', 'Bengkel', 'Jam', 'Jumlah', 'Jenis Pengerjaan'];
 
         if ($request->query('format') === 'xlsx' || $request->query('format') === 'excel') {

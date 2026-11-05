@@ -11,7 +11,13 @@
                 <select id="observed_hour" name="observed_hour" class="form-input" x-model="form.observed_hour" required><option value="">Pilih jam</option>@foreach([11,15] as $hour)<option value="{{ $hour }}">Jam {{ sprintf('%02d.00',$hour) }}</option>@endforeach</select>
             </x-ui.field>
         </div>
-        <fieldset class="observation-types"><legend>Jenis Pengerjaan</legend>
+        <input type="hidden" name="no_work" :value="form.no_work ? '1' : '0'">
+        <label class="work-type-choice" :class="{ 'is-selected': form.no_work }">
+            <input type="checkbox" :checked="form.no_work" @change="setNoWork($event.target.checked)">
+            <span>Tidak ada pengerjaan (Kosong / 0)</span>
+        </label>
+        <p class="text-sm text-muted" x-show="form.no_work">Pengamatan tetap tercatat pada tanggal dan jam ini dengan total 0 pengerjaan.</p>
+        <fieldset class="observation-types" :disabled="form.no_work" x-show="!form.no_work"><legend>Jenis Pengerjaan</legend>
             <div class="work-type-options"><template x-for="type in types" :key="type.id"><label class="work-type-choice" :class="{ 'is-selected': hasType(type.id) }"><input type="checkbox" :checked="hasType(type.id)" @change="toggleType(type.id, $event.target.checked)"><span x-text="type.name"></span></label></template></div>
             <button type="button" class="lookup-add-button" @click="openLookup('types')">+ Tambah Jenis Pengerjaan Baru</button>
             @error('items')<p class="field-error">{{ $message }}</p>@enderror
@@ -34,7 +40,7 @@
                 </button>
             @endif
             <button type="button" class="ui-button ui-button--cancel" @click="$el.closest('dialog').close()">Batalkan</button>
-            <button type="submit" class="ui-button" :disabled="submitting || form.items.length === 0" x-text="submitting ? 'Menyimpan…' : 'Simpan Pengerjaan'">Simpan Pengerjaan</button>
+            <button type="submit" class="ui-button" :disabled="submitting || (!form.no_work && form.items.length === 0)" x-text="submitting ? 'Menyimpan…' : 'Simpan Pengerjaan'">Simpan Pengerjaan</button>
         </footer>
     </form>
 </x-ui.dialog>

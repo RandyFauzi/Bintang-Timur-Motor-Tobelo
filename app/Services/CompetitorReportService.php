@@ -108,7 +108,7 @@ class CompetitorReportService
                 $observation->update($attributes);
             }
             $items = [];
-            foreach ($data['items'] as $item) {
+            foreach ($data['items'] ?? [] as $item) {
                 $items[$item['work_type_id']] = ['quantity' => $item['quantity']];
             }
             $observation->workTypes()->sync($items);

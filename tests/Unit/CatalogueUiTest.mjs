@@ -438,3 +438,16 @@ test('customSelectAutocomplete filters options, selects items, and toggles dropd
     assert.equal(comp.query, 'Aksesoris');
     assert.equal(comp.open, false);
 });
+
+test('empty observation clears work items and can return to recording actual work', () => {
+    const state = observationForm({items:[{work_type_id:'1', quantity:4}], no_work:false}, options, [], {});
+    state.setNoWork(true);
+    assert.equal(state.form.no_work, true);
+    assert.deepEqual(state.form.items, []);
+    assert.equal(state.total, 0);
+    state.toggleType('2', true);
+    assert.deepEqual(state.form.items, []);
+    state.setNoWork(false);
+    state.toggleType('2', true);
+    assert.equal(state.total, 1);
+});
