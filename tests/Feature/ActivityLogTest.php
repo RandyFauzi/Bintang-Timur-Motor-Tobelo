@@ -385,6 +385,46 @@ class ActivityLogTest extends TestCase
         $this->assertSame($admin->id, $redoAudit->user_id);
     }
 
+    public function test_undo_activity_row_links_to_target_and_allows_redo_proxy(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = Product::factory()->withStock(10)->create(['selling_price' => 50000]);
+
+        $this->actingAs($admin)->patch(route('products.update', $product), [
+            'name' => $product->name,
+            'purchase_price' => $product->purchase_price,
+            'selling_price' => 75000,
+            'quantity' => 10,
+            'stock_minimum' => 2,
+        ])->assertSessionHasNoErrors();
+
+        $originalLog = ActivityLog::where('route_name', 'products.update')->latest('id')->firstOrFail();
+
+        // Perform undo
+        $this->actingAs($admin)->post(route('activity-logs.undo', $originalLog))->assertSessionHas('success');
+
+        $undoLog = ActivityLog::where('action', 'undo')->latest('id')->firstOrFail();
+
+        // The undo activity row recognizes its target and offers effective redo
+        $this->assertNotNull($undoLog->effectiveRedoLog());
+        $this->assertSame($originalLog->id, $undoLog->effectiveRedoLog()->id);
+
+        // View displays Redo button and target link
+        $response = $this->actingAs($admin)->get(route('activity-logs.index', ['detail' => $undoLog->id]));
+        $response->assertOk();
+        $response->assertSee('Undo Aktif');
+        $response->assertSee('Terapkan Ulang (Redo)');
+
+        // Test status filter
+        $undoneFilterResponse = $this->actingAs($admin)->get(route('activity-logs.index', ['status' => 'undone']));
+        $undoneFilterResponse->assertOk();
+        $undoneFilterResponse->assertSee($originalLog->request_id);
+
+        $activeFilterResponse = $this->actingAs($admin)->get(route('activity-logs.index', ['status' => 'active']));
+        $activeFilterResponse->assertOk();
+        $activeFilterResponse->assertDontSee($originalLog->request_id);
+    }
+
     public function test_model_rejects_deleting_an_existing_audit_entry(): void
     {
         $log = ActivityLog::factory()->create();

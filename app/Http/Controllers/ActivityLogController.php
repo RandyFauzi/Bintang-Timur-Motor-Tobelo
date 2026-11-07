@@ -34,6 +34,13 @@ class ActivityLogController extends Controller
         if (! empty($filters['end_date'])) {
             $query->where('occurred_at', '<=', $filters['end_date'].' 23:59:59.999999');
         }
+        if (! empty($filters['status'])) {
+            if ($filters['status'] === 'undone') {
+                $query->whereNotNull('undone_at');
+            } elseif ($filters['status'] === 'active') {
+                $query->whereNull('undone_at');
+            }
+        }
 
         return $query;
     }
@@ -46,6 +53,35 @@ class ActivityLogController extends Controller
         $logs = $query->orderByDesc('occurred_at')->orderByDesc('id')->paginate($filters['per_page'] ?? 25)->withQueryString()->appends(['detail' => null]);
         $detail = ! empty($filters['detail']) ? ActivityLog::where('action', '!=', 'view')->findOrFail($filters['detail']) : null;
         $presentedChanges = $detail ? $presenter->presentAll($detail->changes ?? []) : [];
+
+        $targetIds = $logs->getCollection()
+            ->filter(fn (ActivityLog $log): bool => in_array($log->action, ['undo', 'redo'], true))
+            ->map(fn (ActivityLog $log): ?int => $log->getTargetActivityLogId())
+            ->filter()
+            ->unique();
+
+        if ($detail && in_array($detail->action, ['undo', 'redo'], true)) {
+            $detailTargetId = $detail->getTargetActivityLogId();
+            if ($detailTargetId) {
+                $targetIds->push($detailTargetId);
+            }
+        }
+
+        $targetLogs = $targetIds->isNotEmpty()
+            ? ActivityLog::whereIn('id', $targetIds->unique()->values())->get()->keyBy('id')
+            : collect();
+
+        foreach ($logs as $log) {
+            if (in_array($log->action, ['undo', 'redo'], true)) {
+                $tid = $log->getTargetActivityLogId();
+                $log->setRelation('targetActivityLog', $tid ? $targetLogs->get($tid) : null);
+            }
+        }
+
+        if ($detail && in_array($detail->action, ['undo', 'redo'], true)) {
+            $dtid = $detail->getTargetActivityLogId();
+            $detail->setRelation('targetActivityLog', $dtid ? $targetLogs->get($dtid) : null);
+        }
 
         return view('activity-logs.index', [
             'logs' => $logs,

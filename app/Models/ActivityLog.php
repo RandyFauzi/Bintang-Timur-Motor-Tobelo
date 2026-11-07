@@ -61,14 +61,94 @@ class ActivityLog extends Model
         return ! empty($recordedChanges);
     }
 
+    public function getTargetActivityLogId(): ?int
+    {
+        $targets = $this->metadata['targets'] ?? [];
+        $targetId = $targets['activityLog'] ?? $targets['id'] ?? null;
+        if ($targetId !== null && is_numeric($targetId)) {
+            return (int) $targetId;
+        }
+
+        if ($this->action === 'undo' && $this->id) {
+            $foundId = DB::table('activity_logs')
+                ->where('undo_activity_log_id', $this->id)
+                ->value('id');
+            if ($foundId) {
+                return (int) $foundId;
+            }
+        }
+
+        return null;
+    }
+
+    public function targetActivityLog(): ?ActivityLog
+    {
+        $targetId = $this->getTargetActivityLogId();
+        if (! $targetId) {
+            return null;
+        }
+
+        return ActivityLog::find($targetId);
+    }
+
+    public function getResolvedTargetActivityLog(): ?ActivityLog
+    {
+        if ($this->relationLoaded('targetActivityLog')) {
+            return $this->getRelation('targetActivityLog');
+        }
+
+        return $this->targetActivityLog();
+    }
+
+    public function effectiveRedoLog(): ?ActivityLog
+    {
+        if ($this->canBeRedone()) {
+            return $this;
+        }
+
+        if ($this->action === 'undo' && $this->result === 'success') {
+            $target = $this->getResolvedTargetActivityLog();
+            if ($target && $target->canBeRedone()) {
+                return $target;
+            }
+        }
+
+        return null;
+    }
+
+    public function effectiveUndoLog(): ?ActivityLog
+    {
+        if ($this->canBeUndone()) {
+            return $this;
+        }
+
+        if ($this->action === 'redo' && $this->result === 'success') {
+            $target = $this->getResolvedTargetActivityLog();
+            if ($target && $target->canBeUndone()) {
+                return $target;
+            }
+        }
+
+        return null;
+    }
+
     public function undoEligibilityReason(): ?string
     {
         if ($this->isUndone()) {
             return 'Sudah dikembalikan (di-undo)';
         }
 
-        if ($this->action === 'undo' || $this->action === 'redo') {
-            return 'Aktivitas undo/redo tidak dapat di-undo kembali';
+        if ($this->action === 'undo') {
+            $target = $this->getResolvedTargetActivityLog();
+            if ($target && $target->canBeRedone()) {
+                return 'Aktivitas ini adalah tindakan Undo. Anda dapat melakukan Redo untuk menerapkan kembali perubahannya.';
+            }
+
+            return 'Aktivitas undo tidak dapat di-undo kembali';
+        }
+
+        if ($this->action === 'redo') {
+            return 'Aktivitas ini adalah tindakan Redo';
         }
 
         if ($this->result !== 'success') {
