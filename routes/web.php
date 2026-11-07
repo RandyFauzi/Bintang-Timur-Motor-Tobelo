@@ -128,6 +128,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/activity-logs/export', [ActivityLogController::class, 'export'])->name('activity-logs.export');
         Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
         Route::post('/activity-logs/{activityLog}/undo', [ActivityLogController::class, 'undo'])->name('activity-logs.undo');
+        Route::post('/activity-logs/{activityLog}/redo', [ActivityLogController::class, 'redo'])->name('activity-logs.redo');
     });
 
     Route::get('/users/{user}/avatar', UserAvatarController::class)->name('users.avatar');

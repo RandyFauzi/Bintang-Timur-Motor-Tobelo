@@ -15,7 +15,7 @@ class ActivityLog extends Model
 
     protected $guarded = [];
 
-    public const ACTIONS = ['access_denied' => 'Akses Ditolak', 'request_failed' => 'Permintaan Gagal', 'export' => 'Export Data', 'create' => 'Tambah Data', 'update' => 'Ubah Data', 'delete' => 'Hapus Data', 'submit' => 'Kirim Tindakan', 'login' => 'Login', 'logout' => 'Logout', 'login_failed' => 'Login Gagal', 'register' => 'Registrasi Akun', 'password_reset' => 'Reset Password', 'password_reset_request' => 'Minta Reset Password', 'checkout' => 'Transaksi Kasir', 'scan' => 'Pindai Produk', 'cancel' => 'Batalkan Data', 'bulk' => 'Ubah Massal', 'undo' => 'Kembalikan Perubahan (Undo)'];
+    public const ACTIONS = ['access_denied' => 'Akses Ditolak', 'request_failed' => 'Permintaan Gagal', 'export' => 'Export Data', 'create' => 'Tambah Data', 'update' => 'Ubah Data', 'delete' => 'Hapus Data', 'submit' => 'Kirim Tindakan', 'login' => 'Login', 'logout' => 'Logout', 'login_failed' => 'Login Gagal', 'register' => 'Registrasi Akun', 'password_reset' => 'Reset Password', 'password_reset_request' => 'Minta Reset Password', 'checkout' => 'Transaksi Kasir', 'scan' => 'Pindai Produk', 'cancel' => 'Batalkan Data', 'bulk' => 'Ubah Massal', 'undo' => 'Kembalikan Perubahan (Undo)', 'redo' => 'Terapkan Ulang (Redo)'];
 
     public const RESULTS = ['success' => 'Berhasil', 'failed' => 'Gagal', 'denied' => 'Ditolak'];
 
@@ -43,15 +43,22 @@ class ActivityLog extends Model
             return false;
         }
 
-        if (! empty($this->metadata['changes_truncated'])) {
-            return false;
-        }
-
-        if ($this->action === 'undo') {
+        if ($this->action === 'undo' || $this->action === 'redo') {
             return false;
         }
 
         return true;
+    }
+
+    public function canBeRedone(): bool
+    {
+        if (! $this->isUndone()) {
+            return false;
+        }
+
+        $recordedChanges = (array) ($this->getAttribute('changes') ?? []);
+
+        return ! empty($recordedChanges);
     }
 
     public function undoEligibilityReason(): ?string
@@ -60,8 +67,8 @@ class ActivityLog extends Model
             return 'Sudah dikembalikan (di-undo)';
         }
 
-        if ($this->action === 'undo') {
-            return 'Aktivitas undo tidak dapat di-undo kembali';
+        if ($this->action === 'undo' || $this->action === 'redo') {
+            return 'Aktivitas undo/redo tidak dapat di-undo kembali';
         }
 
         if ($this->result !== 'success') {
@@ -73,11 +80,24 @@ class ActivityLog extends Model
             return 'Tidak ada rekaman data yang berubah pada aktivitas ini';
         }
 
-        if (! empty($this->metadata['changes_truncated'])) {
-            return 'Data perubahan terpotong karena melebihi batas simpan. Gunakan fitur Hapus Massal pada modul terkait.';
-        }
-
         return null;
+    }
+
+    public function markAsRedone(): void
+    {
+        DB::table('activity_logs')
+            ->where('id', $this->id)
+            ->update([
+                'undone_at' => null,
+                'undone_by_user_id' => null,
+                'undone_by_name' => null,
+                'undo_activity_log_id' => null,
+            ]);
+
+        $this->undone_at = null;
+        $this->undone_by_user_id = null;
+        $this->undone_by_name = null;
+        $this->undo_activity_log_id = null;
     }
 
     public function markAsUndone(?int $undoLogId = null, ?User $actor = null): void

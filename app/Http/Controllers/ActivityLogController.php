@@ -69,6 +69,16 @@ class ActivityLogController extends Controller
         return back()->with('success', "Perubahan data dari \"{$description}\" berhasil dikembalikan (di-undo) dan dicatat ke log aktivitas.");
     }
 
+    public function redo(ActivityLog $activityLog, ActivityUndoService $undoService): RedirectResponse
+    {
+        $actor = auth()->user();
+        $description = $activityLog->summaryDescription();
+
+        $undoService->redo($activityLog, $actor);
+
+        return back()->with('success', "Perubahan data dari \"{$description}\" berhasil diterapkan kembali (di-redo) dan dicatat ke log aktivitas.");
+    }
+
     public function export(ActivityLogFilterRequest $request, CsvExportService $csv, ExcelExportService $excel): StreamedResponse
     {
         $rows = $this->query($request->validated())->orderByDesc('id')->lazyByIdDesc(200)->map(fn (ActivityLog $log): array => [$log->request_id, $log->occurred_at->format('Y-m-d H:i:s.u').' '.config('app.timezone'), $log->actor_name, $log->user_id, $log->actor_role, ActivityLog::MODULES[$log->module] ?? $log->module, ActivityLog::ACTIONS[$log->action] ?? $log->action, ActivityLog::RESULTS[$log->result] ?? $log->result, $log->route_name, $log->method, $log->status_code, json_encode($log->changes, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE)]);

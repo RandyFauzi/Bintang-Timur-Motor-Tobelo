@@ -331,24 +331,58 @@ class ActivityLogTest extends TestCase
         $response->assertSee('Kembalikan Perubahan');
     }
 
-    public function test_activity_log_reports_eligibility_reason_when_cannot_be_undone(): void
+    public function test_truncated_activity_can_still_be_undone(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
+        $product = Product::factory()->create(['name' => 'Produk Truncated']);
+
         $truncatedLog = ActivityLog::factory()->create([
             'result' => 'success',
             'action' => 'submit',
             'metadata' => ['changes_truncated' => true],
-            'changes' => [['entity' => 'Product', 'id' => '1', 'event' => 'created', 'before' => [], 'after' => ['name' => 'Item']]],
+            'changes' => [['entity' => 'Product', 'id' => (string) $product->id, 'event' => 'created', 'before' => [], 'after' => ['name' => 'Produk Truncated']]],
         ]);
 
-        $this->assertFalse($truncatedLog->canBeUndone());
-        $this->assertNotNull($truncatedLog->undoEligibilityReason());
-        $this->assertStringContainsString('Data perubahan terpotong', $truncatedLog->undoEligibilityReason());
+        $this->assertTrue($truncatedLog->canBeUndone());
 
-        $response = $this->actingAs($admin)->get(route('activity-logs.index', ['detail' => $truncatedLog->id]));
-        $response->assertOk();
-        $response->assertSee('Data besar');
-        $response->assertSee('Data Perubahan Terpotong');
+        $this->actingAs($admin)->post(route('activity-logs.undo', $truncatedLog))->assertSessionHas('success');
+        $this->assertTrue($truncatedLog->fresh()->isUndone());
+        $this->assertSoftDeleted('products', ['id' => $product->id]);
+    }
+
+    public function test_admin_can_redo_an_undone_activity(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = Product::factory()->withStock(10)->create(['selling_price' => 50000]);
+
+        $this->actingAs($admin)->patch(route('products.update', $product), [
+            'name' => $product->name,
+            'purchase_price' => $product->purchase_price,
+            'selling_price' => 75000,
+            'quantity' => 10,
+            'stock_minimum' => 2,
+        ])->assertSessionHasNoErrors()->assertRedirect();
+
+        $log = ActivityLog::where('route_name', 'products.update')->latest('id')->firstOrFail();
+
+        // 1. Undo
+        $this->actingAs($admin)->post(route('activity-logs.undo', $log))->assertSessionHas('success');
+        $product->refresh();
+        $this->assertSame(50000, (int) $product->selling_price);
+        $this->assertTrue($log->fresh()->isUndone());
+        $this->assertTrue($log->fresh()->canBeRedone());
+
+        // 2. Redo
+        $this->actingAs($admin)->post(route('activity-logs.redo', $log))->assertSessionHas('success');
+        $product->refresh();
+        $this->assertSame(75000, (int) $product->selling_price);
+        $this->assertFalse($log->fresh()->isUndone());
+        $this->assertTrue($log->fresh()->canBeUndone());
+
+        // Redo action is audited
+        $redoAudit = ActivityLog::where('action', 'redo')->latest('id')->firstOrFail();
+        $this->assertSame('activity-logs', $redoAudit->module);
+        $this->assertSame($admin->id, $redoAudit->user_id);
     }
 
     public function test_model_rejects_deleting_an_existing_audit_entry(): void

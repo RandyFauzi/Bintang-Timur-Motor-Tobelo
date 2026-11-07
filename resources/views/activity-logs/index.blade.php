@@ -1,5 +1,5 @@
 <x-app-layout>
-    <div class="catalogue-page" x-data="{ undoId: null, undoDescription: '', undoUrl: '', submitting: false, openUndo(id, desc) { this.undoId = id; this.undoDescription = desc; this.undoUrl = '{{ url('activity-logs') }}/' + id + '/undo'; $dispatch('open-dialog', { id: 'undo-confirm-dialog' }); } }">
+    <div class="catalogue-page" x-data="{ undoId: null, undoDescription: '', undoUrl: '', undoTruncated: false, redoId: null, redoDescription: '', redoUrl: '', submitting: false, openUndo(id, desc, truncated = false) { this.undoId = id; this.undoDescription = desc; this.undoTruncated = truncated; this.undoUrl = '{{ url('activity-logs') }}/' + id + '/undo'; $dispatch('open-dialog', { id: 'undo-confirm-dialog' }); }, openRedo(id, desc) { this.redoId = id; this.redoDescription = desc; this.redoUrl = '{{ url('activity-logs') }}/' + id + '/redo'; $dispatch('open-dialog', { id: 'redo-confirm-dialog' }); } }">
         <header class="catalogue-heading"><div><h1>Log Aktivitas</h1><p class="mt-2 text-sm text-muted">Jejak akses dan perubahan data setiap akun. Zona waktu: {{ config('app.timezone') }}.</p></div></header>
         <div class="audit-summary">
             <x-dashboard.stat-card title="Aktivitas Tercatat" :value="number_format($summary['total'])" note="Sesuai filter yang dipilih" icon="note-summary" />
@@ -37,7 +37,7 @@
                 </div>
             </form>
             <div class="catalogue-table-scroll"><table class="catalogue-table"><caption class="sr-only">Jejak audit akun</caption><thead><tr>@foreach(['Waktu','Akun','Aktivitas','Modul / Rute','Hasil','Status','Aksi'] as $heading)<th scope="col">{{ $heading }}</th>@endforeach</tr></thead><tbody>
-                @forelse($logs as $log)<tr><td class="whitespace-nowrap">{{ $log->occurred_at->format('d/m/Y H:i:s') }}</td><td><span class="font-medium">{{ $log->actor_name }}</span><span class="mt-1 block text-xs text-muted">{{ $log->actor_role ?? 'Tanpa akun' }}{{ $log->user_id ? ' · #'.$log->user_id : '' }}</span></td><td>{{ $actions[$log->action] ?? $log->action }}</td><td><span>{{ $modules[$log->module] ?? $log->module }}</span><span class="mt-1 block text-xs text-muted">{{ $log->route_name }}</span></td><td><span @class(['history-status','history-status--completed'=>$log->result === 'success','history-status--cancelled'=>$log->result !== 'success'])>{{ $results[$log->result] ?? $log->result }}</span></td><td class="whitespace-nowrap">@if($log->isUndone())<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200" title="Dibatalkan pada {{ $log->undone_at->format('d/m/Y H:i') }} oleh {{ $log->undone_by_name }}"><x-ui.icon name="undo" :size="12" />Di-undo</span>@elseif(!empty($log->metadata['changes_truncated']))<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200" title="Data perubahan terpotong karena melebihi batas simpan. Gunakan Hapus Massal pada menu terkait jika ingin membatalkan.">Data besar</span>@else<span class="text-muted text-xs">–</span>@endif</td><td class="whitespace-nowrap"><div class="inline-flex items-center gap-2"><a href="{{ request()->fullUrlWithQuery(['detail'=>$log->id]) }}" class="edit-link" aria-label="Detail aktivitas {{ $log->request_id }}">Detail <x-ui.icon name="chevron" :size="14" /></a>@if($log->canBeUndone())<button type="button" class="ui-button ui-button--secondary !py-1 !px-2 !text-xs text-amber-700 border-amber-300 hover:bg-amber-50 inline-flex items-center gap-1" @click="openUndo({{ $log->id }}, '{{ addslashes($log->summaryDescription()) }}')" title="Kembalikan perubahan aktivitas ini"><x-ui.icon name="undo" :size="12" />Undo</button>@endif</div></td></tr>
+                @forelse($logs as $log)<tr><td class="whitespace-nowrap">{{ $log->occurred_at->format('d/m/Y H:i:s') }}</td><td><span class="font-medium">{{ $log->actor_name }}</span><span class="mt-1 block text-xs text-muted">{{ $log->actor_role ?? 'Tanpa akun' }}{{ $log->user_id ? ' · #'.$log->user_id : '' }}</span></td><td>{{ $actions[$log->action] ?? $log->action }}</td><td><span>{{ $modules[$log->module] ?? $log->module }}</span><span class="mt-1 block text-xs text-muted">{{ $log->route_name }}</span></td><td><span @class(['history-status','history-status--completed'=>$log->result === 'success','history-status--cancelled'=>$log->result !== 'success'])>{{ $results[$log->result] ?? $log->result }}</span></td><td class="whitespace-nowrap">@if($log->isUndone())<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200" title="Dibatalkan pada {{ $log->undone_at->format('d/m/Y H:i') }} oleh {{ $log->undone_by_name }}"><x-ui.icon name="undo" :size="12" />Di-undo</span>@elseif(!empty($log->metadata['changes_truncated']))<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200" title="Data perubahan terpotong karena melebihi batas simpan.">Data besar</span>@else<span class="text-muted text-xs">–</span>@endif</td><td class="whitespace-nowrap"><div class="inline-flex items-center gap-2"><a href="{{ request()->fullUrlWithQuery(['detail'=>$log->id]) }}" class="edit-link" aria-label="Detail aktivitas {{ $log->request_id }}">Detail <x-ui.icon name="chevron" :size="14" /></a>@if($log->canBeUndone())<button type="button" class="ui-button ui-button--secondary !py-1 !px-2 !text-xs text-amber-700 border-amber-300 hover:bg-amber-50 inline-flex items-center gap-1" @click="openUndo({{ $log->id }}, '{{ addslashes($log->summaryDescription()) }}', {{ !empty($log->metadata['changes_truncated']) ? 'true' : 'false' }})" title="Kembalikan perubahan aktivitas ini"><x-ui.icon name="undo" :size="12" />Undo</button>@elseif($log->canBeRedone())<button type="button" class="ui-button ui-button--secondary !py-1 !px-2 !text-xs text-blue-700 border-blue-300 hover:bg-blue-50 inline-flex items-center gap-1" @click="openRedo({{ $log->id }}, '{{ addslashes($log->summaryDescription()) }}')" title="Terapkan kembali perubahan aktivitas ini"><x-ui.icon name="history" :size="12" />Redo</button>@endif</div></td></tr>
                 @empty<tr><td colspan="7"><x-ui.empty-state title="Log tidak ditemukan" description="Ubah filter atau tunggu aktivitas akun berikutnya." /></td></tr>@endforelse
             </tbody></table></div>
             <x-ui.pagination :paginator="$logs" />
@@ -46,17 +46,28 @@
         @if($detail)
             <x-ui.dialog name="activity-detail" title="Detail Aktivitas" :show="true" wide close-icon="close">
                 @if($detail->isUndone())
-                    <div class="p-3 mb-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2.5">
-                        <x-ui.icon name="undo" :size="16" class="text-amber-700 shrink-0" />
-                        <div><strong>Aktivitas ini telah dibatalkan (di-undo)</strong> pada {{ $detail->undone_at->format('d/m/Y H:i') }} oleh {{ $detail->undone_by_name }}.</div>
+                    <div class="p-3 mb-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex flex-wrap items-center justify-between gap-2.5">
+                        <div class="flex items-center gap-2">
+                            <x-ui.icon name="undo" :size="16" class="text-amber-700 shrink-0" />
+                            <div><strong>Aktivitas ini telah dibatalkan (di-undo)</strong> pada {{ $detail->undone_at->format('d/m/Y H:i') }} oleh {{ $detail->undone_by_name }}.</div>
+                        </div>
+                        @if($detail->canBeRedone())
+                            <button type="button" class="ui-button !bg-blue-600 hover:!bg-blue-700 text-white inline-flex items-center gap-1.5 shadow-sm !text-xs !py-1.5 !px-3" @click="openRedo({{ $detail->id }}, '{{ addslashes($detail->summaryDescription()) }}')">
+                                <x-ui.icon name="history" :size="13" class="brightness-0 invert" />Terapkan Ulang (Redo)
+                            </button>
+                        @endif
                     </div>
                 @endif
                 <dl class="audit-detail"><dt>ID Permintaan</dt><dd>{{ $detail->request_id }}</dd><dt>Waktu</dt><dd>{{ $detail->occurred_at->format('d/m/Y H:i:s.u') }} {{ config('app.timezone') }}</dd><dt>Akun</dt><dd>{{ $detail->actor_name }} · {{ $detail->actor_role ?? 'Tamu' }} · ID {{ $detail->user_id ?? '–' }}</dd><dt>Aktivitas</dt><dd>{{ $actions[$detail->action] ?? $detail->action }}</dd><dt>Hasil</dt><dd>{{ $results[$detail->result] }} · HTTP {{ $detail->status_code }}</dd><dt>Rute</dt><dd>{{ $detail->method }} /{{ $detail->route_path }} · {{ $detail->route_name }}</dd><dt>Durasi</dt><dd>{{ $detail->duration_ms }} ms</dd><dt>Objek Diakses</dt><dd>{{ json_encode($detail->metadata['targets'] ?? [], JSON_UNESCAPED_UNICODE) }}</dd></dl>
                 <div class="flex flex-wrap items-center justify-between gap-2 mb-3 mt-6">
                     <h3 class="text-sm font-medium">Perubahan Data</h3>
                     @if($detail->canBeUndone())
-                        <button type="button" class="ui-button !bg-amber-600 hover:!bg-amber-700 text-white inline-flex items-center gap-1.5 shadow-sm !text-xs !py-1 !px-2.5" @click="openUndo({{ $detail->id }}, '{{ addslashes($detail->summaryDescription()) }}')">
+                        <button type="button" class="ui-button !bg-amber-600 hover:!bg-amber-700 text-white inline-flex items-center gap-1.5 shadow-sm !text-xs !py-1 !px-2.5" @click="openUndo({{ $detail->id }}, '{{ addslashes($detail->summaryDescription()) }}', {{ !empty($detail->metadata['changes_truncated']) ? 'true' : 'false' }})">
                             <x-ui.icon name="undo" :size="13" class="brightness-0 invert" />Kembalikan Perubahan (Undo)
+                        </button>
+                    @elseif($detail->canBeRedone())
+                        <button type="button" class="ui-button !bg-blue-600 hover:!bg-blue-700 text-white inline-flex items-center gap-1.5 shadow-sm !text-xs !py-1 !px-2.5" @click="openRedo({{ $detail->id }}, '{{ addslashes($detail->summaryDescription()) }}')">
+                            <x-ui.icon name="history" :size="13" class="brightness-0 invert" />Terapkan Ulang (Redo)
                         </button>
                     @elseif($detail->undoEligibilityReason())
                         <span class="text-xs text-muted italic">ℹ️ {{ $detail->undoEligibilityReason() }}</span>
@@ -64,8 +75,8 @@
                 </div>
                 @if($detail->metadata['changes_truncated'] ?? false)
                     <div class="p-3 mb-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex flex-col gap-1 leading-relaxed">
-                        <p class="font-semibold text-amber-900">⚠️ Data Perubahan Terpotong (Melebihi Batas Simpan)</p>
-                        <p class="text-amber-800">Aktivitas impor ini memproses data dalam jumlah besar sehingga rekaman perubahan diringkas. Tombol Undo otomatis dinonaktifkan demi mencegah penghapusan data secara parsial (setengah-setengah). Jika ingin menghapus seluruh data yang baru diimpor, silakan gunakan fitur <strong>Hapus Massal</strong> langsung pada menu terkait.</p>
+                        <p class="font-semibold text-amber-900">⚠️ Data Perubahan Sangat Besar (Terpotong)</p>
+                        <p class="text-amber-800">Aktivitas impor ini memproses data dalam jumlah besar sehingga sebagian data diringkas. Tombol Undo akan mengembalikan seluruh data yang terekam dalam log ini.</p>
                     </div>
                 @endif
                 @if($detail->result !== 'success')<p class="mb-3 text-sm text-muted">Tindakan tidak selesai dengan berhasil. Perubahan yang dibatalkan tidak ditampilkan.</p>@endif
@@ -138,8 +149,12 @@
                 <footer class="dialog-actions mt-6 flex justify-between items-center">
                     <div>
                         @if($detail->canBeUndone())
-                            <button type="button" class="ui-button !bg-amber-600 hover:!bg-amber-700 text-white inline-flex items-center gap-1.5 shadow-sm !text-xs !py-1.5 !px-3" @click="openUndo({{ $detail->id }}, '{{ addslashes($detail->summaryDescription()) }}')">
+                            <button type="button" class="ui-button !bg-amber-600 hover:!bg-amber-700 text-white inline-flex items-center gap-1.5 shadow-sm !text-xs !py-1.5 !px-3" @click="openUndo({{ $detail->id }}, '{{ addslashes($detail->summaryDescription()) }}', {{ !empty($detail->metadata['changes_truncated']) ? 'true' : 'false' }})">
                                 <x-ui.icon name="undo" :size="14" class="brightness-0 invert" />Kembalikan Perubahan (Undo)
+                            </button>
+                        @elseif($detail->canBeRedone())
+                            <button type="button" class="ui-button !bg-blue-600 hover:!bg-blue-700 text-white inline-flex items-center gap-1.5 shadow-sm !text-xs !py-1.5 !px-3" @click="openRedo({{ $detail->id }}, '{{ addslashes($detail->summaryDescription()) }}')">
+                                <x-ui.icon name="history" :size="14" class="brightness-0 invert" />Terapkan Ulang (Redo)
                             </button>
                         @endif
                     </div>
@@ -165,6 +180,10 @@
                         <p class="font-semibold text-sm mb-1 text-amber-900">⚠️ Konfirmasi Pembatalan Data</p>
                         <p>Sistem akan mengembalikan seluruh data yang terpengaruh pada aktivitas ini ke kondisi sebelum perubahan disimpan.</p>
                     </div>
+                    <div x-show="undoTruncated" class="p-3 rounded-xl bg-orange-50 border border-orange-200 text-orange-950 text-xs">
+                        <p class="font-semibold text-orange-900">ℹ️ Catatan Data Besar</p>
+                        <p class="mt-0.5">Aktivitas ini memproses data dalam jumlah banyak. Sistem akan mengembalikan seluruh data yang terekam pada log ini.</p>
+                    </div>
                     <div class="p-3 rounded-xl bg-gray-50 border border-gray-200 text-xs">
                         <span class="text-muted text-[11px] block mb-1">Aktivitas yang akan dikembalikan:</span>
                         <strong class="text-slate-800 break-words" x-text="undoDescription"></strong>
@@ -176,6 +195,39 @@
                     <button type="submit" class="ui-button !bg-amber-600 hover:!bg-amber-700 text-white inline-flex items-center gap-1.5" :disabled="submitting">
                         <x-ui.icon name="undo" :size="14" class="brightness-0 invert" />
                         <span x-text="submitting ? 'Mengembalikan Data…' : 'Ya, Kembalikan Data (Undo)'"></span>
+                    </button>
+                </footer>
+            </form>
+        </dialog>
+
+        <dialog id="redo-confirm-dialog" class="ui-dialog" x-data="appDialog(false)" @open-dialog.window="if ($event.detail.id === 'redo-confirm-dialog') open()" @close="submitting = false" @click="backdrop($event)" aria-labelledby="redo-confirm-title">
+            <header class="ui-dialog__header">
+                <div>
+                    <h2 id="redo-confirm-title" class="text-base font-medium text-blue-900 flex items-center gap-2">
+                        <x-ui.icon name="history" :size="18" class="text-blue-600" />Terapkan Ulang Perubahan (Redo)
+                    </h2>
+                    <p class="mt-1 text-xs text-muted">Menerapkan kembali data yang sebelumnya pernah dibatalkan (di-undo).</p>
+                </div>
+                <button type="button" class="dialog-close" @click="$el.closest('dialog').close()" aria-label="Tutup dialog">×</button>
+            </header>
+            <form method="POST" :action="redoUrl" class="dialog-form" @submit="submitting = true">
+                @csrf
+                <div class="space-y-3 py-1">
+                    <div class="p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-950 text-xs leading-relaxed">
+                        <p class="font-semibold text-sm mb-1 text-blue-900">ℹ️ Konfirmasi Redo Data</p>
+                        <p>Sistem akan menerapkan kembali seluruh data dan nilai yang sebelumnya telah dibatalkan.</p>
+                    </div>
+                    <div class="p-3 rounded-xl bg-gray-50 border border-gray-200 text-xs">
+                        <span class="text-muted text-[11px] block mb-1">Aktivitas yang akan diterapkan ulang:</span>
+                        <strong class="text-slate-800 break-words" x-text="redoDescription"></strong>
+                    </div>
+                    <p class="text-[11px] text-muted italic">Tindakan redo ini akan dicatat kembali ke dalam log aktivitas sebagai bukti riwayat audit.</p>
+                </div>
+                <footer class="dialog-actions mt-4 flex justify-end gap-2">
+                    <button type="button" class="ui-button ui-button--secondary" @click="$el.closest('dialog').close()" :disabled="submitting">Batal</button>
+                    <button type="submit" class="ui-button !bg-blue-600 hover:!bg-blue-700 text-white inline-flex items-center gap-1.5" :disabled="submitting">
+                        <x-ui.icon name="history" :size="14" class="brightness-0 invert" />
+                        <span x-text="submitting ? 'Menerapkan Data…' : 'Ya, Terapkan Ulang (Redo)'"></span>
                     </button>
                 </footer>
             </form>

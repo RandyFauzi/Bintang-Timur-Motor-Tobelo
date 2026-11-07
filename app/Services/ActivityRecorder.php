@@ -166,7 +166,7 @@ class ActivityRecorder
             'GET','HEAD' => $status >= 400 ? ($result === 'denied' ? 'access_denied' : 'request_failed') : 'update', 'POST' => str_ends_with($name ?? '', '.store') ? 'create' : 'submit', 'PUT','PATCH' => 'update', 'DELETE' => 'delete', default => 'submit'
         });
         $action = match ($name) {
-            'activity-logs.undo' => 'undo', 'pos.checkout' => 'checkout', 'pos.scan' => 'scan', 'returns.cancel' => 'cancel', 'returns.bulk' => 'bulk', default => $action
+            'activity-logs.undo' => 'undo', 'activity-logs.redo' => 'redo', 'pos.checkout' => 'checkout', 'pos.scan' => 'scan', 'returns.cancel' => 'cancel', 'returns.bulk' => 'bulk', default => $action
         };
         try {
             $createdLog = ActivityLog::create(($this->actor ?? ['user_id' => null, 'actor_name' => 'Tamu', 'actor_role' => null]) + [

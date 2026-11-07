@@ -105,6 +105,138 @@ class ActivityUndoService
     }
 
     /**
+     * Redo the changes recorded in an undone ActivityLog.
+     *
+     * @throws ValidationException
+     */
+    public function redo(ActivityLog $log, User $actor): void
+    {
+        if (! $log->isUndone()) {
+            throw ValidationException::withMessages([
+                'activity' => 'Aktivitas ini belum pernah di-undo sehingga tidak dapat di-redo.',
+            ]);
+        }
+
+        $changes = (array) ($log->getAttribute('changes') ?? []);
+        if (empty($changes)) {
+            throw ValidationException::withMessages([
+                'activity' => 'Tidak ada rekaman perubahan data pada aktivitas ini yang dapat di-redo.',
+            ]);
+        }
+
+        DB::transaction(function () use ($log, $changes): void {
+            // Apply changes in original chronological order
+            foreach ($changes as $change) {
+                $this->reapplyChange($change);
+            }
+
+            // Mark the activity log as redone (no longer undone)
+            $log->markAsRedone();
+        });
+    }
+
+    /**
+     * @param  array{entity: string, id: string|int, event: string, before?: array<string, mixed>, after?: array<string, mixed>}  $change
+     */
+    private function reapplyChange(array $change): void
+    {
+        $rawEntity = (string) ($change['entity'] ?? '');
+        $id = $change['id'] ?? null;
+        $event = (string) ($change['event'] ?? '');
+        $after = (array) ($change['after'] ?? []);
+
+        $modelClass = self::ENTITY_CLASS_MAP[$rawEntity] ?? ('App\\Models\\'.$rawEntity);
+        if (! class_exists($modelClass) || ! is_subclass_of($modelClass, Model::class)) {
+            return;
+        }
+
+        $usesSoftDeletes = in_array(SoftDeletes::class, class_uses_recursive($modelClass), true);
+
+        match ($event) {
+            'created' => $this->reapplyCreated($modelClass, $id, $after, $usesSoftDeletes),
+            'updated' => $this->reapplyUpdated($modelClass, $id, $after, $usesSoftDeletes),
+            'deleted' => $this->reapplyDeleted($modelClass, $id, $usesSoftDeletes),
+            default => null,
+        };
+    }
+
+    /**
+     * @param  class-string<Model>  $modelClass
+     * @param  array<string, mixed>  $after
+     */
+    private function reapplyCreated(string $modelClass, mixed $id, array $after, bool $usesSoftDeletes): void
+    {
+        if ($id === null) {
+            return;
+        }
+
+        if ($usesSoftDeletes) {
+            $model = $modelClass::withTrashed()->find($id);
+            if ($model) {
+                if ($model->trashed()) {
+                    $model->restore();
+                }
+                $attributes = $this->cleanAttributes($model, $after);
+                if (! empty($attributes)) {
+                    $model->forceFill($attributes)->save();
+                }
+
+                return;
+            }
+        }
+
+        $model = (new $modelClass)->find($id);
+        if (! $model) {
+            $attributes = $this->cleanAttributes(new $modelClass, $after);
+            $attributes['id'] = $id;
+
+            $modelClass::unguarded(function () use ($modelClass, $attributes): void {
+                $modelClass::create($attributes);
+            });
+        }
+    }
+
+    /**
+     * @param  class-string<Model>  $modelClass
+     * @param  array<string, mixed>  $after
+     */
+    private function reapplyUpdated(string $modelClass, mixed $id, array $after, bool $usesSoftDeletes): void
+    {
+        if ($id === null || empty($after)) {
+            return;
+        }
+
+        $query = $usesSoftDeletes ? $modelClass::withTrashed() : $modelClass::query();
+        $model = $query->find($id);
+
+        if (! $model) {
+            return;
+        }
+
+        $attributes = $this->cleanAttributes($model, $after);
+        if (! empty($attributes)) {
+            $model->forceFill($attributes)->save();
+        }
+    }
+
+    /**
+     * @param  class-string<Model>  $modelClass
+     */
+    private function reapplyDeleted(string $modelClass, mixed $id, bool $usesSoftDeletes): void
+    {
+        if ($id === null) {
+            return;
+        }
+
+        $query = $usesSoftDeletes ? $modelClass::withTrashed() : $modelClass::query();
+        $model = $query->find($id);
+
+        if ($model) {
+            $model->delete();
+        }
+    }
+
+    /**
      * @param  array{entity: string, id: string|int, event: string, before?: array<string, mixed>, after?: array<string, mixed>}  $change
      */
     private function revertChange(array $change): void
