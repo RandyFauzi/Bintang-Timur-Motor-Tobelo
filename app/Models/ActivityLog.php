@@ -54,6 +54,32 @@ class ActivityLog extends Model
         return true;
     }
 
+    public function undoEligibilityReason(): ?string
+    {
+        if ($this->isUndone()) {
+            return 'Sudah dikembalikan (di-undo)';
+        }
+
+        if ($this->action === 'undo') {
+            return 'Aktivitas undo tidak dapat di-undo kembali';
+        }
+
+        if ($this->result !== 'success') {
+            return 'Aktivitas tidak selesai dengan berhasil';
+        }
+
+        $recordedChanges = (array) ($this->getAttribute('changes') ?? []);
+        if (empty($recordedChanges)) {
+            return 'Tidak ada rekaman data yang berubah pada aktivitas ini';
+        }
+
+        if (! empty($this->metadata['changes_truncated'])) {
+            return 'Data perubahan terpotong karena melebihi batas simpan. Gunakan fitur Hapus Massal pada modul terkait.';
+        }
+
+        return null;
+    }
+
     public function markAsUndone(?int $undoLogId = null, ?User $actor = null): void
     {
         $now = now();

@@ -54,7 +54,7 @@ class ActivityRecorder
         if (! $this->active || $model instanceof ActivityLog) {
             return;
         }
-        if (count($this->changes) >= 200) {
+        if (count($this->changes) >= 500) {
             $this->truncated = true;
 
             return;
@@ -68,7 +68,7 @@ class ActivityRecorder
         $after = $action === 'deleted' ? [] : $attributes;
         $change = ['entity' => class_basename($model), 'id' => (string) $model->getKey(), 'event' => $action, 'before' => $this->sanitize($before), 'after' => $this->sanitize($after), 'level' => DB::transactionLevel()];
         $bytes = strlen(json_encode($change, JSON_INVALID_UTF8_SUBSTITUTE));
-        if ($this->changeBytes + $bytes > 65536) {
+        if ($this->changeBytes + $bytes > 262144) {
             $this->truncated = true;
 
             return;

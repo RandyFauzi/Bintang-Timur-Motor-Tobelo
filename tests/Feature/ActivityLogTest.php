@@ -331,6 +331,26 @@ class ActivityLogTest extends TestCase
         $response->assertSee('Kembalikan Perubahan');
     }
 
+    public function test_activity_log_reports_eligibility_reason_when_cannot_be_undone(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $truncatedLog = ActivityLog::factory()->create([
+            'result' => 'success',
+            'action' => 'submit',
+            'metadata' => ['changes_truncated' => true],
+            'changes' => [['entity' => 'Product', 'id' => '1', 'event' => 'created', 'before' => [], 'after' => ['name' => 'Item']]],
+        ]);
+
+        $this->assertFalse($truncatedLog->canBeUndone());
+        $this->assertNotNull($truncatedLog->undoEligibilityReason());
+        $this->assertStringContainsString('Data perubahan terpotong', $truncatedLog->undoEligibilityReason());
+
+        $response = $this->actingAs($admin)->get(route('activity-logs.index', ['detail' => $truncatedLog->id]));
+        $response->assertOk();
+        $response->assertSee('Data besar');
+        $response->assertSee('Data Perubahan Terpotong');
+    }
+
     public function test_model_rejects_deleting_an_existing_audit_entry(): void
     {
         $log = ActivityLog::factory()->create();
