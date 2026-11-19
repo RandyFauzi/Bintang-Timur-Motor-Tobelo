@@ -28,7 +28,7 @@ class PosTest extends TestCase
         Product::factory()->inactive()->create();
         $response = $this->actingAs(User::factory()->create())->get(route('pos.index'));
         $response->assertOk()->assertSee('Kasir / POS')->assertSee('Lihat Keranjang')->assertSee('Ringkasan Transaksi')->assertDontSee('Uang Diterima (Tunai)')->assertSee('Simpan Transaksi')->assertSee('Transaksi Berhasil Dicatat!')
-            ->assertSee('pos-stepper')->assertSee('pos-stepper__btn--minus')->assertSee('pos-stepper__btn--plus');
+            ->assertSee('pos-stepper')->assertSee('pos-stepper__btn--minus')->assertSee('pos-stepper__btn--plus')->assertSee('pos-product__brand-value');
         $this->assertCount(6, $response->viewData('catalogueProducts'));
         $this->assertSame(8, $response->viewData('products')->total());
     }

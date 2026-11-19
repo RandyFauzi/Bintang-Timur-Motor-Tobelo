@@ -10,6 +10,7 @@
     .pos-product dl { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 16px 12px; font-size: 14px; }
     .pos-product dt { color: var(--color-muted); }
     .pos-product dd { text-align: right; overflow-wrap: anywhere; }
+    .pos-product__brand-value { font-weight: 600; color: #171a17; }
     .pos-product footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--color-border); padding-top: 12px; margin-top: auto; }
     .pos-product footer strong { overflow-wrap: anywhere; font-size: 18px; }
     .pos-product__cart-action { display: flex; flex-shrink: 0; align-items: center; gap: 8px; margin-left: auto; }
